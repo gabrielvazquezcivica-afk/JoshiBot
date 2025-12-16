@@ -20,53 +20,69 @@ export const handler = async (m, {
   }
 
   const participants = metadata.participants.map(p => p.id)
-
-  const quoted =
-    m.message?.extendedTextMessage?.contextInfo?.quotedMessage
-
   const text = args.join(' ')
+  const quoted = m.quoted
 
-  // 🔁 SI RESPONDE A UN MENSAJE
+  // ─────────────────────────────
+  // 📌 RESPONDIENDO A UN MENSAJE
+  // ─────────────────────────────
   if (quoted) {
-    const type = Object.keys(quoted)[0]
+    const mime = quoted.mtype
+    let msg = {}
 
-    // 📥 Descargar media si existe
-    if (type !== 'conversation' && type !== 'extendedTextMessage') {
-      const stream = await downloadContentFromMessage(
-        quoted[type],
-        type.replace('Message', '')
-      )
-
-      let buffer = Buffer.from([])
-      for await (const chunk of stream) {
-        buffer = Buffer.concat([buffer, chunk])
-      }
-
-      await sock.sendMessage(
-        from,
-        {
-          [type.replace('Message', '')]: buffer,
-          caption: quoted[type]?.caption || text,
-          mentions: participants
-        },
-        { quoted: m }
-      )
-      return
+    // 📝 TEXTO
+    if (mime === 'conversation' || mime === 'extendedTextMessage') {
+      msg.text = quoted.text
     }
 
-    // 📝 TEXTO RESPONDIDO
-    await sock.sendMessage(
-      from,
-      {
-        text: quoted.conversation || quoted.extendedTextMessage?.text,
-        mentions: participants
-      },
-      { quoted: m }
-    )
+    // 🖼️ IMAGEN
+    else if (mime === 'imageMessage') {
+      const buffer = await quoted.download()
+      msg.image = buffer
+      msg.caption = quoted.text || text
+    }
+
+    // 🎥 VIDEO
+    else if (mime === 'videoMessage') {
+      const buffer = await quoted.download()
+      msg.video = buffer
+      msg.caption = quoted.text || text
+    }
+
+    // 🎧 AUDIO
+    else if (mime === 'audioMessage') {
+      const buffer = await quoted.download()
+      msg.audio = buffer
+      msg.mimetype = 'audio/mpeg'
+    }
+
+    // 🧷 STICKER
+    else if (mime === 'stickerMessage') {
+      const buffer = await quoted.download()
+      msg.sticker = buffer
+    }
+
+    // 📄 DOCUMENTO
+    else if (mime === 'documentMessage') {
+      const buffer = await quoted.download()
+      msg.document = buffer
+      msg.mimetype = quoted.mimetype
+      msg.fileName = quoted.fileName
+    }
+
+    else {
+      return reply('❌ Tipo de mensaje no soportado')
+    }
+
+    msg.mentions = participants
+
+    await sock.sendMessage(from, msg, { quoted: m })
     return
   }
 
+  // ─────────────────────────────
   // 📝 SOLO TEXTO
+  // ─────────────────────────────
   if (text) {
     await sock.sendMessage(
       from,
