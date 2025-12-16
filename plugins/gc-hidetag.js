@@ -11,7 +11,6 @@ export const handler = async (m, { sock, from, isGroup, reply, args }) => {
   const isAdmin = participants.some(
     p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
   )
-
   if (!isAdmin) return reply('❌ Solo administradores')
 
   const text = args.join(' ')
@@ -23,12 +22,9 @@ export const handler = async (m, { sock, from, isGroup, reply, args }) => {
   const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
   const footer = `\n\n> JoshiBot • ${day} de ${months[now.getMonth()]} ${year}`
 
-  // 😀 Reacción AL COMANDO
+  // 😀 Reacción al comando
   await sock.sendMessage(from, {
-    react: {
-      text: '📢',
-      key: m.key
-    }
+    react: { text: '📢', key: m.key }
   })
 
   // ================= SI ES RESPUESTA
@@ -75,23 +71,22 @@ export const handler = async (m, { sock, from, isGroup, reply, args }) => {
           text: (q.text || text || '') + footer,
           mentions: users
         }
-        break
     }
 
     return sock.sendMessage(from, msg, { quoted: m })
   }
 
   // ================= SOLO TEXTO
-  if (!text) return reply('Uso: .n <mensaje>')
+  if (!text) {
+    return reply('Uso: .n <mensaje> o responde a un mensaje')
+  }
 
   const msg = generateWAMessageFromContent(
     from,
     {
       extendedTextMessage: {
         text: text + footer,
-        contextInfo: {
-          mentionedJid: users
-        }
+        contextInfo: { mentionedJid: users }
       }
     },
     { quoted: m, userJid: sock.user.id }
