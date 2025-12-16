@@ -1,13 +1,13 @@
 import fs from 'fs'
 
+// ───── BASE DE DATOS ─────
 const dbDir = './database'
 const dbFile = './database/welcome.json'
 
-// 📂 Crear DB si no existe
 if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir)
 if (!fs.existsSync(dbFile)) fs.writeFileSync(dbFile, '{}')
 
-// 🎄 FRASES
+// ───── FRASES ─────
 const frasesAdd = [
   '🎄 Oh no… llegó otro humano',
   '❄️ Bienvenido, no rompas nada',
@@ -24,7 +24,7 @@ const frasesRemove = [
   '🚪 Salida silenciosa'
 ]
 
-// 🖼️ FOTO PERFIL
+// ───── FOTO PERFIL ─────
 async function getProfileImage(sock, jid, botJid) {
   try {
     return await sock.profilePictureUrl(jid, 'image')
@@ -37,7 +37,7 @@ async function getProfileImage(sock, jid, botJid) {
   }
 }
 
-// 🧠 MENSAJE
+// ───── MENSAJE ─────
 function buildMessage(action, user) {
   const frase =
     action === 'add'
@@ -62,9 +62,17 @@ function buildMessage(action, user) {
 `.trim()
 }
 
-// 🎛️ COMANDO
+// ───── COMANDO .welcome ─────
 export const handler = async (m, { sock, from, sender, isGroup, reply }) => {
-  if (!isGroup) return reply('❌ Solo funciona en grupos')
+  if (!isGroup) {
+    return reply(`
+╭─〔 ⚠️ SISTEMA 〕
+│ Este comando
+│ solo funciona
+│ en grupos
+╰─〔 🤖 JoshiBot 〕
+`.trim())
+  }
 
   const text =
     m.message?.conversation ||
@@ -78,34 +86,85 @@ export const handler = async (m, { sock, from, sender, isGroup, reply }) => {
   try {
     metadata = await sock.groupMetadata(from)
   } catch {
-    return reply('❌ No pude obtener info del grupo')
+    return reply('❌ No pude obtener información del grupo')
   }
 
   const admins = metadata.participants
     .filter(p => p.admin)
     .map(p => p.id)
 
-  if (!admins.includes(sender))
-    return reply('🚫 Solo admins pueden usar este comando')
+  if (!admins.includes(sender)) {
+    return reply(`
+╭─〔 🚫 ACCESO DENEGADO 〕
+│ Solo admins
+│ pueden usar
+│ este sistema
+╰─〔 🤖 JoshiBot 〕
+`.trim())
+  }
 
   const db = JSON.parse(fs.readFileSync(dbFile))
   if (!db[from]) db[from] = false
 
+  // 🟢 ACTIVAR
   if (option === 'on') {
-    if (db[from]) return reply('⚠️ Welcome ya estaba activado')
+    if (db[from]) {
+      return reply(`
+╭─〔 ⚠️ SISTEMA 〕
+│ Welcome ya
+│ estaba activo
+╰─〔 🤖 JoshiBot 〕
+`.trim())
+    }
+
     db[from] = true
     fs.writeFileSync(dbFile, JSON.stringify(db, null, 2))
-    return reply('✅ Welcome activado')
+
+    return reply(`
+╭─〔 🚀 SISTEMA WELCOME 〕
+│ 🟢 ESTADO: ACTIVADO
+├────────────────
+│ Bienvenidas
+│ habilitadas
+╰─〔 🤖 JoshiBot 〕
+`.trim())
   }
 
+  // 🔴 DESACTIVAR
   if (option === 'off') {
-    if (!db[from]) return reply('⚠️ Welcome ya estaba desactivado')
+    if (!db[from]) {
+      return reply(`
+╭─〔 ⚠️ SISTEMA 〕
+│ Welcome ya
+│ estaba apagado
+╰─〔 🤖 JoshiBot 〕
+`.trim())
+    }
+
     db[from] = false
     fs.writeFileSync(dbFile, JSON.stringify(db, null, 2))
-    return reply('❌ Welcome desactivado')
+
+    return reply(`
+╭─〔 🚀 SISTEMA WELCOME 〕
+│ 🔴 ESTADO: DESACTIVADO
+├────────────────
+│ Bienvenidas
+│ desactivadas
+╰─〔 🤖 JoshiBot 〕
+`.trim())
   }
 
-  reply('⚙️ Uso correcto:\n.welcome on\n.welcome off')
+  // 📟 PANEL
+  reply(`
+╭─〔 ⚙️ PANEL WELCOME 〕
+│ Estado actual:
+│ ${db[from] ? '🟢 ACTIVADO' : '🔴 DESACTIVADO'}
+├────────────────
+│ Comandos:
+│ • .welcome on
+│ • .welcome off
+╰─〔 🤖 JoshiBot 〕
+`.trim())
 }
 
 handler.command = ['welcome']
@@ -114,7 +173,7 @@ handler.group = true
 handler.admin = true
 handler.menu = true
 
-// 👥 EVENTO
+// ───── EVENTO DE GRUPO ─────
 export async function welcomeEvent(sock, update) {
   const { id, participants, action } = update
   if (!['add', 'remove'].includes(action)) return
@@ -141,4 +200,4 @@ export async function welcomeEvent(sock, update) {
       })
     }
   }
-}
+    }
