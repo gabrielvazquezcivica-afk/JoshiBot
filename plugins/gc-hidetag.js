@@ -21,57 +21,43 @@ export const handler = async (m, {
 
   const participants = metadata.participants.map(p => p.id)
   const text = args.join(' ')
-  const quoted = m.quoted
+
+  // 📌 MENSAJE RESPONDIDO (FORMA CORRECTA)
+  const ctx = m.message?.extendedTextMessage?.contextInfo
+  const quoted = ctx?.quotedMessage
 
   // ─────────────────────────────
-  // 📌 RESPONDIENDO A UN MENSAJE
+  // 🔁 RESPONDIENDO A UN MENSAJE
   // ─────────────────────────────
   if (quoted) {
-    const mime = quoted.mtype
+    const type = Object.keys(quoted)[0]
     let msg = {}
 
     // 📝 TEXTO
-    if (mime === 'conversation' || mime === 'extendedTextMessage') {
-      msg.text = quoted.text
+    if (type === 'conversation' || type === 'extendedTextMessage') {
+      msg.text =
+        quoted.conversation ||
+        quoted.extendedTextMessage?.text
     }
 
-    // 🖼️ IMAGEN
-    else if (mime === 'imageMessage') {
-      const buffer = await quoted.download()
-      msg.image = buffer
-      msg.caption = quoted.text || text
-    }
-
-    // 🎥 VIDEO
-    else if (mime === 'videoMessage') {
-      const buffer = await quoted.download()
-      msg.video = buffer
-      msg.caption = quoted.text || text
-    }
-
-    // 🎧 AUDIO
-    else if (mime === 'audioMessage') {
-      const buffer = await quoted.download()
-      msg.audio = buffer
-      msg.mimetype = 'audio/mpeg'
-    }
-
-    // 🧷 STICKER
-    else if (mime === 'stickerMessage') {
-      const buffer = await quoted.download()
-      msg.sticker = buffer
-    }
-
-    // 📄 DOCUMENTO
-    else if (mime === 'documentMessage') {
-      const buffer = await quoted.download()
-      msg.document = buffer
-      msg.mimetype = quoted.mimetype
-      msg.fileName = quoted.fileName
-    }
-
+    // 📥 MEDIA
     else {
-      return reply('❌ Tipo de mensaje no soportado')
+      const mediaType = type.replace('Message', '')
+      const stream = await downloadContentFromMessage(
+        quoted[type],
+        mediaType
+      )
+
+      let buffer = Buffer.from([])
+      for await (const chunk of stream) {
+        buffer = Buffer.concat([buffer, chunk])
+      }
+
+      msg[mediaType] = buffer
+
+      if (quoted[type]?.caption || text) {
+        msg.caption = quoted[type]?.caption || text
+      }
     }
 
     msg.mentions = participants
