@@ -107,4 +107,4 @@ export function initAutoDetect(sock) {
   })
 
   console.log(chalk.green('🔔 AutoDetect estilo WhatsApp activo'))
-    }
+}
