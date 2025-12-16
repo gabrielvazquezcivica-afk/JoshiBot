@@ -1,93 +1,104 @@
-import { generateWAMessageFromContent } from '@whiskeysockets/baileys'
+import { getContentType } from '@whiskeysockets/baileys'
 
-export const handler = async (m, { sock, from, isGroup, reply, args }) => {
-  if (!isGroup) return reply('Este comando solo funciona en grupos')
+const handler = async (m, { conn, text, command }) => {
+  try {
+    // Solo grupos
+    if (!m.isGroup) return
 
-  const metadata = await sock.groupMetadata(from)
-  const participants = metadata.participants
-  const users = participants.map(p => p.id)
+    // Obtener participantes
+    const participants = m.participants || m.metadata?.participants
+    const mentions = participants.map(p => p.id)
 
-  const sender = m.key.participant
-  const isAdmin = participants.some(
-    p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
-  )
-  if (!isAdmin) return reply('❌ Solo administradores')
+    // Reacción
+    await conn.sendMessage(m.chat, {
+      react: { text: '📢', key: m.key }
+    })
 
-  const text = args.join(' ')
+    // Si responde a un mensaje
+    if (m.quoted) {
+      const q = m.quoted
+      const type = getContentType(q.message)
 
-  // 📅 Footer
-  const now = new Date()
-  const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
-  const footer = `\n\n> JoshiBot • ${now.getDate()} de ${months[now.getMonth()]} ${now.getFullYear()}`
+      // Clonar mensaje citado
+      let msg = await q.download?.()
 
-  // 😀 Reacción al comando
-  await sock.sendMessage(from, {
-    react: { text: '📢', key: m.key }
-  })
+      // Texto adicional
+      let caption = text || q.text || ''
 
-  // ================= RESPUESTA A MENSAJE
-  if (m.quoted) {
-    const q = m.quoted
-    let msg = {}
-
-    if (q.mtype === 'audioMessage') {
-      msg = {
-        audio: await q.download(),
-        ptt: q.ptt || false,
-        mimetype: 'audio/mp4',
-        mentions: users
+      // Reenviar según tipo
+      if (type === 'conversation' || type === 'extendedTextMessage') {
+        await conn.sendMessage(m.chat, {
+          text: caption,
+          mentions
+        })
       }
 
-    } else if (q.mtype === 'imageMessage') {
-      msg = {
-        image: await q.download(),
-        caption: (q.text || '') + footer,
-        mentions: users
+      else if (type === 'imageMessage') {
+        await conn.sendMessage(m.chat, {
+          image: msg,
+          caption,
+          mentions
+        })
       }
 
-    } else if (q.mtype === 'videoMessage') {
-      msg = {
-        video: await q.download(),
-        caption: (q.text || '') + footer,
-        mentions: users
+      else if (type === 'videoMessage') {
+        await conn.sendMessage(m.chat, {
+          video: msg,
+          caption,
+          mentions
+        })
       }
 
-    } else if (q.mtype === 'stickerMessage') {
-      msg = {
-        sticker: await q.download(),
-        mentions: users
+      else if (type === 'audioMessage') {
+        await conn.sendMessage(m.chat, {
+          audio: msg,
+          mimetype: 'audio/mpeg',
+          ptt: q.message.audioMessage.ptt,
+          mentions
+        })
       }
 
-    } else {
-      msg = {
-        text: (q.text || '') + footer,
-        mentions: users
+      else if (type === 'stickerMessage') {
+        await conn.sendMessage(m.chat, {
+          sticker: msg,
+          mentions
+        })
       }
+
+      else if (type === 'documentMessage') {
+        await conn.sendMessage(m.chat, {
+          document: msg,
+          fileName: q.message.documentMessage.fileName,
+          mimetype: q.message.documentMessage.mimetype,
+          caption,
+          mentions
+        })
+      }
+
+      return
     }
 
-    return sock.sendMessage(from, msg, { quoted: m })
+    // Si NO responde a nada
+    if (!text) {
+      return m.reply('✳️ Usa:\n.n <mensaje>\nO responde a un mensaje')
+    }
+
+    await conn.sendMessage(m.chat, {
+      text,
+      mentions
+    })
+
+  } catch (e) {
+    console.error('[HIDETAG]', e)
   }
-
-  // ================= SOLO TEXTO (AQUÍ SÍ)
-  if (!text) {
-    return reply('Uso: .n <mensaje> o responde a un mensaje')
-  }
-
-  const msg = generateWAMessageFromContent(
-    from,
-    {
-      extendedTextMessage: {
-        text: text + footer,
-        contextInfo: { mentionedJid: users }
-      }
-    },
-    { quoted: m, userJid: sock.user.id }
-  )
-
-  await sock.relayMessage(from, msg.message, {
-    messageId: msg.key.id
-  })
 }
 
-handler.command = ['hidetag', 'n']
+// Handler config
+handler.command = ['n']
+handler.group = true
+handler.admin = false
+handler.botAdmin = false
+handler.help = ['n <texto>']
 handler.tags = ['group']
+
+export default handler
