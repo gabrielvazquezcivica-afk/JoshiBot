@@ -8,7 +8,15 @@ export const handler = async (m, {
     return reply('🎄 Este comando solo funciona en grupos 🎅')
   }
 
-  // 📌 Obtener usuario a expulsar
+  // 🎯 REACCIÓN NAVIDEÑA AL COMANDO
+  await sock.sendMessage(m.key.remoteJid, {
+    react: {
+      text: '🎅',
+      key: m.key
+    }
+  })
+
+  // 📌 Usuario a expulsar (mención o reply)
   let user =
     m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0] ||
     m.message?.extendedTextMessage?.contextInfo?.participant
@@ -33,7 +41,7 @@ export const handler = async (m, {
       m.key.remoteJid,
       {
         text:
-          `╭━━━━━━━━━━━━━━━━━━━━━━╮
+`╭━━━━━━━━━━━━━━━━━━━━━━╮
 │ 🎄 EXPULSIÓN NAVIDEÑA 🎄 │
 ╰━━━━━━━━━━━━━━━━━━━━━━╯
 
@@ -41,8 +49,7 @@ export const handler = async (m, {
 👤 Usuario: @${user.split('@')[0]}
 👮 Moderador: @${sender.split('@')[0]}
 
-🎁 Ho ho ho… fuera del grupo ❄️`
-        ,
+🎁 Ho ho ho… fuera del grupo ❄️`,
         mentions: [user, sender]
       },
       { quoted: m }
@@ -53,7 +60,7 @@ export const handler = async (m, {
   }
 }
 
-handler.command = ['kick', 'expulsar', 'ban']
+handler.command = ['kick', 'expulsar']
 handler.tags = ['group']
 handler.group = true
 handler.admin = true
