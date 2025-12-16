@@ -28,7 +28,7 @@ const __dirname = path.dirname(__filename)
 const PREFIX = '.'
 const plugins = []
 
-// ⏱️ Anti mensajes viejos
+// ⏱️ Ignorar mensajes antiguos
 const botStartTime = Math.floor(Date.now() / 1000)
 
 // 🎨 Banner
@@ -67,12 +67,9 @@ async function start() {
   showBanner()
   await loadPlugins()
 
-  // 🔥 FIX DEFINITIVO PARA MENU
-  global.plugins = plugins
-
   const sock = await connectBot()
 
-  // 🔔 AUTO-DETECT (CAMBIOS DE GRUPO)
+  // 🔔 AUTO-DETECT (cambios de grupo)
   initAutoDetect(sock)
 
   // 👋 WELCOME / BYE
@@ -106,22 +103,19 @@ async function start() {
       ''
 
     if (!text) return
+    if (!text.startsWith(PREFIX)) return
 
-    const isCommand = text.startsWith(PREFIX)
+    const args = text.slice(PREFIX.length).trim().split(/\s+/)
+    const command = args.shift().toLowerCase()
 
     // 🧾 LOG
     console.log(
       chalk.cyan('\n📩 MENSAJE'),
       chalk.gray('\n📍 Chat:'), from,
       chalk.gray('\n👤 Usuario:'), pushName,
-      chalk.gray('\n⚙️ Tipo:'), isCommand ? 'Comando' : 'Mensaje',
+      chalk.gray('\n⚙️ Tipo:'), 'Comando',
       chalk.gray('\n💬 Texto:'), text
     )
-
-    if (!isCommand) return
-
-    const args = text.slice(PREFIX.length).trim().split(/\s+/)
-    const command = args.shift().toLowerCase()
 
     for (const plugin of plugins) {
       const handler = plugin.handler
@@ -137,6 +131,9 @@ async function start() {
           isGroup,
           args,
           command,
+
+          // ✅ FIX DEFINITIVO PARA MENU
+          plugins,
 
           reply: (text) =>
             sock.sendMessage(from, { text }, { quoted: m })
