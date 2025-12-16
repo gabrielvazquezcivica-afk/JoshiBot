@@ -1,104 +1,68 @@
-import { getContentType } from '@whiskeysockets/baileys'
-
-const handler = async (m, { conn, text, command }) => {
-  try {
-    // Solo grupos
-    if (!m.isGroup) return
-
-    // Obtener participantes
-    const participants = m.participants || m.metadata?.participants
-    const mentions = participants.map(p => p.id)
-
-    // Reacción
-    await conn.sendMessage(m.chat, {
-      react: { text: '📢', key: m.key }
-    })
-
-    // Si responde a un mensaje
-    if (m.quoted) {
-      const q = m.quoted
-      const type = getContentType(q.message)
-
-      // Clonar mensaje citado
-      let msg = await q.download?.()
-
-      // Texto adicional
-      let caption = text || q.text || ''
-
-      // Reenviar según tipo
-      if (type === 'conversation' || type === 'extendedTextMessage') {
-        await conn.sendMessage(m.chat, {
-          text: caption,
-          mentions
-        })
-      }
-
-      else if (type === 'imageMessage') {
-        await conn.sendMessage(m.chat, {
-          image: msg,
-          caption,
-          mentions
-        })
-      }
-
-      else if (type === 'videoMessage') {
-        await conn.sendMessage(m.chat, {
-          video: msg,
-          caption,
-          mentions
-        })
-      }
-
-      else if (type === 'audioMessage') {
-        await conn.sendMessage(m.chat, {
-          audio: msg,
-          mimetype: 'audio/mpeg',
-          ptt: q.message.audioMessage.ptt,
-          mentions
-        })
-      }
-
-      else if (type === 'stickerMessage') {
-        await conn.sendMessage(m.chat, {
-          sticker: msg,
-          mentions
-        })
-      }
-
-      else if (type === 'documentMessage') {
-        await conn.sendMessage(m.chat, {
-          document: msg,
-          fileName: q.message.documentMessage.fileName,
-          mimetype: q.message.documentMessage.mimetype,
-          caption,
-          mentions
-        })
-      }
-
-      return
-    }
-
-    // Si NO responde a nada
-    if (!text) {
-      return m.reply('✳️ Usa:\n.n <mensaje>\nO responde a un mensaje')
-    }
-
-    await conn.sendMessage(m.chat, {
-      text,
-      mentions
-    })
-
-  } catch (e) {
-    console.error('[HIDETAG]', e)
+export const handler = async (m, {
+  sock,
+  from,
+  args,
+  isGroup,
+  reply
+}) => {
+  if (!isGroup) {
+    return reply('❌ Este comando solo funciona en grupos')
   }
+
+  // 🔐 Verificar admin
+  const metadata = await sock.groupMetadata(from)
+  const admins = metadata.participants
+    .filter(p => p.admin)
+    .map(p => p.id)
+
+  const sender = m.key.participant
+  if (!admins.includes(sender)) {
+    return reply('❌ Solo los administradores pueden usar este comando')
+  }
+
+  // 📌 Obtener participantes (para hidetag)
+  const participants = metadata.participants.map(p => p.id)
+
+  // 🧠 Detectar si el comando responde a un mensaje
+  const quoted = m.message?.extendedTextMessage?.contextInfo?.quotedMessage
+
+  // 📝 TEXTO (si existe)
+  const text = args.length ? args.join(' ') : undefined
+
+  // 🔁 SI ES RESPUESTA A OTRO MENSAJE
+  if (quoted) {
+    const type = Object.keys(quoted)[0]
+
+    await sock.sendMessage(
+      from,
+      {
+        [type]: quoted[type],
+        caption: quoted[type]?.caption || text,
+        mentions: participants
+      },
+      { quoted: m }
+    )
+    return
+  }
+
+  // 📝 SOLO TEXTO
+  if (text) {
+    await sock.sendMessage(
+      from,
+      {
+        text,
+        mentions: participants
+      },
+      { quoted: m }
+    )
+    return
+  }
+
+  reply('⚠️ Usa:\n.n <texto>\nO responde a un mensaje')
 }
 
-// Handler config
 handler.command = ['n']
-handler.group = true
-handler.admin = false
-handler.botAdmin = false
-handler.help = ['n <texto>']
 handler.tags = ['group']
-
-export default handler
+handler.help = ['n <texto> (hidetag)']
+handler.group = true
+handler.admin = true
