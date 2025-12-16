@@ -1,4 +1,4 @@
-export const handler = async (m, { sock, from, sender, isGroup }) => {
+export const handler = async (m, { sock, from, sender, isGroup, reply }) => {
   if (!isGroup) return
 
   // 🔒 Obtener metadata
@@ -7,42 +7,52 @@ export const handler = async (m, { sock, from, sender, isGroup }) => {
     .filter(p => p.admin)
     .map(p => p.id)
 
-  // ❌ Si no es admin → NO RESPONDE NADA
-  if (!admins.includes(sender)) return
+  // ❌ NO es admin → AVISA
+  if (!admins.includes(sender)) {
+    return reply('⛔ Solo los administradores pueden usar este comando.')
+  }
 
-  // 🎯 Obtener usuario objetivo
+  // 🎯 Usuario objetivo
   let target = null
 
-  // 👉 Si responde a un mensaje
+  // 👉 Respondiendo mensaje
   if (m.message?.extendedTextMessage?.contextInfo?.participant) {
     target = m.message.extendedTextMessage.contextInfo.participant
   }
 
-  // 👉 Si menciona
-  if (!target && m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.length) {
+  // 👉 Mencionando
+  if (
+    !target &&
+    m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.length
+  ) {
     target = m.message.extendedTextMessage.contextInfo.mentionedJid[0]
   }
 
-  // ❌ Si no hay target → silencio total
-  if (!target) return
+  // ❌ No hay target
+  if (!target) {
+    return reply('👤 Responde a un mensaje o menciona al usuario.')
+  }
 
-  // 🚫 Si ya es admin → silencio
-  if (admins.includes(target)) return
+  // 🚫 Ya es admin
+  if (admins.includes(target)) {
+    return reply('ℹ️ Ese usuario ya es administrador.')
+  }
 
   try {
     // 👑 PROMOVER
     await sock.groupParticipantsUpdate(from, [target], 'promote')
 
-    // ✅ Reacción silenciosa al comando
+    // 👑 Reacción
     await sock.sendMessage(from, {
       react: { text: '👑', key: m.key }
     })
-  } catch {
-    // ❌ Error = silencio
+  } catch (e) {
+    reply('❌ No se pudo promover al usuario.')
   }
 }
 
 handler.command = ['promote', 'admin']
 handler.group = true
 handler.admin = true
-handler.menu = false
+handler.menu = true
+handler.tags = ['group']
