@@ -1,149 +1,75 @@
 import chalk from 'chalk'
+import fetch from 'node-fetch'
+import ws from 'ws'
+let WAMessageStubType = (await import('@whiskeysockets/baileys')).default
+import { readdirSync, unlinkSync, existsSync, promises as fs, rmSync} from 'fs'
+import path from 'path'
 
-export function initAutoDetect(sock) {
+let handler = m => m
+handler.before = async function (m, { conn, participants, groupMetadata}) {
+    if (!m.messageStubType ||!m.isGroup) return
 
-  sock.ev.on('groups.update', async (updates) => {
-    for (const update of updates) {
-      try {
-        const jid = update.id
+    const fkontak = {
+        key: {
+            participants: "0@s.whatsapp.net",
+            remoteJid: "status@broadcast",
+            fromMe: false,
+            id: "AlienMenu"
+},
+        message: {
+            locationMessage: {
+                name: "*JoshiBot 💚*",
+                jpegThumbnail: await (await fetch('https://files.catbox.moe/1j784p.jpg')).buffer(),
+                vcard:
+                    "BEGIN:VCARD\n" +
+                    "VERSION:3.0\n" +
+                    "N:;Sasuke;;;\n" +
+                    "FN:Sasuke Bot\n" +
+                    "ORG:Barboza Developers\n" +
+                    "TITLE:\n" +
+                    "item1.TEL;waid=19709001746:+1 (970) 900-1746\n" +
+                    "item1.X-ABLabel:Alien\n" +
+                    "X-WA-BIZ-DESCRIPTION:🛸 Llamado grupal universal con estilo.\n" +
+                    "X-WA-BIZ-NAME:Sasuke\n" +
+                    "END:VCARD"
+}
+},
+        participant: "0@s.whatsapp.net"
+}
 
-        // 🔒 ABRIR / CERRAR GRUPO
-        if (update.announce !== undefined) {
-          const isClosed = update.announce
-          const actionBy = update.author || 'Desconocido'
+    let chat = global.db.data.chats[m.chat]
+    let usuario = `@${m.sender.split`@`[0]}`
+    let pp = await conn.profilePictureUrl(m.chat, 'image').catch(_ => null) || 'https://files.catbox.moe/xr2m6u.jpg'
 
-          const text = `
-🔔 *WhatsApp*
-━━━━━━━━━━━━━━
-${isClosed ? '🔒 El grupo fue *cerrado*' : '🔓 El grupo fue *abierto*'}
+    let nombre = `✨ ${usuario} *ha cambiado el nombre del grupo* ✨\n\n> 📝 *Nuevo nombre:* _${m.messageStubParameters[0]}_`
+    let foto = `📸 *¡Nueva foto de grupo!* 📸\n\n> 💫 Acción realizada por: ${usuario}`
+    let edit = `⚙️ ${usuario} ha ajustado la configuración del grupo.\n\n> 🔒 Ahora *${m.messageStubParameters[0] == 'on'? 'solo los administradores': 'todos'}* pueden configurar el grupo.`
+    let newlink = `🔗 *¡El enlace del grupo ha sido restablecido!* 🔗\n\n> 💫 Acción realizada por: ${usuario}`
+    let status = `🗣️ El grupo ha sido *${m.messageStubParameters[0] == 'on'? 'cerrado': 'abierto'}* por ${usuario}!\n\n> 💬 Ahora *${m.messageStubParameters[0] == 'on'? 'solo los administradores': 'todos'}* pueden enviar mensajes.`
+    let admingp = `👑 @${m.messageStubParameters[0].split`@`[0]} *¡Ahora es administrador del grupo!* 👑\n\n> 💫 Acción realizada por: ${usuario}`
+    let noadmingp = `🗑️ @${m.messageStubParameters[0].split`@`[0]} *ha dejado de ser administrador del grupo.* 🗑️\n\n> 💫 Acción realizada por: ${usuario}`
 
-${isClosed
-  ? '❄️ Solo los *admins* pueden escribir'
-  : '✨ Todos los *miembros* pueden escribir'}
+    if (chat.detect && m.messageStubType == 21) {
+        await this.sendMessage(m.chat, { text: nombre, mentions: [m.sender]}, { quoted: fkontak})
+} else if (chat.detect && m.messageStubType == 22) {
+        await this.sendMessage(m.chat, { image: { url: pp}, caption: foto, mentions: [m.sender]}, { quoted: fkontak})
+} else if (chat.detect && m.messageStubType == 23) {
+        await this.sendMessage(m.chat, { text: newlink, mentions: [m.sender]}, { quoted: fkontak})
+} else if (chat.detect && m.messageStubType == 25) {
+        await this.sendMessage(m.chat, { text: edit, mentions: [m.sender]}, { quoted: fkontak})
+} else if (chat.detect && m.messageStubType == 26) {
+        await this.sendMessage(m.chat, { text: status, mentions: [m.sender]}, { quoted: fkontak})
+} else if (chat.detect && m.messageStubType == 29) {
+        await this.sendMessage(m.chat, { text: admingp, mentions: [`${m.sender}`,`${m.messageStubParameters[0]}`]}, { quoted: fkontak})
+} else if (chat.detect && m.messageStubType == 30) {
+await this.sendMessage(m.chat, { text: noadmingp, mentions: [`${m.sender}`,`${m.messageStubParameters[0]}`]}, { quoted: fkontak})
+} else {
+        console.log({
+            messageStubType: m.messageStubType,
+            messageStubParameters: m.messageStubParameters,
+            type: WAMessageStubType[m.messageStubType],
+})
+}
+}
 
-👤 Acción realizada por:
-@${actionBy.split('@')[0]}
-━━━━━━━━━━━━━━
-`.trim()
-
-          await sock.sendMessage(jid, {
-            text,
-            mentions: [actionBy]
-          })
-        }
-
-        // ✏️ CAMBIO DE NOMBRE
-        if (update.subject) {
-          const actor = update.author || 'Desconocido'
-          const text = `
-🔔 *WhatsApp*
-━━━━━━━━━━━━━━
-✏️ *Nombre del grupo actualizado*
-
-📌 Nuevo nombre:
-${update.subject}
-
-👤 Cambiado por:
-@${actor.split('@')[0]}
-━━━━━━━━━━━━━━
-`.trim()
-
-          await sock.sendMessage(jid, {
-            text,
-            mentions: [actor]
-          })
-        }
-
-        // 📝 CAMBIO DE DESCRIPCIÓN
-        if (update.desc !== undefined) {
-          const actor = update.author || 'Desconocido'
-          const text = `
-🔔 *WhatsApp*
-━━━━━━━━━━━━━━
-📝 *Descripción del grupo modificada*
-
-👤 Cambiado por:
-@${actor.split('@')[0]}
-━━━━━━━━━━━━━━
-`.trim()
-
-          await sock.sendMessage(jid, {
-            text,
-            mentions: [actor]
-          })
-        }
-
-      } catch (err) {
-        console.log(chalk.red('❌ AutoDetect error:'), err)
-      }
-    }
-  })
-
-  // ⭐ PROMOTE / DEMOTE ADMIN
-  sock.ev.on('group-participants.update', async (update) => {
-    try {
-      if (!['promote', 'demote'].includes(update.action)) return
-
-      const jid = update.id
-      const actor = update.author || 'Desconocido'
-      const target = update.participants?.[0]
-
-      if (!target) return
-
-      const isPromote = update.action === 'promote'
-
-      const text = `
-🔔 *WhatsApp*
-━━━━━━━━━━━━━━
-${isPromote ? '⭐ *Nuevo administrador*' : '⚠️ *Administrador removido*'}
-
-👤 Usuario:
-@${target.split('@')[0]}
-
-🛠️ Acción realizada por:
-@${actor.split('@')[0]}
-━━━━━━━━━━━━━━
-`.trim()
-
-      await sock.sendMessage(jid, {
-        text,
-        mentions: [target, actor]
-      })
-
-    } catch (err) {
-      console.log(chalk.red('❌ Promote/Demote error:'), err)
-    }
-  })
-
-  // 🖼️ CAMBIO DE FOTO
-  sock.ev.on('groups.update', async (updates) => {
-    for (const update of updates) {
-      if (!update.picture) return
-
-      try {
-        const jid = update.id
-        const actor = update.author || 'Desconocido'
-
-        const text = `
-🔔 *WhatsApp*
-━━━━━━━━━━━━━━
-🖼️ *Foto del grupo actualizada*
-
-👤 Cambiado por:
-@${actor.split('@')[0]}
-━━━━━━━━━━━━━━
-`.trim()
-
-        await sock.sendMessage(jid, {
-          text,
-          mentions: [actor]
-        })
-
-      } catch (err) {
-        console.log(chalk.red('❌ Foto grupo error:'), err)
-      }
-    }
-  })
-
-  console.log(chalk.green('🔔 AutoDetect de grupo ACTIVADO'))
-          }
+export default handler
