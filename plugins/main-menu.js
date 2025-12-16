@@ -1,11 +1,38 @@
-export const handler = async (m, { reply, pushName, plugins }) => {
+export const handler = async (m, {
+  sock,
+  reply,
+  from,
+  pushName,
+  plugins
+}) => {
   const uptime = clockString(process.uptime() * 1000)
 
   const botName = 'JoshiBot'
   const dev = 'SoyGabo'
   const saludo = getGreeting()
 
-  // 🎄 Agrupar comandos por categorías (tags)
+  // 🎄 REACCIÓN AL MENÚ
+  await sock.sendMessage(from, {
+    react: {
+      text: '🎄',
+      key: m.key
+    }
+  })
+
+  // 🎞️ GIF NAVIDEÑO (PUEDES CAMBIAR LA URL)
+  await sock.sendMessage(
+    from,
+    {
+      video: {
+        url: 'https://media.tenor.com/5Q1z5T6k7JkAAAPo/christmas-anime.mp4'
+      },
+      gifPlayback: true,
+      caption: '🎅✨ Menú navideño activado ✨🎅'
+    },
+    { quoted: m }
+  )
+
+  // 🎄 Agrupar comandos por tags
   const categories = {}
 
   for (const plugin of plugins) {
@@ -71,7 +98,7 @@ function clockString(ms) {
   return [h, m, s].map(v => v.toString().padStart(2, '0')).join(':')
 }
 
-/* 🌤️ Saludo por hora */
+/* 🌤️ Saludo según hora */
 function getGreeting() {
   const hour = new Date().getHours()
   if (hour >= 5 && hour < 12) return '☀️ Buenos días'
