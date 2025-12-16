@@ -98,7 +98,12 @@ async function start() {
             args,
             command,
             isCommand,
-            plugins
+            plugins,
+            reply: (text) => sock.sendMessage(
+  from,
+  { text },
+  { quoted: m }
+)
           })
         } catch (e) {
           console.error(chalk.red('❌ Error en plugin:'), e)
