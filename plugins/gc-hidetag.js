@@ -3,7 +3,6 @@ import { generateWAMessageFromContent } from '@whiskeysockets/baileys'
 export const handler = async (m, { sock, from, isGroup, reply, args }) => {
   if (!isGroup) return reply('Este comando solo funciona en grupos')
 
-  // 🔐 Verificar admin
   const metadata = await sock.groupMetadata(from)
   const participants = metadata.participants
   const users = participants.map(p => p.id)
@@ -13,86 +12,61 @@ export const handler = async (m, { sock, from, isGroup, reply, args }) => {
     p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
   )
 
-  if (!isAdmin) return reply('❌ Solo los administradores pueden usar este comando')
+  if (!isAdmin) return reply('❌ Solo admins')
 
   const text = args.join(' ')
 
-  // 📅 Fecha + emoji
+  // 📅 Footer
   const now = new Date()
   const day = now.getDate()
   const year = now.getFullYear()
-
-  const months = [
-    { name: 'Enero', emoji: '❄️' },
-    { name: 'Febrero', emoji: '💖' },
-    { name: 'Marzo', emoji: '🌸' },
-    { name: 'Abril', emoji: '🌷' },
-    { name: 'Mayo', emoji: '🌼' },
-    { name: 'Junio', emoji: '☀️' },
-    { name: 'Julio', emoji: '🔥' },
-    { name: 'Agosto', emoji: '🌴' },
-    { name: 'Septiembre', emoji: '🍂' },
-    { name: 'Octubre', emoji: '🎃' },
-    { name: 'Noviembre', emoji: '🍁' },
-    { name: 'Diciembre', emoji: '🎄' }
-  ]
-
-  const month = months[now.getMonth()]
-  const footer = `\n\n> JoshiBot • ${day} de ${month.name} ${year} ${month.emoji}`
+  const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+  const footer = `\n\n> JoshiBot • ${day} de ${monthNames[now.getMonth()]} ${year}`
 
   // 😀 Reacción AL COMANDO
   await sock.sendMessage(from, {
-    react: {
-      text: '📢',
-      key: m.key
-    }
+    react: { text: '📢', key: m.key }
   })
 
   // ================= CON MENSAJE CITADO
   if (m.quoted) {
     const q = m.quoted
-    const mime = q.mtype
+    const type = Object.keys(q.message || {})[0]
     let msg = {}
 
-    switch (mime) {
-      case 'audioMessage':
-        msg = {
-          audio: await q.download(),
-          ptt: q.ptt || false,
-          mimetype: 'audio/mp4',
-          mentions: users
-        }
-        break
+    if (type === 'audioMessage') {
+      msg = {
+        audio: await q.download(),
+        ptt: q.message.audioMessage?.ptt || false,
+        mimetype: 'audio/mp4',
+        mentions: users
+      }
 
-      case 'imageMessage':
-        msg = {
-          image: await q.download(),
-          caption: (q.text || text || '') + footer,
-          mentions: users
-        }
-        break
+    } else if (type === 'imageMessage') {
+      msg = {
+        image: await q.download(),
+        caption: (q.text || text || '') + footer,
+        mentions: users
+      }
 
-      case 'videoMessage':
-        msg = {
-          video: await q.download(),
-          caption: (q.text || text || '') + footer,
-          mentions: users
-        }
-        break
+    } else if (type === 'videoMessage') {
+      msg = {
+        video: await q.download(),
+        caption: (q.text || text || '') + footer,
+        mentions: users
+      }
 
-      case 'stickerMessage':
-        msg = {
-          sticker: await q.download(),
-          mentions: users
-        }
-        break
+    } else if (type === 'stickerMessage') {
+      msg = {
+        sticker: await q.download(),
+        mentions: users
+      }
 
-      default:
-        msg = {
-          text: (q.text || text || '') + footer,
-          mentions: users
-        }
-        break
+    } else {
+      msg = {
+        text: (q.text || text || '') + footer,
+        mentions: users
+      }
     }
 
     return sock.sendMessage(from, msg, { quoted: m })
