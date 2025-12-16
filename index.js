@@ -8,10 +8,8 @@ async function askLoginMethod() {
     console.log(chalk.yellow('[2] Código de emparejamiento\n'))
 
     process.stdout.write('👉 Elige una opción (1 o 2): ')
-
     process.stdin.once('data', (data) => {
-      const option = data.toString().trim()
-      resolve(option === '2') // true = pairing | false = QR
+      resolve(data.toString().trim() === '2')
     })
   })
 }
@@ -31,7 +29,9 @@ async function start() {
       m.message.extendedTextMessage?.text
 
     if (text === '.ping') {
-      await sock.sendMessage(m.key.remoteJid, { text: 'pong 🏓' })
+      await sock.sendMessage(m.key.remoteJid, {
+        text: 'pong 🏓'
+      })
     }
   })
 
