@@ -8,7 +8,7 @@ import { fileURLToPath, pathToFileURL } from 'url'
 // 👋 WELCOME EVENT
 import { welcomeEvent } from './plugins/welcome.js'
 
-// 🔔 AUTO-DETECT CAMBIOS DE GRUPO
+// 🔔 AUTO-DETECT
 import { initAutoDetect } from './plugins/_autodetec.js'
 
 /* ───── Silenciar errores molestos ───── */
@@ -31,7 +31,7 @@ const plugins = []
 // ⏱️ ANTI MENSAJES ANTIGUOS
 const botStartTime = Math.floor(Date.now() / 1000)
 
-// 🎨 Banner 3D
+// 🎨 Banner
 function showBanner() {
   console.clear()
   const banner = figlet.textSync('JoshiBot', { font: 'Slant' })
@@ -66,20 +66,19 @@ async function start() {
 
   const sock = await connectBot()
 
-  // ✅ INICIAR AUTO-DETECCIÓN (CAMBIOS DE GRUPO)
+  // 🔔 INICIAR AUTO-DETECT (CAMBIOS DE GRUPO)
   initAutoDetect(sock)
 
-  // ✅ WELCOME / BYE
+  // 👋 WELCOME / BYE
   sock.ev.on('group-participants.update', async (update) => {
     try {
-      console.log(chalk.blueBright('👥 Evento grupo:'), update.action)
       await welcomeEvent(sock, update)
     } catch (e) {
-      console.error(chalk.red('❌ Error en welcome:'), e)
+      console.error('❌ Error en welcome:', e)
     }
   })
 
-  // ✅ MENSAJES
+  // 📩 MENSAJES
   sock.ev.on('messages.upsert', async ({ messages }) => {
     const m = messages?.[0]
     if (!m?.message || m.key.fromMe) return
@@ -90,7 +89,7 @@ async function start() {
 
     const from = m.key.remoteJid
     const isGroup = from.endsWith('@g.us')
-    const senderJid = isGroup ? m.key.participant : from
+    const sender = isGroup ? m.key.participant : from
     const pushName = m.pushName || 'Sin nombre'
 
     const text =
@@ -106,20 +105,15 @@ async function start() {
 
     // 🧾 LOG
     console.log(
-      chalk.cyan('\n📩 MENSAJE RECIBIDO'),
-      chalk.gray('\n🗂 Chat:'), chalk.yellow(isGroup ? 'Grupo' : 'Privado'),
-      chalk.gray('\n📍 ID:'), chalk.white(from),
-      chalk.gray('\n👤 Usuario:'), chalk.green(pushName),
-      chalk.gray('\n🆔 JID:'), chalk.gray(senderJid),
-      chalk.gray('\n⚙️ Tipo:'), isCommand
-        ? chalk.magenta('Comando')
-        : chalk.blue('Mensaje'),
-      chalk.gray('\n💬 Texto:'), chalk.white(text)
+      chalk.cyan('\n📩 MENSAJE'),
+      chalk.gray('\n📍 Chat:'), from,
+      chalk.gray('\n👤 Usuario:'), pushName,
+      chalk.gray('\n⚙️ Tipo:'), isCommand ? 'Comando' : 'Mensaje',
+      chalk.gray('\n💬 Texto:'), text
     )
 
     if (!isCommand) return
 
-    // ⚙️ COMANDO
     const args = text.slice(PREFIX.length).trim().split(/\s+/)
     const command = args.shift().toLowerCase()
 
@@ -132,25 +126,27 @@ async function start() {
         await handler(m, {
           sock,
           from,
-          sender: senderJid,
+          sender,
           pushName,
           isGroup,
           args,
           command,
-          plugins,
 
-          // 💬 REPLY
-          reply: (text) =>
-            sock.sendMessage(from, { text }, { quoted: m })
+          // 💬 REPLY REAL
+          reply: (text) => sock.sendMessage(
+            from,
+            { text },
+            { quoted: m }
+          )
         })
       } catch (e) {
-        console.error(chalk.red('❌ Error en plugin:'), e)
+        console.error('❌ Error en plugin:', e)
       }
       break
     }
   })
 
-  console.log(chalk.green('🤖 Bot listo, esperando mensajes...\n'))
+  console.log(chalk.green('🤖 JoshiBot listo\n'))
 }
 
 start()
