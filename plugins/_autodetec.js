@@ -4,11 +4,10 @@ const lastAdmin = new Map() // grupo => último admin activo
 
 export function initAutoDetect(sock) {
 
-  /* ───── Detectar último admin que habló ───── */
+  /* ───── Guardar último admin que habló ───── */
   sock.ev.on('messages.upsert', async ({ messages }) => {
     const m = messages?.[0]
-    if (!m?.key?.remoteJid) return
-    if (!m.key.remoteJid.endsWith('@g.us')) return
+    if (!m?.key?.remoteJid?.endsWith('@g.us')) return
 
     const jid = m.key.remoteJid
     const sender = m.key.participant
@@ -17,88 +16,63 @@ export function initAutoDetect(sock) {
     try {
       const meta = await sock.groupMetadata(jid)
       const isAdmin = meta.participants.find(
-        p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
+        p =>
+          p.id === sender &&
+          (p.admin === 'admin' || p.admin === 'superadmin')
       )
       if (isAdmin) lastAdmin.set(jid, sender)
     } catch {}
   })
 
-  /* ───── Cambios del grupo (abrir / cerrar / nombre / desc) ───── */
+  /* ───── Abrir / cerrar grupo ───── */
   sock.ev.on('groups.update', async (updates) => {
     for (const u of updates) {
+      if (u.announce === undefined) continue
+
       const jid = u.id
       const actor = lastAdmin.get(jid)
-      const actorTag = actor ? `@${actor.split('@')[0]}` : 'un administrador'
 
-      try {
-        // 🔒 Abrir / cerrar grupo
-        if (u.announce !== undefined) {
-          const txt = u.announce
-            ? `🔒 Solo los administradores pueden enviar mensajes.\n\n👤 Acción realizada por ${actorTag}`
-            : `🔓 Todos los participantes pueden enviar mensajes.\n\n👤 Acción realizada por ${actorTag}`
+      const actorJid = actor || null
+      const actorText = actorJid
+        ? `@${actorJid.split('@')[0]}`
+        : 'un administrador'
 
-          await sock.sendMessage(jid, {
-            text: txt,
-            mentions: actor ? [actor] : [],
-            contextInfo: {
-              forwardingScore: 9999,
-              isForwarded: true
-            }
-          })
+      await sock.sendMessage(jid, {
+        text: u.announce
+          ? `🔒 Solo los administradores pueden enviar mensajes.\n\n👤 Acción realizada por ${actorText}`
+          : `🔓 Todos los participantes pueden enviar mensajes.\n\n👤 Acción realizada por ${actorText}`,
+        mentions: actorJid ? [actorJid] : [],
+        contextInfo: {
+          forwardingScore: 9999,
+          isForwarded: true
         }
-
-        // ✏️ Cambio de nombre
-        if (u.subject) {
-          await sock.sendMessage(jid, {
-            text:
-`✏️ El nombre del grupo fue cambiado.
-
-📛 ${u.subject}
-
-👤 Acción realizada por ${actorTag}`,
-            mentions: actor ? [actor] : [],
-            contextInfo: {
-              forwardingScore: 9999,
-              isForwarded: true
-            }
-          })
-        }
-
-        // 🧾 Descripción
-        if (u.desc !== undefined) {
-          await sock.sendMessage(jid, {
-            text:
-`🧾 La descripción del grupo fue actualizada.
-
-👤 Acción realizada por ${actorTag}`,
-            mentions: actor ? [actor] : [],
-            contextInfo: {
-              forwardingScore: 9999,
-              isForwarded: true
-            }
-          })
-        }
-
-      } catch (e) {
-        console.log(chalk.red('AutoDetect error:'), e)
-      }
+      })
     }
   })
 
-  /* ───── Admins (aquí WhatsApp SÍ manda actor) ───── */
+  /* ───── Dar / quitar admin (FIX REAL) ───── */
   sock.ev.on('group-participants.update', async (u) => {
     const { id, action, participants, actor } = u
     if (!['promote', 'demote'].includes(action)) return
 
-    const user = `@${participants[0].split('@')[0]}`
-    const admin = actor ? `@${actor.split('@')[0]}` : 'un administrador'
+    const target = participants?.[0]
+    const actorJid = actor || lastAdmin.get(id) || null
+
+    const userTag = target ? `@${target.split('@')[0]}` : 'un usuario'
+    const adminTag = actorJid
+      ? `@${actorJid.split('@')[0]}`
+      : 'un administrador'
+
+    const mentions = []
+    if (target) mentions.push(target)
+    if (actorJid) mentions.push(actorJid)
 
     await sock.sendMessage(id, {
       text:
         action === 'promote'
-          ? `👑 ${user} ahora es administrador.\n\n👤 Acción realizada por ${admin}`
-          : `🧹 ${user} ya no es administrador.\n\n👤 Acción realizada por ${admin}`,
-      mentions: actor ? [participants[0], actor] : [participants[0]],
+          ? `👑 ${userTag} ahora es administrador.\n\n👤 Acción realizada por ${adminTag}`
+          : `🧹 ${userTag} ya no es administrador.\n\n👤 Acción realizada por ${adminTag}`,
+      mentions,
       contextInfo: {
         forwardingScore: 9999,
         isForwarded: true
@@ -106,5 +80,5 @@ export function initAutoDetect(sock) {
     })
   })
 
-  console.log(chalk.green('🔔 AutoDetect estilo WhatsApp activo'))
+  console.log(chalk.green('🔔 AutoDetect WhatsApp-style (admin FIXED)'))
 }
