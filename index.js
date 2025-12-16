@@ -1,37 +1,42 @@
 import { connectBot } from './lib/connection.js'
 import chalk from 'chalk'
 import figlet from 'figlet'
+import fs from 'fs'
+import path from 'path'
 
 const PREFIX = '.'
+const plugins = []
 
-// 🎨 BANNER 3D AL INICIAR
+// 🎨 Banner 3D
 function showBanner() {
   console.clear()
-
-  const banner = figlet.textSync('JoshiBot', {
-    font: 'Slant',
-    horizontalLayout: 'default',
-    verticalLayout: 'default'
-  })
-
+  const banner = figlet.textSync('JoshiBot', { font: 'Slant' })
   console.log(chalk.cyanBright(banner))
-  console.log(
-    chalk.magentaBright('🤖 JoshiBot iniciado correctamente') +
-    chalk.gray('\n────────────────────────────────────')
-  )
+  console.log(chalk.gray('──────────────────────────────────'))
+}
+
+// 📦 Cargar plugins
+function loadPlugins() {
+  const dir = path.resolve('./plugins')
+  const files = fs.readdirSync(dir).filter(f => f.endsWith('.js'))
+
+  for (const file of files) {
+    const plugin = require(`${dir}/${file}`)
+    plugins.push(plugin)
+  }
+
+  console.log(chalk.green(`🔌 Plugins cargados: ${plugins.length}`))
 }
 
 async function start() {
   showBanner()
+  loadPlugins()
 
-  // 🔑 Inicia bot (QR o código depende de config / sesión)
   const sock = await connectBot()
 
-  // 📩 ESCUCHAR MENSAJES
   sock.ev.on('messages.upsert', async ({ messages }) => {
     const m = messages[0]
-    if (!m?.message) return
-    if (m.key.fromMe) return
+    if (!m?.message || m.key.fromMe) return
 
     const from = m.key.remoteJid
     const isGroup = from.endsWith('@g.us')
@@ -44,29 +49,34 @@ async function start() {
       m.message.videoMessage?.caption ||
       ''
 
-    if (!text) return
-
-    // 🧾 LOG EN CONSOLA
-    console.log(
-      chalk.green('\n📩 MENSAJE'),
-      chalk.white(text),
-      chalk.gray('\n👤 De:'), chalk.yellow(sender),
-      chalk.gray('\n💬 Chat:'), chalk.cyan(isGroup ? 'Grupo' : 'Privado')
-    )
-
-    // ⚙️ DETECTAR COMANDO (para plugins después)
     if (!text.startsWith(PREFIX)) return
 
     const args = text.slice(PREFIX.length).trim().split(/\s+/)
     const command = args.shift().toLowerCase()
 
-    // 🧪 Comando base de prueba
-    if (command === 'ping') {
-      await sock.sendMessage(from, { text: 'pong 🏓' })
+    for (const plugin of plugins) {
+      const handler = plugin.handler
+      if (!handler?.command) continue
+
+      if (handler.command.includes(command)) {
+        try {
+          await handler(m, {
+            sock,
+            args,
+            command,
+            isGroup,
+            sender,
+            from
+          })
+        } catch (e) {
+          console.error(e)
+        }
+        break
+      }
     }
   })
 
-  console.log(chalk.green('\n✅ Bot listo, esperando mensajes...\n'))
+  console.log(chalk.green('🤖 Bot listo'))
 }
 
 start()
