@@ -8,6 +8,9 @@ import { fileURLToPath, pathToFileURL } from 'url'
 // 👋 WELCOME
 import { welcomeEvent } from './plugins/welcome.js'
 
+// 🚫 ANTILINK
+import { antiLinkEvent } from './plugins/gc-antilink.js'
+
 // 🔔 AUTO-DETECT
 import { initAutoDetect } from './plugins/_autodetec.js'
 
@@ -67,6 +70,9 @@ async function start() {
   showBanner()
   await loadPlugins()
 
+  // 🔥 FIX MENU GLOBAL
+  global.plugins = plugins
+
   const sock = await connectBot()
 
   // 🔔 AUTO-DETECT (cambios de grupo)
@@ -85,6 +91,13 @@ async function start() {
   sock.ev.on('messages.upsert', async ({ messages }) => {
     const m = messages?.[0]
     if (!m?.message || m.key.fromMe) return
+
+    // 🚫 ANTILINK (detecta links aunque no sean comandos)
+    try {
+      await antiLinkEvent(sock, m)
+    } catch (e) {
+      console.error('❌ Error en antilink:', e)
+    }
 
     // ❌ Ignorar mensajes viejos
     if (!m.messageTimestamp) return
@@ -132,7 +145,7 @@ async function start() {
           args,
           command,
 
-          // ✅ FIX DEFINITIVO PARA MENU
+          // ✅ Plugins para menu
           plugins,
 
           reply: (text) =>
