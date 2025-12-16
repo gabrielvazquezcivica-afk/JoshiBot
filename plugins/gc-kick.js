@@ -8,15 +8,18 @@ export const handler = async (m, {
     return reply('🎄 Este comando solo funciona en grupos 🎅')
   }
 
-  // 🎯 REACCIÓN NAVIDEÑA AL COMANDO
-  await sock.sendMessage(m.key.remoteJid, {
-    react: {
-      text: '🎅',
-      key: m.key
-    }
-  })
+  // 🔒 Obtener metadata del grupo
+  const metadata = await sock.groupMetadata(m.key.remoteJid)
+  const admins = metadata.participants
+    .filter(p => p.admin)
+    .map(p => p.id)
 
-  // 📌 Usuario a expulsar (mención o reply)
+  // ❌ No es admin → AVISA
+  if (!admins.includes(sender)) {
+    return reply('⛔ Solo los administradores pueden usar este comando.')
+  }
+
+  // 🎯 Usuario a expulsar (reply o mención)
   let user =
     m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0] ||
     m.message?.extendedTextMessage?.contextInfo?.participant
@@ -31,12 +34,19 @@ export const handler = async (m, {
   }
 
   try {
+    // ❄️ Expulsar
     await sock.groupParticipantsUpdate(
       m.key.remoteJid,
       [user],
       'remove'
     )
 
+    // 🎅 Reacción
+    await sock.sendMessage(m.key.remoteJid, {
+      react: { text: '🎅', key: m.key }
+    })
+
+    // 📢 Mensaje estilo sistema
     await sock.sendMessage(
       m.key.remoteJid,
       {
@@ -65,3 +75,4 @@ handler.tags = ['group']
 handler.group = true
 handler.admin = true
 handler.botAdmin = true
+handler.menu = true
