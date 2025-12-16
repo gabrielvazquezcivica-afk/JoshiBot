@@ -3,8 +3,9 @@ export const handler = async (m, { reply, pushName, plugins }) => {
 
   const botName = 'JoshiBot'
   const dev = 'SoyGabo'
+  const saludo = getGreeting()
 
-  // 🎄 Agrupar comandos por tags
+  // 🎄 Agrupar comandos por categorías (tags)
   const categories = {}
 
   for (const plugin of plugins) {
@@ -24,8 +25,7 @@ export const handler = async (m, { reply, pushName, plugins }) => {
 
 🤖 BOT: ${botName}
 👑 CREADOR: ${dev}
-⭐ MODO: Público
-📱 SISTEMA: Baileys MD
+🌤️ ${saludo}
 ⏱️ ACTIVO: ${uptime}
 
 ───────────────
@@ -39,14 +39,20 @@ export const handler = async (m, { reply, pushName, plugins }) => {
 `
 
   for (const tag in categories) {
-    menu += `\n❄️ 🎅 ${tag.toUpperCase()} 🎅 ❄️\n`
+    menu += `
+╭───────────────╮
+│ 🎅 ${tag.toUpperCase()} 🎅 │
+╰───────────────╯
+`
+
     for (const cmd of categories[tag]) {
       menu += `• .${cmd}\n`
     }
+
+    menu += `───────────────\n`
   }
 
   menu += `
-───────────────
 🎅 ${botName} activo con espíritu navideño
 🎄 Felices fiestas y buenos comandos 🎁
 `
@@ -57,9 +63,18 @@ export const handler = async (m, { reply, pushName, plugins }) => {
 handler.command = ['menu', 'help', 'comandos']
 handler.tags = ['main']
 
+/* ⏱️ Tiempo activo */
 function clockString(ms) {
   let h = Math.floor(ms / 3600000)
   let m = Math.floor(ms / 60000) % 60
   let s = Math.floor(ms / 1000) % 60
   return [h, m, s].map(v => v.toString().padStart(2, '0')).join(':')
+}
+
+/* 🌤️ Saludo por hora */
+function getGreeting() {
+  const hour = new Date().getHours()
+  if (hour >= 5 && hour < 12) return '☀️ Buenos días'
+  if (hour >= 12 && hour < 19) return '🌤️ Buenas tardes'
+  return '🌙 Buenas noches'
 }
