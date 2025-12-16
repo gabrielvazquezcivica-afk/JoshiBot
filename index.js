@@ -11,6 +11,9 @@ const __dirname = path.dirname(__filename)
 const PREFIX = '.'
 const plugins = []
 
+// ⏱️ TIEMPO DE INICIO DEL BOT (ANTI MENSAJES ANTIGUOS)
+const botStartTime = Math.floor(Date.now() / 1000)
+
 // 🎨 Banner 3D
 function showBanner() {
   console.clear()
@@ -43,6 +46,10 @@ async function start() {
     const m = messages[0]
     if (!m?.message || m.key.fromMe) return
 
+    // ❌ IGNORAR MENSAJES ANTERIORES AL INICIO DEL BOT
+    if (!m.messageTimestamp) return
+    if (Number(m.messageTimestamp) < botStartTime) return
+
     // 📍 DATOS BÁSICOS
     const from = m.key.remoteJid
     const isGroup = from.endsWith('@g.us')
@@ -61,7 +68,7 @@ async function start() {
 
     if (!text) return
 
-    // 🧾 LOG EN CONSOLA (MENSAJE O COMANDO)
+    // 🧾 LOG EN CONSOLA
     const isCommand = text.startsWith(PREFIX)
 
     console.log(
@@ -76,7 +83,7 @@ async function start() {
       chalk.gray('\n💬 Texto:'), chalk.white(text)
     )
 
-    // ❌ Si no es comando, solo registrar
+    // ❌ Si no es comando, no ejecutar plugins
     if (!isCommand) return
 
     // ⚙️ PROCESAR COMANDO
@@ -99,11 +106,13 @@ async function start() {
             command,
             isCommand,
             plugins,
+
+            // 💬 REPLY (responde al mensaje del usuario)
             reply: (text) => sock.sendMessage(
-  from,
-  { text },
-  { quoted: m }
-)
+              from,
+              { text },
+              { quoted: m }
+            )
           })
         } catch (e) {
           console.error(chalk.red('❌ Error en plugin:'), e)
