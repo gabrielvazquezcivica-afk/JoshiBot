@@ -1,71 +1,99 @@
-import chalk from 'chalk'
+import fs from 'fs'
 
-const lastAdmin = new Map() // grupo => último admin activo
+const lastAdmin = new Map()
 
+// Guarda último admin que habló (fallback real)
 export function initAutoDetect(sock) {
 
-  /* ───── Guardar último admin que habló ───── */
+  // 🧠 Detectar admins que escriben
   sock.ev.on('messages.upsert', async ({ messages }) => {
     const m = messages?.[0]
     if (!m?.key?.remoteJid?.endsWith('@g.us')) return
-
-    const jid = m.key.remoteJid
-    const sender = m.key.participant
-    if (!sender) return
+    if (!m.key.participant) return
 
     try {
-      const meta = await sock.groupMetadata(jid)
-      const isAdmin = meta.participants.find(
-        p =>
-          p.id === sender &&
-          (p.admin === 'admin' || p.admin === 'superadmin')
-      )
-      if (isAdmin) lastAdmin.set(jid, sender)
+      const meta = await sock.groupMetadata(m.key.remoteJid)
+      const isAdmin = meta.participants
+        .filter(p => p.admin)
+        .some(p => p.id === m.key.participant)
+
+      if (isAdmin) {
+        lastAdmin.set(m.key.remoteJid, m.key.participant)
+      }
     } catch {}
   })
 
-  /* ───── Abrir / cerrar grupo ───── */
-  sock.ev.on('groups.update', async (updates) => {
-    for (const u of updates) {
-      if (u.announce === undefined) continue
+  // 🔔 AUTO-DETECT CAMBIOS
+  sock.ev.on('group-update', async (u) => {
+    const { id, announce, restrict, subject, desc, author } = u
 
-      const jid = u.id
-      const actor = lastAdmin.get(jid)
+    let text = ''
+    let mentions = []
 
-      const actorJid = actor || null
-      const actorText = actorJid
-        ? `@${actorJid.split('@')[0]}`
-        : 'un administrador'
+    // 🔒 Abrir / cerrar grupo
+    if (announce !== undefined) {
+      const actor = author || lastAdmin.get(id)
 
-      await sock.sendMessage(jid, {
-        text: u.announce
-          ? `🔒 Solo los administradores pueden enviar mensajes.\n\n👤 Acción realizada por ${actorText}`
-          : `🔓 Todos los participantes pueden enviar mensajes.\n\n👤 Acción realizada por ${actorText}`,
-        mentions: actorJid ? [actorJid] : [],
+      if (actor) mentions.push(actor)
+
+      text =
+        announce === 'true'
+          ? `🔒 Solo los administradores pueden enviar mensajes.\n\n👤 Acción realizada por @${actor?.split('@')[0] || 'un administrador'}`
+          : `🔓 Todos los participantes pueden enviar mensajes.\n\n👤 Acción realizada por @${actor?.split('@')[0] || 'un administrador'}`
+
+      await sock.sendMessage(id, {
+        text,
+        mentions,
         contextInfo: {
           forwardingScore: 9999,
           isForwarded: true
         }
       })
     }
+
+    // ✏️ Cambio de nombre
+    if (subject) {
+      const actor = author || lastAdmin.get(id)
+      if (actor) mentions.push(actor)
+
+      await sock.sendMessage(id, {
+        text: `✏️ El nombre del grupo fue cambiado a:\n*${subject}*\n\n👤 Acción realizada por @${actor?.split('@')[0] || 'un administrador'}`,
+        mentions,
+        contextInfo: { forwardingScore: 9999, isForwarded: true }
+      })
+    }
+
+    // 📝 Cambio de descripción
+    if (desc) {
+      const actor = author || lastAdmin.get(id)
+      if (actor) mentions.push(actor)
+
+      await sock.sendMessage(id, {
+        text: `📝 La descripción del grupo fue actualizada.\n\n👤 Acción realizada por @${actor?.split('@')[0] || 'un administrador'}`,
+        mentions,
+        contextInfo: { forwardingScore: 9999, isForwarded: true }
+      })
+    }
   })
 
-  /* ───── Dar / quitar admin (FIX REAL) ───── */
+  // 👑 PROMOTE / DEMOTE
   sock.ev.on('group-participants.update', async (u) => {
     const { id, action, participants, actor } = u
     if (!['promote', 'demote'].includes(action)) return
 
     const target = participants?.[0]
-    const actorJid = actor || lastAdmin.get(id) || null
 
-    const userTag = target ? `@${target.split('@')[0]}` : 'un usuario'
-    const adminTag = actorJid
-      ? `@${actorJid.split('@')[0]}`
-      : 'un administrador'
+    // 🔥 actor real o fallback
+    const adminActor = actor || lastAdmin.get(id)
 
     const mentions = []
     if (target) mentions.push(target)
-    if (actorJid) mentions.push(actorJid)
+    if (adminActor) mentions.push(adminActor)
+
+    const userTag = target ? `@${target.split('@')[0]}` : 'un usuario'
+    const adminTag = adminActor
+      ? `@${adminActor.split('@')[0]}`
+      : 'un administrador'
 
     await sock.sendMessage(id, {
       text:
@@ -79,6 +107,4 @@ export function initAutoDetect(sock) {
       }
     })
   })
-
-  console.log(chalk.green('🔔 AutoDetect WhatsApp-style (admin FIXED)'))
-}
+                                                                                            }
