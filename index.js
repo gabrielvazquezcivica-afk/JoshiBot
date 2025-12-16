@@ -97,7 +97,8 @@ async function start() {
             isGroup,
             args,
             command,
-            isCommand
+            isCommand,
+            plugins
           })
         } catch (e) {
           console.error(chalk.red('❌ Error en plugin:'), e)
