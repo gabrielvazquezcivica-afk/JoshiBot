@@ -1,44 +1,42 @@
 import { connectBot } from './lib/connection.js'
 import chalk from 'chalk'
+import figlet from 'figlet'
 
-// prefijo de comandos
 const PREFIX = '.'
 
-// 🟢 Menú de inicio de sesión
-async function askLoginMethod() {
-  return new Promise((resolve) => {
-    console.log(chalk.cyan('\n🔐 MÉTODO DE INICIO DE SESIÓN'))
-    console.log(chalk.yellow('[1] Código QR'))
-    console.log(chalk.yellow('[2] Código de emparejamiento\n'))
+// 🎨 BANNER 3D AL INICIAR
+function showBanner() {
+  console.clear()
 
-    process.stdout.write('👉 Elige una opción (1 o 2): ')
-    process.stdin.once('data', (data) => {
-      resolve(data.toString().trim() === '2')
-    })
+  const banner = figlet.textSync('JoshiBot', {
+    font: 'Slant',
+    horizontalLayout: 'default',
+    verticalLayout: 'default'
   })
+
+  console.log(chalk.cyanBright(banner))
+  console.log(
+    chalk.magentaBright('🤖 JoshiBot iniciado correctamente') +
+    chalk.gray('\n────────────────────────────────────')
+  )
 }
 
 async function start() {
-  const pairing = await askLoginMethod()
-  const sock = await connectBot(pairing)
+  showBanner()
 
-  sock.ev.on('messages.upsert', async ({ messages, type }) => {
-    if (type !== 'notify') return
+  // 🔑 Inicia bot (QR o código depende de config / sesión)
+  const sock = await connectBot()
 
+  // 📩 ESCUCHAR MENSAJES
+  sock.ev.on('messages.upsert', async ({ messages }) => {
     const m = messages[0]
-    if (!m.message) return
+    if (!m?.message) return
     if (m.key.fromMe) return
 
-    // 📌 JID
     const from = m.key.remoteJid
     const isGroup = from.endsWith('@g.us')
+    const sender = isGroup ? m.key.participant : from
 
-    // 👤 Quién envió el mensaje
-    const sender = isGroup
-      ? m.key.participant
-      : from
-
-    // 📝 Texto del mensaje (normal + citado)
     const text =
       m.message.conversation ||
       m.message.extendedTextMessage?.text ||
@@ -48,48 +46,27 @@ async function start() {
 
     if (!text) return
 
-    // 🧾 Logs en consola
+    // 🧾 LOG EN CONSOLA
     console.log(
-      chalk.cyan('\n📩 MENSAJE RECIBIDO'),
-      '\nDe:', chalk.yellow(sender),
-      '\nChat:', chalk.green(isGroup ? 'Grupo' : 'Privado'),
-      '\nTexto:', chalk.white(text)
+      chalk.green('\n📩 MENSAJE'),
+      chalk.white(text),
+      chalk.gray('\n👤 De:'), chalk.yellow(sender),
+      chalk.gray('\n💬 Chat:'), chalk.cyan(isGroup ? 'Grupo' : 'Privado')
     )
 
-    // ⚙️ Detectar comando
+    // ⚙️ DETECTAR COMANDO (para plugins después)
     if (!text.startsWith(PREFIX)) return
 
     const args = text.slice(PREFIX.length).trim().split(/\s+/)
     const command = args.shift().toLowerCase()
 
-    // 🔥 COMANDOS
-    switch (command) {
-      case 'ping': {
-        await sock.sendMessage(from, {
-          text: 'pong 🏓'
-        })
-        break
-      }
-
-      case 'info': {
-        await sock.sendMessage(from, {
-          text:
-            `🤖 *JoshiBot*\n` +
-            `📌 Tipo: ${isGroup ? 'Grupo' : 'Privado'}\n` +
-            `👤 Usuario: ${sender}`
-        })
-        break
-      }
-
-      default: {
-        await sock.sendMessage(from, {
-          text: '❓ Comando no reconocido'
-        })
-      }
+    // 🧪 Comando base de prueba
+    if (command === 'ping') {
+      await sock.sendMessage(from, { text: 'pong 🏓' })
     }
   })
 
-  console.log('🤖 Bot iniciado correctamente')
+  console.log(chalk.green('\n✅ Bot listo, esperando mensajes...\n'))
 }
 
 start()
