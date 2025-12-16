@@ -17,66 +17,58 @@ export const handler = async (m, { sock, from, isGroup, reply, args }) => {
 
   // 📅 Footer
   const now = new Date()
-  const day = now.getDate()
-  const year = now.getFullYear()
   const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
-  const footer = `\n\n> JoshiBot • ${day} de ${months[now.getMonth()]} ${year}`
+  const footer = `\n\n> JoshiBot • ${now.getDate()} de ${months[now.getMonth()]} ${now.getFullYear()}`
 
   // 😀 Reacción al comando
   await sock.sendMessage(from, {
     react: { text: '📢', key: m.key }
   })
 
-  // ================= SI ES RESPUESTA
+  // ================= RESPUESTA A MENSAJE
   if (m.quoted) {
     const q = m.quoted
-    const mime = q.mtype
     let msg = {}
 
-    switch (mime) {
-      case 'audioMessage':
-        msg = {
-          audio: await q.download(),
-          ptt: q.ptt || false,
-          mimetype: 'audio/mp4',
-          mentions: users
-        }
-        break
+    if (q.mtype === 'audioMessage') {
+      msg = {
+        audio: await q.download(),
+        ptt: q.ptt || false,
+        mimetype: 'audio/mp4',
+        mentions: users
+      }
 
-      case 'imageMessage':
-        msg = {
-          image: await q.download(),
-          caption: (q.text || text || '') + footer,
-          mentions: users
-        }
-        break
+    } else if (q.mtype === 'imageMessage') {
+      msg = {
+        image: await q.download(),
+        caption: (q.text || '') + footer,
+        mentions: users
+      }
 
-      case 'videoMessage':
-        msg = {
-          video: await q.download(),
-          caption: (q.text || text || '') + footer,
-          mentions: users
-        }
-        break
+    } else if (q.mtype === 'videoMessage') {
+      msg = {
+        video: await q.download(),
+        caption: (q.text || '') + footer,
+        mentions: users
+      }
 
-      case 'stickerMessage':
-        msg = {
-          sticker: await q.download(),
-          mentions: users
-        }
-        break
+    } else if (q.mtype === 'stickerMessage') {
+      msg = {
+        sticker: await q.download(),
+        mentions: users
+      }
 
-      default:
-        msg = {
-          text: (q.text || text || '') + footer,
-          mentions: users
-        }
+    } else {
+      msg = {
+        text: (q.text || '') + footer,
+        mentions: users
+      }
     }
 
     return sock.sendMessage(from, msg, { quoted: m })
   }
 
-  // ================= SOLO TEXTO
+  // ================= SOLO TEXTO (AQUÍ SÍ)
   if (!text) {
     return reply('Uso: .n <mensaje> o responde a un mensaje')
   }
