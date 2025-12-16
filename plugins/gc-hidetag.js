@@ -1,5 +1,28 @@
 import { downloadContentFromMessage } from '@whiskeysockets/baileys'
 
+function footer(botName) {
+  const meses = [
+    { name: 'enero', emojis: ['❄️','☃️','✨'] },
+    { name: 'febrero', emojis: ['❤️','💘','🌹'] },
+    { name: 'marzo', emojis: ['🍀','🌱','🌸'] },
+    { name: 'abril', emojis: ['🌷','☔','🌼'] },
+    { name: 'mayo', emojis: ['🌺','🌼','☀️'] },
+    { name: 'junio', emojis: ['🌞','🏖️','😎'] },
+    { name: 'julio', emojis: ['🔥','🌴','☀️'] },
+    { name: 'agosto', emojis: ['🌻','☀️','🏖️'] },
+    { name: 'septiembre', emojis: ['🍁','🍂','🌾'] },
+    { name: 'octubre', emojis: ['🎃','👻','🕸️'] },
+    { name: 'noviembre', emojis: ['🍂','🦃','🤎'] },
+    { name: 'diciembre', emojis: ['🎄','✨','🎅'] }
+  ]
+
+  const now = new Date()
+  const m = meses[now.getMonth()]
+  const emoji = m.emojis[Math.floor(Math.random() * m.emojis.length)]
+
+  return `\n\n> ${botName} • ${now.getDate()} ${m.name} ${now.getFullYear()} ${emoji}`
+}
+
 export const handler = async (m, {
   sock,
   from,
@@ -22,13 +45,13 @@ export const handler = async (m, {
   const participants = metadata.participants.map(p => p.id)
   const text = args.join(' ')
 
-  // 📌 MENSAJE RESPONDIDO (FORMA CORRECTA)
+  // 📛 NOMBRE REAL DEL BOT
+  const botName = sock.user?.name || 'Bot'
+
+  // 📌 MENSAJE RESPONDIDO
   const ctx = m.message?.extendedTextMessage?.contextInfo
   const quoted = ctx?.quotedMessage
 
-  // ─────────────────────────────
-  // 🔁 RESPONDIENDO A UN MENSAJE
-  // ─────────────────────────────
   if (quoted) {
     const type = Object.keys(quoted)[0]
     let msg = {}
@@ -36,8 +59,9 @@ export const handler = async (m, {
     // 📝 TEXTO
     if (type === 'conversation' || type === 'extendedTextMessage') {
       msg.text =
-        quoted.conversation ||
-        quoted.extendedTextMessage?.text
+        (quoted.conversation ||
+        quoted.extendedTextMessage?.text || '') +
+        footer(botName)
     }
 
     // 📥 MEDIA
@@ -54,10 +78,9 @@ export const handler = async (m, {
       }
 
       msg[mediaType] = buffer
-
-      if (quoted[type]?.caption || text) {
-        msg.caption = quoted[type]?.caption || text
-      }
+      msg.caption =
+        (quoted[type]?.caption || text || '') +
+        footer(botName)
     }
 
     msg.mentions = participants
@@ -66,13 +89,14 @@ export const handler = async (m, {
     return
   }
 
-  // ─────────────────────────────
   // 📝 SOLO TEXTO
-  // ─────────────────────────────
   if (text) {
     await sock.sendMessage(
       from,
-      { text, mentions: participants },
+      {
+        text: text + footer(botName),
+        mentions: participants
+      },
       { quoted: m }
     )
     return
