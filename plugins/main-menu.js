@@ -1,7 +1,7 @@
 export const handler = async (m, {
   sock,
-  reply,
   from,
+  reply,
   pushName,
   plugins
 }) => {
@@ -11,7 +11,7 @@ export const handler = async (m, {
   const dev = 'SoyGabo'
   const saludo = getGreeting()
 
-  // 🎄 REACCIÓN AL MENÚ
+  // 🎄 Reacción al mensaje
   await sock.sendMessage(from, {
     react: {
       text: '🎄',
@@ -19,20 +19,7 @@ export const handler = async (m, {
     }
   })
 
-  // 🎞️ GIF NAVIDEÑO (PUEDES CAMBIAR LA URL)
-  await sock.sendMessage(
-    from,
-    {
-      video: {
-        url: 'https://media.tenor.com/5Q1z5T6k7JkAAAPo/christmas-anime.mp4'
-      },
-      gifPlayback: true,
-      caption: '🎅✨ Menú navideño activado ✨🎅'
-    },
-    { quoted: m }
-  )
-
-  // 🎄 Agrupar comandos por tags
+  // 📂 Agrupar comandos por categorías
   const categories = {}
 
   for (const plugin of plugins) {
@@ -84,7 +71,19 @@ export const handler = async (m, {
 🎄 Felices fiestas y buenos comandos 🎁
 `
 
-  reply(menu)
+  // 🖼️ IMAGEN DEL MENÚ (puede ser URL o archivo local)
+  const image = {
+    url: 'https://i.postimg.cc/W3gbckFb/27969f9eb4afa31ef9ad64f8ede1ad45.jpg' // 🔁 cambia por la que tú quieras
+  }
+
+  await sock.sendMessage(
+    from,
+    {
+      image,
+      caption: menu
+    },
+    { quoted: m }
+  )
 }
 
 handler.command = ['menu', 'help', 'comandos']
@@ -98,7 +97,7 @@ function clockString(ms) {
   return [h, m, s].map(v => v.toString().padStart(2, '0')).join(':')
 }
 
-/* 🌤️ Saludo según hora */
+/* 🌤️ Saludo por hora */
 function getGreeting() {
   const hour = new Date().getHours()
   if (hour >= 5 && hour < 12) return '☀️ Buenos días'
