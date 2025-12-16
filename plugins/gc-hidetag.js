@@ -28,43 +28,55 @@ export const handler = async (m, { sock, from, isGroup, reply, args }) => {
     react: { text: '📢', key: m.key }
   })
 
+  // ========= DETECTAR MENSAJE CITADO (FORMA REAL)
+  const quoted =
+    m.message?.extendedTextMessage?.contextInfo?.quotedMessage
+
+  const quotedKey =
+    m.message?.extendedTextMessage?.contextInfo?.stanzaId
+      ? {
+          remoteJid: from,
+          id: m.message.extendedTextMessage.contextInfo.stanzaId,
+          participant: m.message.extendedTextMessage.contextInfo.participant
+        }
+      : null
+
   // ================= CON MENSAJE CITADO
-  if (m.quoted) {
-    const q = m.quoted
-    const type = Object.keys(q.message || {})[0]
+  if (quoted && quotedKey) {
+    const type = Object.keys(quoted)[0]
     let msg = {}
 
     if (type === 'audioMessage') {
       msg = {
-        audio: await q.download(),
-        ptt: q.message.audioMessage?.ptt || false,
+        audio: await sock.downloadMediaMessage({ message: quoted, key: quotedKey }),
+        ptt: quoted.audioMessage?.ptt || false,
         mimetype: 'audio/mp4',
         mentions: users
       }
 
     } else if (type === 'imageMessage') {
       msg = {
-        image: await q.download(),
-        caption: (q.text || text || '') + footer,
+        image: await sock.downloadMediaMessage({ message: quoted, key: quotedKey }),
+        caption: (quoted.imageMessage?.caption || text || '') + footer,
         mentions: users
       }
 
     } else if (type === 'videoMessage') {
       msg = {
-        video: await q.download(),
-        caption: (q.text || text || '') + footer,
+        video: await sock.downloadMediaMessage({ message: quoted, key: quotedKey }),
+        caption: (quoted.videoMessage?.caption || text || '') + footer,
         mentions: users
       }
 
     } else if (type === 'stickerMessage') {
       msg = {
-        sticker: await q.download(),
+        sticker: await sock.downloadMediaMessage({ message: quoted, key: quotedKey }),
         mentions: users
       }
 
     } else {
       msg = {
-        text: (q.text || text || '') + footer,
+        text: (text || '') + footer,
         mentions: users
       }
     }
