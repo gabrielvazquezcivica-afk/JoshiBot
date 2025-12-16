@@ -1,118 +1,149 @@
-export async function autoDetectSystem(sock) {
+import chalk from 'chalk'
 
-  // ───────────── ADMINS (PROMOTE / DEMOTE) ─────────────
-  sock.ev.on('group-participants.update', async (update) => {
-    try {
-      const { id, participants, action, author } = update
+export function initAutoDetect(sock) {
 
-      // ❌ IGNORAR add / remove
-      if (!['promote', 'demote'].includes(action)) return
+  sock.ev.on('groups.update', async (updates) => {
+    for (const update of updates) {
+      try {
+        const jid = update.id
 
-      const icon = action === 'promote' ? '⬆️' : '⬇️'
-      const text =
-        action === 'promote'
-          ? 'Se otorgó administrador'
-          : 'Se retiró administrador'
+        // 🔒 ABRIR / CERRAR GRUPO
+        if (update.announce !== undefined) {
+          const isClosed = update.announce
+          const actionBy = update.author || 'Desconocido'
 
-      const systemMsg = `
-╭───〔 ${icon} Sistema de WhatsApp 〕
-│
-│ ${text}
-│
-│ 👤 Usuario:
-│ ${participants.map(u => `@${u.split('@')[0]}`).join(', ')}
-│
-│ 🛠️ Acción realizada por:
-│ @${author?.split('@')[0] || 'Sistema'}
-╰─────────────────────────────
+          const text = `
+🔔 *WhatsApp*
+━━━━━━━━━━━━━━
+${isClosed ? '🔒 El grupo fue *cerrado*' : '🔓 El grupo fue *abierto*'}
+
+${isClosed
+  ? '❄️ Solo los *admins* pueden escribir'
+  : '✨ Todos los *miembros* pueden escribir'}
+
+👤 Acción realizada por:
+@${actionBy.split('@')[0]}
+━━━━━━━━━━━━━━
 `.trim()
 
-      await sock.sendMessage(id, {
-        text: systemMsg,
-        mentions: [...participants, author].filter(Boolean)
-      })
-    } catch {}
-  })
-
-  // ───────────── CONFIGURACIÓN DEL GRUPO ─────────────
-  sock.ev.on('groups.update', async (updates) => {
-    try {
-      for (const update of updates) {
-        const { id, subject, desc, announce, restrict, author } = update
-
-        let text = ''
-        let icon = '⚙️'
-
-        if (subject) {
-          icon = '✏️'
-          text = `Nombre del grupo actualizado:\n${subject}`
-        } else if (desc) {
-          icon = '📝'
-          text = `Descripción del grupo actualizada`
-        } else if (announce !== undefined) {
-          icon = announce ? '🔒' : '🔓'
-          text = announce
-            ? 'El grupo fue cerrado (solo administradores)'
-            : 'El grupo fue abierto (todos pueden escribir)'
-        } else if (restrict !== undefined) {
-          icon = '🛡️'
-          text = restrict
-            ? 'Edición del grupo solo para administradores'
-            : 'Edición del grupo permitida para todos'
+          await sock.sendMessage(jid, {
+            text,
+            mentions: [actionBy]
+          })
         }
 
-        if (!text) return
+        // ✏️ CAMBIO DE NOMBRE
+        if (update.subject) {
+          const actor = update.author || 'Desconocido'
+          const text = `
+🔔 *WhatsApp*
+━━━━━━━━━━━━━━
+✏️ *Nombre del grupo actualizado*
 
-        const systemMsg = `
-╭───〔 ${icon} Sistema de WhatsApp 〕
-│
-│ ${text}
-│
-│ 🛠️ Modificado por:
-│ @${author?.split('@')[0] || 'Sistema'}
-╰─────────────────────────────
+📌 Nuevo nombre:
+${update.subject}
+
+👤 Cambiado por:
+@${actor.split('@')[0]}
+━━━━━━━━━━━━━━
 `.trim()
 
-        await sock.sendMessage(id, {
-          text: systemMsg,
-          mentions: author ? [author] : []
-        })
+          await sock.sendMessage(jid, {
+            text,
+            mentions: [actor]
+          })
+        }
+
+        // 📝 CAMBIO DE DESCRIPCIÓN
+        if (update.desc !== undefined) {
+          const actor = update.author || 'Desconocido'
+          const text = `
+🔔 *WhatsApp*
+━━━━━━━━━━━━━━
+📝 *Descripción del grupo modificada*
+
+👤 Cambiado por:
+@${actor.split('@')[0]}
+━━━━━━━━━━━━━━
+`.trim()
+
+          await sock.sendMessage(jid, {
+            text,
+            mentions: [actor]
+          })
+        }
+
+      } catch (err) {
+        console.log(chalk.red('❌ AutoDetect error:'), err)
       }
-    } catch {}
+    }
   })
 
-  // ───────────── FOTO DEL GRUPO ─────────────
-  sock.ev.on('groups.picture.update', async (update) => {
+  // ⭐ PROMOTE / DEMOTE ADMIN
+  sock.ev.on('group-participants.update', async (update) => {
     try {
-      const { id, author } = update
+      if (!['promote', 'demote'].includes(update.action)) return
 
-      const systemMsg = `
-╭───〔 🖼️ Sistema de WhatsApp 〕
-│
-│ La foto del grupo fue actualizada
-│
-│ 🛠️ Modificado por:
-│ @${author?.split('@')[0] || 'Sistema'}
-╰─────────────────────────────
+      const jid = update.id
+      const actor = update.author || 'Desconocido'
+      const target = update.participants?.[0]
+
+      if (!target) return
+
+      const isPromote = update.action === 'promote'
+
+      const text = `
+🔔 *WhatsApp*
+━━━━━━━━━━━━━━
+${isPromote ? '⭐ *Nuevo administrador*' : '⚠️ *Administrador removido*'}
+
+👤 Usuario:
+@${target.split('@')[0]}
+
+🛠️ Acción realizada por:
+@${actor.split('@')[0]}
+━━━━━━━━━━━━━━
 `.trim()
 
-      await sock.sendMessage(id, {
-        text: systemMsg,
-        mentions: author ? [author] : []
+      await sock.sendMessage(jid, {
+        text,
+        mentions: [target, actor]
       })
-    } catch {}
+
+    } catch (err) {
+      console.log(chalk.red('❌ Promote/Demote error:'), err)
+    }
   })
-}
 
-// ───────────── AUTO CARGA (SIN MENÚ) ─────────────
-export const handler = async (m, { sock }) => {
-  if (sock._autoDetectLoaded) return
-  sock._autoDetectLoaded = true
-  await autoDetectSystem(sock)
-}
+  // 🖼️ CAMBIO DE FOTO
+  sock.ev.on('groups.update', async (updates) => {
+    for (const update of updates) {
+      if (!update.picture) return
 
-// 🔒 OCULTO TOTAL
-handler.command = []      // sin comandos
-handler.tags = []         // sin categoría
-handler.help = []         // sin ayuda
-handler.hidden = true     // por si tu menú lo soporta
+      try {
+        const jid = update.id
+        const actor = update.author || 'Desconocido'
+
+        const text = `
+🔔 *WhatsApp*
+━━━━━━━━━━━━━━
+🖼️ *Foto del grupo actualizada*
+
+👤 Cambiado por:
+@${actor.split('@')[0]}
+━━━━━━━━━━━━━━
+`.trim()
+
+        await sock.sendMessage(jid, {
+          text,
+          mentions: [actor]
+        })
+
+      } catch (err) {
+        console.log(chalk.red('❌ Foto grupo error:'), err)
+      }
+    }
+  })
+
+  console.log(chalk.green('🔔 AutoDetect de grupo ACTIVADO'))
+          }
