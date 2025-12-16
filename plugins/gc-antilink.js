@@ -1,69 +1,28 @@
 import fs from 'fs'
 
-// ───── DB ─────
+// ───── BASE DE DATOS ─────
 const dbDir = './database'
 const dbFile = './database/antilink.json'
 
 if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir)
 if (!fs.existsSync(dbFile)) fs.writeFileSync(dbFile, '{}')
 
-// ───── DETECTOR DE LINKS (TODOS) ─────
+// ───── DETECTOR DE LINKS (TODO) ─────
 const linkRegex =
-  /(https?:\/\/|www\.|chat\.whatsapp\.com\/|wa\.me\/|t\.me\/|telegram\.me\/|discord\.gg\/|discord\.com\/invite\/|facebook\.com\/|fb\.watch\/|instagram\.com\/|tiktok\.com\/|youtu\.be\/|youtube\.com\/)/i
+  /(https?:\/\/|www\.|chat\.whatsapp\.com\/|t\.me\/|discord\.gg\/|instagram\.com\/|facebook\.com\/|fb\.me\/|twitter\.com\/|x\.com\/|youtube\.com\/|youtu\.be\/)/i
 
-// ───── MENSAJES NAVIDEÑOS ─────
-function panelMessage(state) {
-  return `
-╭─〔 🎄 SISTEMA ANTILINK 〕
-│ Estado actual:
-│ ${state ? '🟢 ACTIVADO' : '🔴 DESACTIVADO'}
-├────────────────
-│ Comandos:
-│ • .antilink on
-│ • .antilink off
-╰─〔 🤖 JoshiBot 〕
-`.trim()
-}
+// ───── FRASES NAVIDEÑAS ─────
+const frasesWarn = [
+  '🎄 Santa vio ese link…',
+  '❄️ Links congelados',
+  '🎅 Este grupo no acepta regalos con links',
+  '☃️ El link se perdió en la nieve',
+  '✨ Link detectado por el sistema'
+]
 
-function enabledMessage() {
-  return `
-╭─〔 🚀 ANTILINK ACTIVADO 〕
-│ 🟢 Protección online
-│ Links prohibidos
-├────────────────
-│ Santa vigila 👀🎅
-╰─〔 🤖 JoshiBot 〕
-`.trim()
-}
-
-function disabledMessage() {
-  return `
-╭─〔 ❄️ ANTILINK DESACTIVADO 〕
-│ 🔴 Protección off
-│ Links permitidos
-├────────────────
-│ Caos navideño 🎁
-╰─〔 🤖 JoshiBot 〕
-`.trim()
-}
-
-function warningMessage(user) {
-  return `
-╭─〔 🎄 ALERTA DE SISTEMA 〕
-│ 🚫 LINK BLOQUEADO
-├────────────────
-│ 👤 @${user.split('@')[0]}
-│ 🎅 Santa dice:
-│ “Aquí no se comparten links”
-╰─〔 🤖 JoshiBot 〕
-`.trim()
-}
-
-// ───── COMANDO ─────
+// ───── COMANDO .antilink ─────
 export const handler = async (m, { sock, from, sender, isGroup, reply }) => {
-  if (!isGroup) {
-    return reply('❌ Este comando solo funciona en grupos')
-  }
+  if (!isGroup) return reply('❌ Solo funciona en grupos')
 
   const text =
     m.message?.conversation ||
@@ -86,9 +45,9 @@ export const handler = async (m, { sock, from, sender, isGroup, reply }) => {
 
   if (!admins.includes(sender)) {
     return reply(`
-╭─〔 🚫 ACCESO DENEGADO 〕
+╭─〔 🚫 SISTEMA ANTILINK 〕
 │ Solo admins
-│ controlan
+│ pueden usar
 │ este sistema
 ╰─〔 🤖 JoshiBot 〕
 `.trim())
@@ -97,21 +56,46 @@ export const handler = async (m, { sock, from, sender, isGroup, reply }) => {
   const db = JSON.parse(fs.readFileSync(dbFile))
   if (!db[from]) db[from] = false
 
+  // 🟢 ACTIVAR
   if (option === 'on') {
-    if (db[from]) return reply('⚠️ Antilink ya estaba activado')
+    if (db[from]) return reply('⚠️ Antilink ya estaba activo')
     db[from] = true
     fs.writeFileSync(dbFile, JSON.stringify(db, null, 2))
-    return reply(enabledMessage())
+    return reply(`
+╭─〔 🚀 ANTILINK 〕
+│ 🟢 ESTADO: ACTIVADO
+├────────────────
+│ Links bloqueados
+│ (excepto admins)
+╰─〔 🤖 JoshiBot 〕
+`.trim())
   }
 
+  // 🔴 DESACTIVAR
   if (option === 'off') {
-    if (!db[from]) return reply('⚠️ Antilink ya estaba desactivado')
+    if (!db[from]) return reply('⚠️ Antilink ya estaba apagado')
     db[from] = false
     fs.writeFileSync(dbFile, JSON.stringify(db, null, 2))
-    return reply(disabledMessage())
+    return reply(`
+╭─〔 🚀 ANTILINK 〕
+│ 🔴 ESTADO: DESACTIVADO
+├────────────────
+│ Links permitidos
+╰─〔 🤖 JoshiBot 〕
+`.trim())
   }
 
-  reply(panelMessage(db[from]))
+  // 📟 PANEL
+  reply(`
+╭─〔 ⚙️ PANEL ANTILINK 〕
+│ Estado actual:
+│ ${db[from] ? '🟢 ACTIVADO' : '🔴 DESACTIVADO'}
+├────────────────
+│ Uso:
+│ • .antilink on
+│ • .antilink off
+╰─〔 🤖 JoshiBot 〕
+`.trim())
 }
 
 handler.command = ['antilink']
@@ -121,13 +105,11 @@ handler.admin = true
 handler.menu = true
 
 // ───── EVENTO MENSAJES ─────
-export async function antilinkEvent(sock, m) {
-  if (!m?.message) return
-  if (!m.key.remoteJid.endsWith('@g.us')) return
-  if (m.key.fromMe) return
+export async function antiLinkEvent(sock, m) {
+  if (!m.message) return
 
   const from = m.key.remoteJid
-  const sender = m.key.participant
+  if (!from?.endsWith('@g.us')) return
 
   const text =
     m.message.conversation ||
@@ -142,7 +124,25 @@ export async function antilinkEvent(sock, m) {
   const db = JSON.parse(fs.readFileSync(dbFile))
   if (!db[from]) return
 
-  // 🗑️ BORRAR MENSAJE
+  const sender = m.key.participant
+
+  let metadata
+  try {
+    metadata = await sock.groupMetadata(from)
+  } catch {
+    return
+  }
+
+  const admins = metadata.participants
+    .filter(p => p.admin)
+    .map(p => p.id)
+
+  // 🛡️ ADMIN EXENTO
+  if (admins.includes(sender)) return
+
+  const frase = frasesWarn[Math.floor(Math.random() * frasesWarn.length)]
+
+  // ❌ BORRAR MENSAJE
   await sock.sendMessage(from, {
     delete: {
       remoteJid: from,
@@ -152,9 +152,17 @@ export async function antilinkEvent(sock, m) {
     }
   })
 
-  // 🎄 AVISO NAVIDEÑO
+  // ⚠️ AVISO
   await sock.sendMessage(from, {
-    text: warningMessage(sender),
+    text: `
+╭─〔 🚨 ANTILINK 〕
+│ ${frase}
+├────────────────
+│ 👤 @${sender.split('@')[0]}
+│ ❄️ Links no permitidos
+│ 🎁 Advertencia navideña
+╰─〔 🤖 JoshiBot 〕
+`.trim(),
     mentions: [sender]
   })
 }
