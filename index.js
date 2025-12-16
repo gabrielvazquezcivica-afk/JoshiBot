@@ -8,13 +8,27 @@ import { fileURLToPath, pathToFileURL } from 'url'
 // 👋 WELCOME EVENT
 import { welcomeEvent } from './plugins/welcome.js'
 
+// 🔔 AUTO-DETECT CAMBIOS DE GRUPO
+import { initAutoDetect } from './plugins/_autodetec.js'
+
+/* ───── Silenciar errores molestos ───── */
+process.on('uncaughtException', err => {
+  if (String(err).includes('Bad MAC')) return
+  console.error(err)
+})
+process.on('unhandledRejection', err => {
+  if (String(err).includes('Bad MAC')) return
+  console.error(err)
+})
+/* ───────────────────────────────────── */
+
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 const PREFIX = '.'
 const plugins = []
 
-// ⏱️ TIEMPO DE INICIO DEL BOT (ANTI MENSAJES ANTIGUOS)
+// ⏱️ ANTI MENSAJES ANTIGUOS
 const botStartTime = Math.floor(Date.now() / 1000)
 
 // 🎨 Banner 3D
@@ -25,15 +39,22 @@ function showBanner() {
   console.log(chalk.gray('────────────────────────────────────'))
 }
 
-// 📦 Cargar plugins (ESM)
+// 📦 Cargar plugins
 async function loadPlugins() {
   const pluginsDir = path.join(__dirname, 'plugins')
+  if (!fs.existsSync(pluginsDir)) return
+
   const files = fs.readdirSync(pluginsDir).filter(f => f.endsWith('.js'))
 
   for (const file of files) {
-    const filePath = pathToFileURL(path.join(pluginsDir, file)).href
-    const plugin = await import(filePath)
-    if (plugin.handler) plugins.push(plugin)
+    try {
+      const plugin = await import(
+        pathToFileURL(path.join(pluginsDir, file)).href
+      )
+      if (plugin.handler) plugins.push(plugin)
+    } catch (e) {
+      console.error('❌ Error cargando plugin:', file)
+    }
   }
 
   console.log(chalk.green(`🔌 Plugins cargados: ${plugins.length}`))
@@ -45,7 +66,10 @@ async function start() {
 
   const sock = await connectBot()
 
-  // ✅ EVENTO WELCOME / BYE (CORRECTO)
+  // ✅ INICIAR AUTO-DETECCIÓN (CAMBIOS DE GRUPO)
+  initAutoDetect(sock)
+
+  // ✅ WELCOME / BYE
   sock.ev.on('group-participants.update', async (update) => {
     try {
       console.log(chalk.blueBright('👥 Evento grupo:'), update.action)
@@ -57,22 +81,18 @@ async function start() {
 
   // ✅ MENSAJES
   sock.ev.on('messages.upsert', async ({ messages }) => {
-    const m = messages[0]
+    const m = messages?.[0]
     if (!m?.message || m.key.fromMe) return
 
-    // ❌ IGNORAR MENSAJES ANTERIORES AL INICIO DEL BOT
+    // ❌ Ignorar mensajes viejos
     if (!m.messageTimestamp) return
     if (Number(m.messageTimestamp) < botStartTime) return
 
-    // 📍 DATOS BÁSICOS
     const from = m.key.remoteJid
     const isGroup = from.endsWith('@g.us')
     const senderJid = isGroup ? m.key.participant : from
-
-    // 👤 NOMBRE REAL DE WHATSAPP
     const pushName = m.pushName || 'Sin nombre'
 
-    // 📝 TEXTO
     const text =
       m.message.conversation ||
       m.message.extendedTextMessage?.text ||
@@ -84,7 +104,7 @@ async function start() {
 
     const isCommand = text.startsWith(PREFIX)
 
-    // 🧾 LOG CONSOLA
+    // 🧾 LOG
     console.log(
       chalk.cyan('\n📩 MENSAJE RECIBIDO'),
       chalk.gray('\n🗂 Chat:'), chalk.yellow(isGroup ? 'Grupo' : 'Privado'),
@@ -106,32 +126,27 @@ async function start() {
     for (const plugin of plugins) {
       const handler = plugin.handler
       if (!handler?.command) continue
+      if (!handler.command.includes(command)) continue
 
-      if (handler.command.includes(command)) {
-        try {
-          await handler(m, {
-            sock,
-            from,
-            sender: senderJid,
-            pushName,
-            isGroup,
-            args,
-            command,
-            isCommand,
-            plugins,
+      try {
+        await handler(m, {
+          sock,
+          from,
+          sender: senderJid,
+          pushName,
+          isGroup,
+          args,
+          command,
+          plugins,
 
-            // 💬 REPLY
-            reply: (text) => sock.sendMessage(
-              from,
-              { text },
-              { quoted: m }
-            )
-          })
-        } catch (e) {
-          console.error(chalk.red('❌ Error en plugin:'), e)
-        }
-        break
+          // 💬 REPLY
+          reply: (text) =>
+            sock.sendMessage(from, { text }, { quoted: m })
+        })
+      } catch (e) {
+        console.error(chalk.red('❌ Error en plugin:'), e)
       }
+      break
     }
   })
 
