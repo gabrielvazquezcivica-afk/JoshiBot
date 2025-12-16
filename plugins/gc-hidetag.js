@@ -1,3 +1,5 @@
+import { downloadContentFromMessage } from '@whiskeysockets/baileys'
+
 export const handler = async (m, {
   sock,
   from,
@@ -5,11 +7,8 @@ export const handler = async (m, {
   isGroup,
   reply
 }) => {
-  if (!isGroup) {
-    return reply('❌ Este comando solo funciona en grupos')
-  }
+  if (!isGroup) return reply('❌ Solo funciona en grupos')
 
-  // 🔐 Verificar admin
   const metadata = await sock.groupMetadata(from)
   const admins = metadata.participants
     .filter(p => p.admin)
@@ -17,27 +16,49 @@ export const handler = async (m, {
 
   const sender = m.key.participant
   if (!admins.includes(sender)) {
-    return reply('❌ Solo los administradores pueden usar este comando')
+    return reply('❌ Solo administradores pueden usar este comando')
   }
 
-  // 📌 Obtener participantes (para hidetag)
   const participants = metadata.participants.map(p => p.id)
 
-  // 🧠 Detectar si el comando responde a un mensaje
-  const quoted = m.message?.extendedTextMessage?.contextInfo?.quotedMessage
+  const quoted =
+    m.message?.extendedTextMessage?.contextInfo?.quotedMessage
 
-  // 📝 TEXTO (si existe)
-  const text = args.length ? args.join(' ') : undefined
+  const text = args.join(' ')
 
-  // 🔁 SI ES RESPUESTA A OTRO MENSAJE
+  // 🔁 SI RESPONDE A UN MENSAJE
   if (quoted) {
     const type = Object.keys(quoted)[0]
 
+    // 📥 Descargar media si existe
+    if (type !== 'conversation' && type !== 'extendedTextMessage') {
+      const stream = await downloadContentFromMessage(
+        quoted[type],
+        type.replace('Message', '')
+      )
+
+      let buffer = Buffer.from([])
+      for await (const chunk of stream) {
+        buffer = Buffer.concat([buffer, chunk])
+      }
+
+      await sock.sendMessage(
+        from,
+        {
+          [type.replace('Message', '')]: buffer,
+          caption: quoted[type]?.caption || text,
+          mentions: participants
+        },
+        { quoted: m }
+      )
+      return
+    }
+
+    // 📝 TEXTO RESPONDIDO
     await sock.sendMessage(
       from,
       {
-        [type]: quoted[type],
-        caption: quoted[type]?.caption || text,
+        text: quoted.conversation || quoted.extendedTextMessage?.text,
         mentions: participants
       },
       { quoted: m }
@@ -49,10 +70,7 @@ export const handler = async (m, {
   if (text) {
     await sock.sendMessage(
       from,
-      {
-        text,
-        mentions: participants
-      },
+      { text, mentions: participants },
       { quoted: m }
     )
     return
@@ -63,6 +81,6 @@ export const handler = async (m, {
 
 handler.command = ['n']
 handler.tags = ['group']
-handler.help = ['n <texto> (hidetag)']
+handler.help = ['n <texto>']
 handler.group = true
 handler.admin = true
