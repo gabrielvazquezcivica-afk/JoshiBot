@@ -12,7 +12,7 @@ export const handler = async (m, { sock, from, isGroup, reply, args }) => {
     p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
   )
 
-  if (!isAdmin) return reply('❌ Solo admins')
+  if (!isAdmin) return reply('❌ Solo administradores')
 
   const text = args.join(' ')
 
@@ -20,65 +20,62 @@ export const handler = async (m, { sock, from, isGroup, reply, args }) => {
   const now = new Date()
   const day = now.getDate()
   const year = now.getFullYear()
-  const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
-  const footer = `\n\n> JoshiBot • ${day} de ${monthNames[now.getMonth()]} ${year}`
+  const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+  const footer = `\n\n> JoshiBot • ${day} de ${months[now.getMonth()]} ${year}`
 
   // 😀 Reacción AL COMANDO
   await sock.sendMessage(from, {
-    react: { text: '📢', key: m.key }
+    react: {
+      text: '📢',
+      key: m.key
+    }
   })
 
-  // ========= DETECTAR MENSAJE CITADO (FORMA REAL)
-  const quoted =
-    m.message?.extendedTextMessage?.contextInfo?.quotedMessage
-
-  const quotedKey =
-    m.message?.extendedTextMessage?.contextInfo?.stanzaId
-      ? {
-          remoteJid: from,
-          id: m.message.extendedTextMessage.contextInfo.stanzaId,
-          participant: m.message.extendedTextMessage.contextInfo.participant
-        }
-      : null
-
-  // ================= CON MENSAJE CITADO
-  if (quoted && quotedKey) {
-    const type = Object.keys(quoted)[0]
+  // ================= SI ES RESPUESTA
+  if (m.quoted) {
+    const q = m.quoted
+    const mime = q.mtype
     let msg = {}
 
-    if (type === 'audioMessage') {
-      msg = {
-        audio: await sock.downloadMediaMessage({ message: quoted, key: quotedKey }),
-        ptt: quoted.audioMessage?.ptt || false,
-        mimetype: 'audio/mp4',
-        mentions: users
-      }
+    switch (mime) {
+      case 'audioMessage':
+        msg = {
+          audio: await q.download(),
+          ptt: q.ptt || false,
+          mimetype: 'audio/mp4',
+          mentions: users
+        }
+        break
 
-    } else if (type === 'imageMessage') {
-      msg = {
-        image: await sock.downloadMediaMessage({ message: quoted, key: quotedKey }),
-        caption: (quoted.imageMessage?.caption || text || '') + footer,
-        mentions: users
-      }
+      case 'imageMessage':
+        msg = {
+          image: await q.download(),
+          caption: (q.text || text || '') + footer,
+          mentions: users
+        }
+        break
 
-    } else if (type === 'videoMessage') {
-      msg = {
-        video: await sock.downloadMediaMessage({ message: quoted, key: quotedKey }),
-        caption: (quoted.videoMessage?.caption || text || '') + footer,
-        mentions: users
-      }
+      case 'videoMessage':
+        msg = {
+          video: await q.download(),
+          caption: (q.text || text || '') + footer,
+          mentions: users
+        }
+        break
 
-    } else if (type === 'stickerMessage') {
-      msg = {
-        sticker: await sock.downloadMediaMessage({ message: quoted, key: quotedKey }),
-        mentions: users
-      }
+      case 'stickerMessage':
+        msg = {
+          sticker: await q.download(),
+          mentions: users
+        }
+        break
 
-    } else {
-      msg = {
-        text: (text || '') + footer,
-        mentions: users
-      }
+      default:
+        msg = {
+          text: (q.text || text || '') + footer,
+          mentions: users
+        }
+        break
     }
 
     return sock.sendMessage(from, msg, { quoted: m })
