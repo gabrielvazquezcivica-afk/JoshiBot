@@ -1,81 +1,90 @@
-import fetch from 'node-fetch'
+// plugins/_autodetec.js
+import chalk from 'chalk'
 
-export async function groupAutoDetect(sock, update) {
-  const jid = update.id
-  if (!jid.endsWith('@g.us')) return
+export function initAutoDetect(sock) {
+  // 🟢 CAMBIOS DE CONFIGURACIÓN DEL GRUPO
+  sock.ev.on('groups.update', async (updates) => {
+    for (const update of updates) {
+      const jid = update.id
 
-  const actor = update.participants?.[0]
-  if (!actor) return
+      try {
+        // 🔒 ABRIR / CERRAR GRUPO
+        if (update.announce !== undefined) {
+          const isClosed = update.announce === true
 
-  const user = '@' + actor.split('@')[0]
+          const text = isClosed
+            ? `🔒 El grupo fue cerrado\n\n❄️ Solo los *admins* pueden escribir`
+            : `🔓 El grupo fue abierto\n\n✨ Todos pueden escribir`
 
-  let title = ''
-  let body = ''
+          await sock.sendMessage(jid, {
+            text,
+            contextInfo: {
+              forwardingScore: 999,
+              isForwarded: true
+            }
+          })
+        }
 
-  switch (update.action) {
-    case 'restrict':
-      title = '🔒 El grupo fue cerrado'
-      body = 'Solo los administradores pueden escribir'
-      break
+        // ✏️ CAMBIO DE NOMBRE
+        if (update.subject) {
+          await sock.sendMessage(jid, {
+            text:
+`✏️ El nombre del grupo fue actualizado
 
-    case 'announce':
-      title = '🔓 El grupo fue abierto'
-      body = 'Todos los participantes pueden escribir'
-      break
+📌 Nuevo nombre:
+${update.subject}`,
+            contextInfo: {
+              forwardingScore: 999,
+              isForwarded: true
+            }
+          })
+        }
 
-    case 'promote':
-      title = '👑 Nuevo administrador'
-      body = `${user} ahora es administrador`
-      break
+        // 🧾 CAMBIO DE DESCRIPCIÓN
+        if (update.desc !== undefined) {
+          await sock.sendMessage(jid, {
+            text:
+`🧾 La descripción del grupo fue modificada`,
+            contextInfo: {
+              forwardingScore: 999,
+              isForwarded: true
+            }
+          })
+        }
 
-    case 'demote':
-      title = '⚠️ Admin removido'
-      body = `${user} ya no es administrador`
-      break
-
-    default:
-      return
-  }
-
-  const fakeSystem = {
-    key: {
-      participant: '0@s.whatsapp.net',
-      remoteJid: 'status@broadcast',
-      fromMe: false,
-      id: 'JoshiBot-System'
-    },
-    message: {
-      locationMessage: {
-        name: '🤖 JoshiBot • Sistema',
-        jpegThumbnail: await (
-          await fetch('https://i.imgur.com/4M34hi2.jpeg')
-        ).buffer(),
-        vcard:
-          'BEGIN:VCARD\n' +
-          'VERSION:3.0\n' +
-          'N:JoshiBot;;;\n' +
-          'FN:JoshiBot System\n' +
-          'ORG:JoshiBot Automations\n' +
-          'TITLE:System\n' +
-          'END:VCARD'
+      } catch (e) {
+        console.log(chalk.red('❌ AutoDetect error:'), e)
       }
-    },
-    participant: '0@s.whatsapp.net'
-  }
+    }
+  })
 
-  const text =
-`╭──〔 WhatsApp • Sistema 〕
-│
-│ ${title}
-│ ${body}
-│
-│ 👤 Acción realizada por:
-│ ${user}
-╰──────────────────────`
+  // 🟢 PROMOVER / DEGRADAR ADMINS (SIN ENTRADAS/SALIDAS)
+  sock.ev.on('group-participants.update', async (update) => {
+    const { id, action, participants, actor } = update
 
-  await sock.sendMessage(
-    jid,
-    { text, mentions: [actor] },
-    { quoted: fakeSystem }
-  )
+    if (!['promote', 'demote'].includes(action)) return
+
+    try {
+      const admin = actor ? `@${actor.split('@')[0]}` : 'Un admin'
+      const user = `@${participants[0].split('@')[0]}`
+
+      const text =
+        action === 'promote'
+          ? `👑 ${user} ahora es *ADMIN*\n\nAccոէón realizada por:\n${admin}`
+          : `🧹 ${user} ya no es *ADMIN*\n\nAcción realizada por:\n${admin}`
+
+      await sock.sendMessage(id, {
+        text,
+        mentions: [participants[0], actor],
+        contextInfo: {
+          forwardingScore: 999,
+          isForwarded: true
+        }
+      })
+    } catch (e) {
+      console.log(chalk.red('❌ AutoDetect admin error:'), e)
+    }
+  })
+
+  console.log(chalk.green('🔔 AutoDetect de grupos ACTIVADO'))
 }
