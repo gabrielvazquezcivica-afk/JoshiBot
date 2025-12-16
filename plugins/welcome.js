@@ -1,12 +1,13 @@
 import fs from 'fs'
 
+const dbDir = './database'
 const dbFile = './database/welcome.json'
 
 // 📂 Crear DB si no existe
-if (!fs.existsSync('./database')) fs.mkdirSync('./database')
+if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir)
 if (!fs.existsSync(dbFile)) fs.writeFileSync(dbFile, '{}')
 
-// 🎄 FRASES NAVIDEÑAS SARCASTICAS
+// 🎄 FRASES
 const frasesAdd = [
   '🎄 Oh no… llegó otro humano',
   '❄️ Bienvenido, no rompas nada',
@@ -23,7 +24,7 @@ const frasesRemove = [
   '🚪 Salida silenciosa'
 ]
 
-// 🖼️ OBTENER FOTO PERFIL (USUARIO → BOT → NULL)
+// 🖼️ FOTO PERFIL
 async function getProfileImage(sock, jid, botJid) {
   try {
     return await sock.profilePictureUrl(jid, 'image')
@@ -36,7 +37,7 @@ async function getProfileImage(sock, jid, botJid) {
   }
 }
 
-// 🧠 MENSAJE FUTURISTA
+// 🧠 MENSAJE
 function buildMessage(action, user) {
   const frase =
     action === 'add'
@@ -61,11 +62,25 @@ function buildMessage(action, user) {
 `.trim()
 }
 
-// 🎛️ HANDLER COMANDO
+// 🎛️ COMANDO
 export const handler = async (m, { sock, from, sender, isGroup, reply }) => {
-  if (!isGroup) return reply('❌ Solo en grupos')
+  if (!isGroup) return reply('❌ Solo funciona en grupos')
 
-  const metadata = await sock.groupMetadata(from)
+  const text =
+    m.message?.conversation ||
+    m.message?.extendedTextMessage?.text ||
+    ''
+
+  const args = text.toLowerCase().split(' ')
+  const option = args[1]
+
+  let metadata
+  try {
+    metadata = await sock.groupMetadata(from)
+  } catch {
+    return reply('❌ No pude obtener info del grupo')
+  }
+
   const admins = metadata.participants
     .filter(p => p.admin)
     .map(p => p.id)
@@ -74,44 +89,32 @@ export const handler = async (m, { sock, from, sender, isGroup, reply }) => {
     return reply('🚫 Solo admins pueden usar este comando')
 
   const db = JSON.parse(fs.readFileSync(dbFile))
-
   if (!db[from]) db[from] = false
 
-  if (m.text.includes('on')) {
+  if (option === 'on') {
     if (db[from]) return reply('⚠️ Welcome ya estaba activado')
     db[from] = true
     fs.writeFileSync(dbFile, JSON.stringify(db, null, 2))
-    return reply(`
-╭─〔 🚀 SISTEMA WELCOME 〕
-│ ✅ ACTIVADO
-├────────────────
-│ Ahora el grupo
-│ tiene bienvenida
-╰─〔 🤖 JoshiBot 〕
-`.trim())
+    return reply('✅ Welcome activado')
   }
 
-  if (m.text.includes('off')) {
+  if (option === 'off') {
     if (!db[from]) return reply('⚠️ Welcome ya estaba desactivado')
     db[from] = false
     fs.writeFileSync(dbFile, JSON.stringify(db, null, 2))
-    return reply(`
-╭─〔 🚀 SISTEMA WELCOME 〕
-│ ❌ DESACTIVADO
-├────────────────
-│ Ya no habrá avisos
-╰─〔 🤖 JoshiBot 〕
-`.trim())
+    return reply('❌ Welcome desactivado')
   }
 
-  reply('⚙️ Uso: .welcome on | off')
+  reply('⚙️ Uso correcto:\n.welcome on\n.welcome off')
 }
 
 handler.command = ['welcome']
 handler.tags = ['group']
+handler.group = true
 handler.admin = true
+handler.menu = true
 
-// 👥 EVENTO ENTRADA / SALIDA
+// 👥 EVENTO
 export async function welcomeEvent(sock, update) {
   const { id, participants, action } = update
   if (!['add', 'remove'].includes(action)) return
