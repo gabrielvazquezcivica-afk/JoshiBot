@@ -5,6 +5,9 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath, pathToFileURL } from 'url'
 
+// 👋 WELCOME EVENT
+import { welcomeEvent } from './plugins/welcome.js'
+
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
@@ -42,6 +45,17 @@ async function start() {
 
   const sock = await connectBot()
 
+  // ✅ EVENTO WELCOME / BYE (CORRECTO)
+  sock.ev.on('group-participants.update', async (update) => {
+    try {
+      console.log(chalk.blueBright('👥 Evento grupo:'), update.action)
+      await welcomeEvent(sock, update)
+    } catch (e) {
+      console.error(chalk.red('❌ Error en welcome:'), e)
+    }
+  })
+
+  // ✅ MENSAJES
   sock.ev.on('messages.upsert', async ({ messages }) => {
     const m = messages[0]
     if (!m?.message || m.key.fromMe) return
@@ -68,9 +82,9 @@ async function start() {
 
     if (!text) return
 
-    // 🧾 LOG EN CONSOLA
     const isCommand = text.startsWith(PREFIX)
 
+    // 🧾 LOG CONSOLA
     console.log(
       chalk.cyan('\n📩 MENSAJE RECIBIDO'),
       chalk.gray('\n🗂 Chat:'), chalk.yellow(isGroup ? 'Grupo' : 'Privado'),
@@ -83,10 +97,9 @@ async function start() {
       chalk.gray('\n💬 Texto:'), chalk.white(text)
     )
 
-    // ❌ Si no es comando, no ejecutar plugins
     if (!isCommand) return
 
-    // ⚙️ PROCESAR COMANDO
+    // ⚙️ COMANDO
     const args = text.slice(PREFIX.length).trim().split(/\s+/)
     const command = args.shift().toLowerCase()
 
@@ -107,7 +120,7 @@ async function start() {
             isCommand,
             plugins,
 
-            // 💬 REPLY (responde al mensaje del usuario)
+            // 💬 REPLY
             reply: (text) => sock.sendMessage(
               from,
               { text },
