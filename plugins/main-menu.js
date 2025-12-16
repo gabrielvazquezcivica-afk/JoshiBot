@@ -1,9 +1,10 @@
-export const handler = async (m, { sock, from, pushName, plugins }) => {
+export const handler = async (m, { reply, pushName, plugins }) => {
   const uptime = clockString(process.uptime() * 1000)
-  const me = 'JoshiBot'
+
+  const botName = 'JoshiBot'
   const dev = 'SoyGabo'
 
-  // 🗂️ Agrupar comandos por categoría
+  // 🎄 Agrupar comandos por tags
   const categories = {}
 
   for (const plugin of plugins) {
@@ -21,10 +22,10 @@ export const handler = async (m, { sock, from, pushName, plugins }) => {
 │ 🎄 MENÚ NAVIDEÑO 🎄 │
 ╰━━━━━━━━━━━━━━━━━━━━━━╯
 
-🤖 BOT: ${me}
+🤖 BOT: ${botName}
 👑 CREADOR: ${dev}
 ⭐ MODO: Público
-📱 BAILEYS: Multidispositivo
+📱 SISTEMA: Baileys MD
 ⏱️ ACTIVO: ${uptime}
 
 ───────────────
@@ -38,9 +39,7 @@ export const handler = async (m, { sock, from, pushName, plugins }) => {
 `
 
   for (const tag in categories) {
-    menu += `
-❄️ 🌲 ${tag.toUpperCase()} 🌲 ❄️
-`
+    menu += `\n❄️ 🎅 ${tag.toUpperCase()} 🎅 ❄️\n`
     for (const cmd of categories[tag]) {
       menu += `• .${cmd}\n`
     }
@@ -48,11 +47,11 @@ export const handler = async (m, { sock, from, pushName, plugins }) => {
 
   menu += `
 ───────────────
-🎅 Bot ${me} activo con espíritu navideño
-🎄 Que nunca falten comandos 🎁
+🎅 ${botName} activo con espíritu navideño
+🎄 Felices fiestas y buenos comandos 🎁
 `
 
-  await sock.sendMessage(from, { text: menu })
+  reply(menu)
 }
 
 handler.command = ['menu', 'help', 'comandos']
@@ -63,4 +62,4 @@ function clockString(ms) {
   let m = Math.floor(ms / 60000) % 60
   let s = Math.floor(ms / 1000) % 60
   return [h, m, s].map(v => v.toString().padStart(2, '0')).join(':')
-    }
+}
