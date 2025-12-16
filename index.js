@@ -5,7 +5,7 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath, pathToFileURL } from 'url'
 
-// 👋 WELCOME EVENT
+// 👋 WELCOME
 import { welcomeEvent } from './plugins/welcome.js'
 
 // 🔔 AUTO-DETECT
@@ -28,7 +28,7 @@ const __dirname = path.dirname(__filename)
 const PREFIX = '.'
 const plugins = []
 
-// ⏱️ ANTI MENSAJES ANTIGUOS
+// ⏱️ Anti mensajes viejos
 const botStartTime = Math.floor(Date.now() / 1000)
 
 // 🎨 Banner
@@ -51,7 +51,10 @@ async function loadPlugins() {
       const plugin = await import(
         pathToFileURL(path.join(pluginsDir, file)).href
       )
-      if (plugin.handler) plugins.push(plugin)
+
+      if (plugin?.handler) {
+        plugins.push(plugin)
+      }
     } catch (e) {
       console.error('❌ Error cargando plugin:', file)
     }
@@ -64,9 +67,12 @@ async function start() {
   showBanner()
   await loadPlugins()
 
+  // 🔥 FIX DEFINITIVO PARA MENU
+  global.plugins = plugins
+
   const sock = await connectBot()
 
-  // 🔔 INICIAR AUTO-DETECT (CAMBIOS DE GRUPO)
+  // 🔔 AUTO-DETECT (CAMBIOS DE GRUPO)
   initAutoDetect(sock)
 
   // 👋 WELCOME / BYE
@@ -132,12 +138,8 @@ async function start() {
           args,
           command,
 
-          // 💬 REPLY REAL
-          reply: (text) => sock.sendMessage(
-            from,
-            { text },
-            { quoted: m }
-          )
+          reply: (text) =>
+            sock.sendMessage(from, { text }, { quoted: m })
         })
       } catch (e) {
         console.error('❌ Error en plugin:', e)
