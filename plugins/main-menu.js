@@ -1,10 +1,9 @@
 export const handler = async (m, {
   sock,
   from,
-  reply,
-  pushName,
-  plugins
+  pushName
 }) => {
+
   const uptime = clockString(process.uptime() * 1000)
 
   const botName = 'JoshiBot'
@@ -19,10 +18,17 @@ export const handler = async (m, {
     }
   })
 
+  // 🔒 Seguridad
+  if (!global.plugins || !Array.isArray(global.plugins)) {
+    return sock.sendMessage(from, {
+      text: '❌ Error: plugins no disponibles.'
+    }, { quoted: m })
+  }
+
   // 📂 Agrupar comandos por categorías
   const categories = {}
 
-  for (const plugin of plugins) {
+  for (const plugin of global.plugins) {
     const h = plugin.handler
     if (!h?.command || !h?.tags) continue
 
@@ -71,9 +77,9 @@ export const handler = async (m, {
 🎄 Felices fiestas y buenos comandos 🎁
 `
 
-  // 🖼️ IMAGEN DEL MENÚ (puede ser URL o archivo local)
+  // 🖼️ Imagen del menú
   const image = {
-    url: 'https://i.postimg.cc/W3gbckFb/27969f9eb4afa31ef9ad64f8ede1ad45.jpg' // 🔁 cambia por la que tú quieras
+    url: 'https://i.postimg.cc/W3gbckFb/27969f9eb4afa31ef9ad64f8ede1ad45.jpg'
   }
 
   await sock.sendMessage(
