@@ -16,7 +16,7 @@ function showBanner() {
   console.clear()
   const banner = figlet.textSync('JoshiBot', { font: 'Slant' })
   console.log(chalk.cyanBright(banner))
-  console.log(chalk.gray('────────────────────────────'))
+  console.log(chalk.gray('────────────────────────────────────'))
 }
 
 // 📦 Cargar plugins (ESM)
@@ -27,10 +27,7 @@ async function loadPlugins() {
   for (const file of files) {
     const filePath = pathToFileURL(path.join(pluginsDir, file)).href
     const plugin = await import(filePath)
-
-    if (plugin.handler) {
-      plugins.push(plugin)
-    }
+    if (plugin.handler) plugins.push(plugin)
   }
 
   console.log(chalk.green(`🔌 Plugins cargados: ${plugins.length}`))
@@ -46,10 +43,15 @@ async function start() {
     const m = messages[0]
     if (!m?.message || m.key.fromMe) return
 
+    // 📍 DATOS BÁSICOS
     const from = m.key.remoteJid
     const isGroup = from.endsWith('@g.us')
-    const sender = isGroup ? m.key.participant : from
+    const senderJid = isGroup ? m.key.participant : from
 
+    // 👤 NOMBRE REAL DE WHATSAPP
+    const pushName = m.pushName || 'Sin nombre'
+
+    // 📝 TEXTO
     const text =
       m.message.conversation ||
       m.message.extendedTextMessage?.text ||
@@ -57,8 +59,27 @@ async function start() {
       m.message.videoMessage?.caption ||
       ''
 
-    if (!text.startsWith(PREFIX)) return
+    if (!text) return
 
+    // 🧾 LOG EN CONSOLA (MENSAJE O COMANDO)
+    const isCommand = text.startsWith(PREFIX)
+
+    console.log(
+      chalk.cyan('\n📩 MENSAJE RECIBIDO'),
+      chalk.gray('\n🗂 Chat:'), chalk.yellow(isGroup ? 'Grupo' : 'Privado'),
+      chalk.gray('\n📍 ID:'), chalk.white(from),
+      chalk.gray('\n👤 Usuario:'), chalk.green(pushName),
+      chalk.gray('\n🆔 JID:'), chalk.gray(senderJid),
+      chalk.gray('\n⚙️ Tipo:'), isCommand
+        ? chalk.magenta('Comando')
+        : chalk.blue('Mensaje'),
+      chalk.gray('\n💬 Texto:'), chalk.white(text)
+    )
+
+    // ❌ Si no es comando, solo registrar
+    if (!isCommand) return
+
+    // ⚙️ PROCESAR COMANDO
     const args = text.slice(PREFIX.length).trim().split(/\s+/)
     const command = args.shift().toLowerCase()
 
@@ -71,10 +92,12 @@ async function start() {
           await handler(m, {
             sock,
             from,
-            sender,
+            sender: senderJid,
+            pushName,
             isGroup,
             args,
-            command
+            command,
+            isCommand
           })
         } catch (e) {
           console.error(chalk.red('❌ Error en plugin:'), e)
@@ -84,7 +107,7 @@ async function start() {
     }
   })
 
-  console.log(chalk.green('🤖 Bot listo y operativo'))
+  console.log(chalk.green('🤖 Bot listo, esperando mensajes...\n'))
 }
 
 start()
