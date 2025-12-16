@@ -1,36 +1,34 @@
 export const handler = async (m, {
   sock,
   from,
-  pushName
+  reply,
+  pushName,
+  plugins
 }) => {
 
-  const uptime = clockString(process.uptime() * 1000)
+  // 🛑 FIX REAL
+  if (!Array.isArray(plugins) || plugins.length === 0) {
+    return reply('❌ No hay plugins cargados.')
+  }
 
+  // 🎄 Reacción
+  await sock.sendMessage(from, {
+    react: { text: '🎄', key: m.key }
+  })
+
+  const uptime = clockString(process.uptime() * 1000)
   const botName = 'JoshiBot'
   const dev = 'SoyGabo'
   const saludo = getGreeting()
 
-  // 🎄 Reacción al mensaje
-  await sock.sendMessage(from, {
-    react: {
-      text: '🎄',
-      key: m.key
-    }
-  })
-
-  // 🔒 Seguridad
-  if (!global.plugins || !Array.isArray(global.plugins)) {
-    return sock.sendMessage(from, {
-      text: '❌ Error: plugins no disponibles.'
-    }, { quoted: m })
-  }
-
-  // 📂 Agrupar comandos por categorías
+  // 📂 Agrupar comandos
   const categories = {}
 
-  for (const plugin of global.plugins) {
+  for (const plugin of plugins) {
+    if (!plugin?.handler) continue
+
     const h = plugin.handler
-    if (!h?.command || !h?.tags) continue
+    if (!h.command || !h.tags) continue
 
     for (const tag of h.tags) {
       if (!categories[tag]) categories[tag] = []
@@ -45,47 +43,35 @@ export const handler = async (m, {
 
 🤖 BOT: ${botName}
 👑 CREADOR: ${dev}
-🌤️ ${saludo}
+${saludo}
 ⏱️ ACTIVO: ${uptime}
 
 ───────────────
-❄️ PERFIL DEL USUARIO ❄️
-───────────────
-🎄 NOMBRE: ${pushName}
-
-───────────────
-🎁 LISTA DE COMANDOS 🎁
+🎁 COMANDOS 🎁
 ───────────────
 `
 
   for (const tag in categories) {
     menu += `
-╭───────────────╮
-│ 🎅 ${tag.toUpperCase()} 🎅 │
-╰───────────────╯
+╭─〔 ${tag.toUpperCase()} 〕
 `
 
     for (const cmd of categories[tag]) {
       menu += `• .${cmd}\n`
     }
-
-    menu += `───────────────\n`
   }
 
   menu += `
-🎅 ${botName} activo con espíritu navideño
-🎄 Felices fiestas y buenos comandos 🎁
+───────────────
+🎄 JoshiBot activo
 `
-
-  // 🖼️ Imagen del menú
-  const image = {
-    url: 'https://i.postimg.cc/W3gbckFb/27969f9eb4afa31ef9ad64f8ede1ad45.jpg'
-  }
 
   await sock.sendMessage(
     from,
     {
-      image,
+      image: {
+        url: 'https://i.postimg.cc/W3gbckFb/27969f9eb4afa31ef9ad64f8ede1ad45.jpg'
+      },
       caption: menu
     },
     { quoted: m }
@@ -94,8 +80,9 @@ export const handler = async (m, {
 
 handler.command = ['menu', 'help', 'comandos']
 handler.tags = ['main']
+handler.group = false
 
-/* ⏱️ Tiempo activo */
+/* ⏱️ */
 function clockString(ms) {
   let h = Math.floor(ms / 3600000)
   let m = Math.floor(ms / 60000) % 60
@@ -103,7 +90,6 @@ function clockString(ms) {
   return [h, m, s].map(v => v.toString().padStart(2, '0')).join(':')
 }
 
-/* 🌤️ Saludo por hora */
 function getGreeting() {
   const hour = new Date().getHours()
   if (hour >= 5 && hour < 12) return '☀️ Buenos días'
