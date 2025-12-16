@@ -3,6 +3,10 @@ import chalk from 'chalk'
 import figlet from 'figlet'
 import fs from 'fs'
 import path from 'path'
+import { fileURLToPath, pathToFileURL } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 const PREFIX = '.'
 const plugins = []
@@ -12,17 +16,21 @@ function showBanner() {
   console.clear()
   const banner = figlet.textSync('JoshiBot', { font: 'Slant' })
   console.log(chalk.cyanBright(banner))
-  console.log(chalk.gray('──────────────────────────────────'))
+  console.log(chalk.gray('────────────────────────────'))
 }
 
-// 📦 Cargar plugins
-function loadPlugins() {
-  const dir = path.resolve('./plugins')
-  const files = fs.readdirSync(dir).filter(f => f.endsWith('.js'))
+// 📦 Cargar plugins (ESM)
+async function loadPlugins() {
+  const pluginsDir = path.join(__dirname, 'plugins')
+  const files = fs.readdirSync(pluginsDir).filter(f => f.endsWith('.js'))
 
   for (const file of files) {
-    const plugin = require(`${dir}/${file}`)
-    plugins.push(plugin)
+    const filePath = pathToFileURL(path.join(pluginsDir, file)).href
+    const plugin = await import(filePath)
+
+    if (plugin.handler) {
+      plugins.push(plugin)
+    }
   }
 
   console.log(chalk.green(`🔌 Plugins cargados: ${plugins.length}`))
@@ -30,7 +38,7 @@ function loadPlugins() {
 
 async function start() {
   showBanner()
-  loadPlugins()
+  await loadPlugins()
 
   const sock = await connectBot()
 
@@ -62,21 +70,21 @@ async function start() {
         try {
           await handler(m, {
             sock,
-            args,
-            command,
-            isGroup,
+            from,
             sender,
-            from
+            isGroup,
+            args,
+            command
           })
         } catch (e) {
-          console.error(e)
+          console.error(chalk.red('❌ Error en plugin:'), e)
         }
         break
       }
     }
   })
 
-  console.log(chalk.green('🤖 Bot listo'))
+  console.log(chalk.green('🤖 Bot listo y operativo'))
 }
 
 start()
