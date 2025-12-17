@@ -1,12 +1,12 @@
 {
   "name": "joshi-bot",
   "version": "1.0.0",
-  "description": "Bot de WhatsApp con Baileys",
   "type": "module",
-  "main": "index.js",
+  "main": "index.mjs",
   "scripts": {
-    "start": "node index.js"
-  },
+    "start": "node index.mjs"
+  }
+}
   "author": "Joshi",
   "license": "MIT",
   "dependencies": {
