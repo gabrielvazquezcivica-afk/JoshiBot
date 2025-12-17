@@ -13,6 +13,7 @@ export default {
     name: 'Joshi',
     number: ['523310167470']
   }
+  }
 
   // ───── LOGIN ─────
   login: {
