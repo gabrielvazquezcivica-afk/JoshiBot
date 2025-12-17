@@ -48,7 +48,7 @@ export const handler = async (m, {
   }
 }
 
-handler.command = ['grupo', 'gc']
+handler.command = ['grupo abrir/cerrar', 'gc']
 handler.tags = ['group']
 handler.group = true
 handler.admin = true
