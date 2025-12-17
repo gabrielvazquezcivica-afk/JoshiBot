@@ -1,22 +1,17 @@
-<!-- JOSHI BOT README --><!-- Animated Title (SVG, no GIF) --><div align="center"><svg width="100%" height="120" viewBox="0 0 1200 120" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#ff0000" />
-      <stop offset="50%" stop-color="#00ff00" />
-      <stop offset="100%" stop-color="#ff0000" />
-    </linearGradient>
-    <style>
-      .title { font: 900 72px 'Arial', sans-serif; fill: url(#rg); }
-      .pulse { animation: pulse 2.5s ease-in-out infinite; }
-      @keyframes pulse {
-        0% { letter-spacing: 2px; opacity: 1; }
-        50% { letter-spacing: 6px; opacity: .9; }
-        100% { letter-spacing: 2px; opacity: 1; }
-      }
-    </style>
-  </defs>
-  <text x="50%" y="78" text-anchor="middle" class="title pulse">JOSHI BOT</text>
-</svg><p><b>Bot de WhatsApp • Estable • Optimizado para Termux</b></p><!-- Buttons --><p>
+<!-- JOSHI BOT README --><!-- Title --><!-- Banner --><div align="center"><!-- Banner --><img src="https://capsule-render.vercel.app/api?type=waving&color=0:ff0000,100:00ff00&height=200&section=header&text=JOSHI%20BOT&fontSize=60&fontColor=ffffff" alt="JOSHI BOT Banner" /><h1>
+  <span style="color:#ff0000">JOSHI</span>
+  <span style="color:#00ff00">BOT</span>
+</h1><p><b>Bot de WhatsApp • Estable • Optimizado para Termux</b></p><p>
+  <a href="https://f-droid.org/repo/com.termux_118.apk">
+    <img alt="Descargar Termux" src="https://img.shields.io/badge/Descargar-Termux-1a1a1a?style=for-the-badge&logo=android" />
+  </a>
+  <a href="https://wa.me/523310167470">
+    <img alt="Contacto WhatsApp" src="https://img.shields.io/badge/WhatsApp-Soporte-25D366?style=for-the-badge&logo=whatsapp&logoColor=white" />
+  </a>
+</p></div><div align="center"><h1>
+  <span style="color:#ff0000">JOSHI</span>
+  <span style="color:#00ff00">BOT</span>
+</h1><p><b>Bot de WhatsApp • Estable • Optimizado para Termux</b></p><p>
   <a href="https://f-droid.org/repo/com.termux_118.apk">
     <img alt="Descargar Termux" src="https://img.shields.io/badge/Descargar-Termux-1a1a1a?style=for-the-badge&logo=android" />
   </a>
@@ -128,6 +123,33 @@ No compartas tu sesión
 
 Usa el bot solo en grupos autorizados
 
+
+
+---
+
+👤 Créditos
+
+Autor: Gabriel Alex Indo
+
+Nombre del bot: JOSHI BOT
+
+Plataforma: Node.js + Baileys
+
+Soporte: WhatsApp +52 33 1016 7470
+
+
+
+---
+
+📜 Licencia
+
+Este proyecto está protegido bajo la licencia MIT.
+
+✔ Uso personal y educativo permitido
+✔ Modificación permitida
+❌ Prohibida la venta sin autorización del autor
+
+El autor no se hace responsable del mal uso del bot.
 
 
 ---
