@@ -5,8 +5,7 @@
   "main": "index.mjs",
   "scripts": {
     "start": "node index.mjs"
-  }
-}
+  },
   "author": "Joshi",
   "license": "MIT",
   "dependencies": {
