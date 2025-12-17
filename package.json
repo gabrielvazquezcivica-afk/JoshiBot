@@ -1,7 +1,7 @@
 {
   "name": "joshi-bot",
   "version": "1.0.0",
-  "description": "Bot de WhatsApp con Baileys (QR / Pairing Code)",
+  "description": "Bot de WhatsApp con Baileys",
   "type": "module",
   "main": "index.js",
   "scripts": {
@@ -12,17 +12,16 @@
     "whatsapp-bot",
     "baileys",
     "termux",
-    "pairing-code",
-    "qr-login"
+    "pairing-code"
   ],
   "author": "Joshi",
   "license": "MIT",
   "dependencies": {
     "@whiskeysockets/baileys": "^6.7.8",
     "chalk": "^5.3.0",
+    "figlet": "^1.8.0",
     "fs-extra": "^11.2.0",
     "lodash": "^4.17.21",
-    "pino": "^8.17.2",
-    "qrcode-terminal": "^0.12.0"
+    "pino": "^8.17.2"
   }
 }
