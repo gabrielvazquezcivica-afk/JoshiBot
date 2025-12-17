@@ -1,22 +1,14 @@
-<div align="center">🟢🟥 JOSHI BOT 🟥🟢
+<div align="center"><img src="https://readme-typing-svg.demolab.com?font=Orbitron&size=60&pause=1000&color=00FF00&center=true&vCenter=true&width=800&lines=JOSHI" />
+<img src="https://readme-typing-svg.demolab.com?font=Orbitron&size=60&pause=1000&color=FF0000&center=true&vCenter=true&width=800&lines=BOT" /><pre>
+███████╗ ██████╗ ███████╗██╗  ██╗██╗██████╗  ██████╗ ████████╗
+██╔════╝██╔═══██╗██╔════╝██║  ██║██║██╔══██╗██╔═══██╗╚══██╔══╝
+███████╗██║   ██║███████╗███████║██║██████╔╝██║   ██║   ██║   
+╚════██║██║   ██║╚════██║██╔══██║██║██╔══██╗██║   ██║   ██║   
+███████║╚██████╔╝███████║██║  ██║██║██████╔╝╚██████╔╝   ██║   
+╚══════╝ ╚═════╝ ╚══════╝╚═╝  ╚═╝╚═╝╚═════╝  ╚═════╝    ╚═╝   
+</pre><h3>🔥 <b>WHATSAPP BOT 3D</b> • ⚡ <b>TERMUX</b> • 🚀 <b>POTENTE & ESTABLE</b></h3>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-██████╗  ██████╗ ███████╗██╗  ██╗██╗
-
-██╔══██╗██╔═══██╗██╔════╝██║  ██║██║
-
-██║  ██║██║   ██║███████╗███████║██║
-
-██║  ██║██║   ██║╚════██║██╔══██║██║
-
-██████╔╝╚██████╔╝███████║██║  ██║███████╗
-
-╚═════╝  ╚═════╝ ╚══════╝╚═╝  ╚═╝╚══════╝
-
-🤖 WhatsApp Bot • ⚡ Termux • 🚀 Potente
-
----</div>
-
-🍟 INSTALACIÓN MANUAL POR TERMUX
+</div>🍟 INSTALACIÓN MANUAL POR TERMUX
 
 Escribe los siguientes comandos uno por uno:
 
