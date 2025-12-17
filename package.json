@@ -2,9 +2,9 @@
   "name": "joshi-bot",
   "version": "1.0.0",
   "type": "module",
-  "main": "index.mjs",
+  "main": "index.js",
   "scripts": {
-    "start": "node index.mjs"
+    "start": "node index.js"
   },
   "author": "Joshi",
   "license": "MIT",
