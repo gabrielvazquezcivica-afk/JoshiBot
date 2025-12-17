@@ -1,29 +1,31 @@
 // ─────────────────────────────
-// CONFIGURACIÓN GLOBAL DEL BOT
+// CONFIGURACIÓN GLOBAL JOSHI-BOT
 // ─────────────────────────────
 
 const config = {
-  // 🤖 BOT
+
+  // ───── BOT ─────
   bot: {
     name: 'JOSHI-BOT',
     prefix: '.',
     public: true
   },
 
-  // 👑 OWNER (SOLO NÚMEROS)
+  // ───── OWNER (NUM + LID) ─────
   owner: {
     name: 'Joshi',
     numbers: [
-      '523310167470'
+      '523310167470',      // 📱 Número real
+      '215590228750567'    // 🔥 LID real (MD)
     ]
   },
 
-  // 🔐 LOGIN
+  // ───── LOGIN ─────
   login: {
-    pairing: true
+    pairing: true // true = código | false = QR
   },
 
-  // 🌐 APIS
+  // ───── APIS ─────
   APIs: {
     openai: 'https://api.openai.com/v1',
     gemini: 'https://generativelanguage.googleapis.com',
@@ -31,7 +33,7 @@ const config = {
     weather: 'https://api.openweathermap.org/data/2.5'
   },
 
-  // 🔑 API KEYS
+  // ───── API KEYS ─────
   APIKeys: {
     'https://api.openai.com/v1': process.env.OPENAI_KEY || '',
     'https://generativelanguage.googleapis.com': process.env.GEMINI_KEY || '',
@@ -39,7 +41,7 @@ const config = {
     'https://api.openweathermap.org/data/2.5': process.env.WEATHER_KEY || ''
   },
 
-  // 📊 LIMITES
+  // ───── LIMITES ─────
   limits: {
     free: 10,
     premium: 100
