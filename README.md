@@ -1,24 +1,26 @@
 <p align="center">
-  <img src="https://media.giphy.com/media/3o7TKtnuHOHHUjR38Y/giphy.gif" width="420" />
-</p><h1 align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Orbitron&weight=900&size=70&pause=1200&center=true&vCenter=true&width=900&lines=🟢+YOSHI+BOT+🔴;HACKER+WHATSAPP+BOT" />
-</h1><p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=banner&color=0:00ff3c,100:ff0000&height=160&section=header&text=YOSHI%20BOT&fontSize=90&fontColor=ffffff" />
+  <img src="https://i.imgur.com/6QKQJkN.gif" width="420" />
+</p><h1 align="center">🟢 YOSHI BOT 🔴</h1><p align="center">
+  <b>WHATSAPP BOT • MODO HACKER • VERDE NEÓN</b>
 </p>
 ---
 
-🚀 Iniciar Yoshi Bot en Termux
+💻 TERMINAL (FAKE)
 
-> Copia y pega UN comando a la vez
+root@YOSHI-BOT:~# initializing system...
+root@YOSHI-BOT:~# loading modules
+root@YOSHI-BOT:~# connecting to whatsapp servers
+root@YOSHI-BOT:~# bypass rate-limit ✔
+root@YOSHI-BOT:~# anti-ban active ✔
+root@YOSHI-BOT:~# bot status: ONLINE
+root@YOSHI-BOT:~# listening commands...
 
 
+---
 
-Paso 1
-
-pkg update && pkg upgrade -y
-
-Paso 2
-
+<p align="center">
+  <b>CREADO POR SoyGabo</b>
+</p>
 pkg install git nodejs -y
 
 Paso 3
