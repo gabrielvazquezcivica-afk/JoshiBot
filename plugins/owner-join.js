@@ -1,61 +1,56 @@
 import config from '../config.js'
 
-export const handler = async (m, { sock, args, sender, reply }) => {
-
-  const owners = config.owner?.jid || []
-  if (!owners.length) {
-    return reply('❌ Owner no configurado correctamente')
+export const handler = async (m, { sock, sender, reply }) => {
+  if (!config.owner.jid.includes(sender)) {
+    return reply('🎅 Solo el OWNER puede usar este comando')
   }
 
-  if (!owners.includes(sender)) {
-    return reply(`🎅 Solo el OWNER puede usar este comando`)
+  const text =
+    m.message?.conversation ||
+    m.message?.extendedTextMessage?.text ||
+    ''
+
+  const link = text.split(' ')[1]
+  if (!link) {
+    return reply('❄️ Usa:\n.join https://chat.whatsapp.com/XXXXX')
   }
-
-  const link = args[0]
-  if (!link) return reply('❌ Usa: .join <link del grupo>')
-
-  const code = link.split('/').pop().split('?')[0]
 
   try {
-    await sock.groupAcceptInvite(code)
-  } catch {
-    try {
-      await sock.groupAcceptInviteV4(code)
-    } catch {
-      return reply('❌ No pude unirme al grupo')
-    }
-  }
+    // ✅ Aceptar invitación
+    const code = link.split('/').pop()
+    const groupJid = await sock.groupAcceptInvite(code)
 
-  reply('🚀 Uniéndome al grupo...')
+    // 🎄 MENSAJE NAVIDEÑO FUTURISTA
+    const msg = `
+🎄✨ *JOSHI-BOT HA LLEGADO* ✨🎄
 
-  await new Promise(r => setTimeout(r, 2500))
+🤖 Bot: *${config.bot.name}*
+👑 Owner: *${config.owner.name}*
 
-  const groups = await sock.groupFetchAllParticipating()
-  const group = Object.values(groups).pop()
-  if (!group?.id) return
+⚡ Funciones activas:
+• Anti-link
+• Welcome
+• Moderación
+• Comandos futuristas
 
-  const text = `
-╔════════════════════╗
-   🤖 𝗝𝗢𝗦𝗛𝗜-𝗕𝗢𝗧
-╚════════════════════╝
-
-🎄✨ AVISO NAVIDEÑO ✨🎄
-
-👋 El bot ha ingresado al grupo
-con autorización del OWNER
-
-⚡ Sistema activado
-👑 Owner: ${config.owner.name}
-
-╔════════════════════╗
-   🚀 MODO FUTURISTA
-╚════════════════════╝
+🎅 ¡Felices fiestas!
+🚀 Listo para proteger el grupo
 `
 
-  await sock.sendMessage(group.id, { text })
+    // ✅ ENVIAR AL GRUPO REAL
+    await sock.sendMessage(groupJid, { text: msg })
+
+    reply('✅ Unido al grupo y aviso enviado correctamente')
+
+  } catch (e) {
+    console.error(e)
+    reply('❌ No pude unirme al grupo')
+  }
 }
 
-handler.help = ['join <link>']
-handler.tags = ['owner']
 handler.command = ['join']
 handler.owner = true
+handler.tags = ['owner']
+handler.help = ['join <link>']
+
+export default handler
