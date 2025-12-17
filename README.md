@@ -1,28 +1,73 @@
 <p align="center">
   <img src="https://i.imgur.com/6QKQJkN.gif" width="420" />
-</p><h1 align="center">🟢 YOSHI BOT 🔴</h1><p align="center">
-  <b>WHATSAPP BOT • MODO HACKER • VERDE NEÓN</b>
 </p>
 ---
 
-💻 TERMINAL (MATRIX MODE)
+<h1 align="center">🟢 YOSHI BOT - PROJECT 🔴</h1><p align="center">
+  <b>🤖 WhatsApp Bot • 📱 Termux • ⚡ Estable</b>
+</p><p align="center">
+  <a href="https://f-droid.org/packages/com.termux/">
+    <img src="https://img.shields.io/badge/📥%20INSTALAR%20TERMUX-000000?style=for-the-badge&logo=android&logoColor=white" />
+  </a>
+</p><p align="center">
+  <a href="#-instalación-manual-por-termux">
+    <img src="https://img.shields.io/badge/🚀%20INSTALAR%20YOSHI%20BOT-00ff3c?style=for-the-badge&logo=whatsapp&logoColor=black" />
+  </a>
+</p><p align="center">
+  <a href="https://wa.me/523310167470">
+    <img src="https://img.shields.io/badge/💬%20WHATSAPP%20SOPORTE-25D366?style=for-the-badge&logo=whatsapp&logoColor=white" />
+  </a>
+</p>
+---
 
-███▓▒░ MATRIX INITIALIZING ░▒▓███
+🍟 INSTALACIÓN MANUAL POR TERMUX
 
-root@YOSHI-BOT:~# echo "Wake up, Neo..."
-Wake up, Neo...
-root@YOSHI-BOT:~# loading matrix-core
-[██████████░░░░░░░░] 42%
-root@YOSHI-BOT:~# decrypting whatsapp protocol
-[ OK ] key-exchange bypassed
-root@YOSHI-BOT:~# injecting green-neon payload
-[ OK ] payload injected
-root@YOSHI-BOT:~# anti-ban matrix shield
-[ ACTIVE ] invisible mode enabled
-root@YOSHI-BOT:~# connecting...
-[ ONLINE ] whatsapp session established
-root@YOSHI-BOT:~# YOSHI BOT STATUS: MATRIX ONLINE
-root@YOSHI-BOT:~# follow the white rabbit 🐇
+> ✍️ ESCRIBE LOS SIGUIENTES COMANDOS UNO POR UNO
+
+
+
+termux-setup-storage
+
+pkg update && pkg upgrade -y
+
+pkg install git nodejs -y
+
+git clone https://github.com/tu-usuario/YoshiBot
+
+cd YoshiBot
+
+npm install
+
+node index.js
+
+
+---
+
+🔄 ACTIVAR BOT EN TERMUX (SI SE DETIENE)
+
+cd YoshiBot
+
+node index.js
+
+
+---
+
+🔑 OBTENER NUEVO CÓDIGO QR
+
+cd YoshiBot
+
+rm -rf sessions
+
+node index.js
+
+
+---
+
+<p align="center">
+  <img src="https://img.shields.io/badge/YoshiBot-24%2F7-00ff3c?style=for-the-badge" />
+</p><p align="center">
+  <b>👑 CREADO POR SoyGabo</b>
+</p>root@YOSHI-BOT:~# follow the white rabbit 🐇
 ```bash
 root@YOSHI-BOT:~# initializing system...
 root@YOSHI-BOT:~# loading modules
