@@ -1,6 +1,7 @@
 import fs from 'fs'
 
-const lastAdmin = new Map()
+// 🔥 CAMBIO NECESARIO (exportar)
+export const lastAdmin = new Map()
 
 // Guarda último admin que habló (fallback real)
 export function initAutoDetect(sock) {
@@ -107,4 +108,4 @@ export function initAutoDetect(sock) {
       }
     })
   })
-                                                                                            }
+        }
