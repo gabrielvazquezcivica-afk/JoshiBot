@@ -1,16 +1,16 @@
 <p align="center">
-  <img src="https://i.imgur.com/YOSHI_PLACEHOLDER.png" width="420" />
+  <img src="https://raw.githubusercontent.com/gabrielvazquezcivica/JoshiBot/main/assets/c33b0081e2683289a03b14ab81885e43.jpg" width="420" />
 </p>
 ---
 
-<h1 align="center">🟢 YOSHI BOT - PROJECT 🔴</h1><p align="center">
-  <b>🤖 WhatsApp Bot • 📱 Termux • ⚡ Estable</b>
+<h1 align="center">🟢 YOSHI BOT - PROYECTO 🔴</h1><p align="center">
+  <b>🤖 Bot de WhatsApp • 📱 Termux • ⚡ Estable</b>
 </p><p align="center">
   <a href="https://f-droid.org/packages/com.termux/">
     <img src="https://img.shields.io/badge/📥%20INSTALAR%20TERMUX-000000?style=for-the-badge&logo=android&logoColor=white" />
   </a>
 </p><p align="center">
-  <a href="#-instalación-manual-por-termux">
+  <a href="#-manual-de-instalación-por-termux">
     <img src="https://img.shields.io/badge/🚀%20INSTALAR%20YOSHI%20BOT-00ff3c?style=for-the-badge&logo=whatsapp&logoColor=black" />
   </a>
 </p><p align="center">
@@ -20,13 +20,9 @@
 </p>
 ---
 
-🍟 INSTALACIÓN MANUAL POR TERMUX
+🍟 MANUAL DE INSTALACIÓN POR TERMUX
 
-> 📋 Cada bloque tiene el ícono 📋 para copiar (arriba a la derecha)
-
-
-
-> ✍️ ESCRIBE LOS SIGUIENTES COMANDOS UNO POR UNO
+> ✍️ COPIA Y PEGA LOS COMANDOS UNO POR UNO
 
 
 
@@ -36,9 +32,9 @@ pkg update && pkg upgrade -y
 
 pkg install git nodejs -y
 
-git clone https://github.com/tu-usuario/YoshiBot
+git clone https://github.com/gabrielvazquezcivica/JoshiBot
 
-cd YoshiBot
+cd JoshiBot
 
 npm install
 
@@ -47,27 +43,22 @@ node index.js
 
 ---
 
-🍟 ACTIVAR EN TERMUX EN CASO DE DETENERSE
+🔄 ACTIVAR BOT EN TERMUX (SI SE DETIENE)
 
-> ✍️ ESCRIBE LOS SIGUIENTES COMANDOS UNO POR UNO
+cd JoshiBot
 
-
-
-> cd YoshiBot
-> node index.js
+node index.js
 
 
 ---
 
-🔥 OBTENER OTRO CÓDIGO QR
+🔑 OBTENER NUEVO CÓDIGO QR
 
-> ✍️ ESCRIBE LOS SIGUIENTES COMANDOS UNO POR UNO
+cd JoshiBot
 
+rm -rf sessions
 
-
-> cd YoshiBot
-> rm -rf sessions
-> node index.js
+node index.js
 
 
 ---
