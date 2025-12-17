@@ -1,48 +1,31 @@
-export const handler = async (m, { sock, args, reply }) => {
+export const handler = async (m, { sock, args, sender, owner, reply }) => {
+  const owners = owner.numbers || []
 
-  // 🔥 OBTENER JID REAL (PRIVADO O GRUPO)
-  const jid =
-    m.key.participant ||
-    m.key.remoteJid
+  // limpiar sender (lid o jid)
+  const cleanSender = sender.replace(/[^0-9]/g, '')
 
-  const senderNumber = jid
-    ?.replace(/@s\.whatsapp\.net|@lid/g, '')
-    ?.trim()
-
-  const ownerNumbers = global.owner.numbers
-
-  // 🧪 DEBUG (NO BORRES HASTA QUE VEAS QUE FUNCIONA)
-  console.log('👑 OWNER CHECK:', senderNumber, ownerNumbers)
-
-  if (!ownerNumbers.includes(senderNumber)) {
-    return reply(
-`⛔ ACCESO DENEGADO
-
-Solo el OWNER puede usar este comando`
-    )
+  if (!owners.includes(cleanSender)) {
+    return reply('🚫 Solo el OWNER puede usar este comando')
   }
 
   const link = args[0]
-  if (!link || !link.includes('chat.whatsapp.com/')) {
-    return reply(
-`❌ LINK INVÁLIDO
-Ejemplo:
-.join https://chat.whatsapp.com/XXXX`
-    )
-  }
+  if (!link) return reply('❌ Usa: .join <link>')
+
+  const code = link.split('/').pop().split('?')[0]
 
   try {
-    const code = link.split('chat.whatsapp.com/')[1]
+    // intento normal
     await sock.groupAcceptInvite(code)
-
-    reply(
-`🚀 ACCESO CONCEDIDO
-Bot unido al grupo correctamente`
-    )
-
-  } catch (e) {
-    console.error(e)
-    reply('❌ No pude unirme al grupo')
+    return reply('✅ Unido al grupo correctamente')
+  } catch (e1) {
+    try {
+      // fallback nuevo (WhatsApp MD 2025)
+      await sock.groupAcceptInviteV4(code)
+      return reply('✅ Unido al grupo (modo V4)')
+    } catch (e2) {
+      console.error('JOIN ERROR:', e2)
+      return reply('❌ No pude unirme al grupo\n🔒 El link puede estar restringido')
+    }
   }
 }
 
