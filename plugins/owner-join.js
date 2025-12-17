@@ -1,61 +1,72 @@
 export const handler = async (m, {
   sock,
-  sender,
   args,
-  reply,
-  owner
+  sender,
+  owner,
+  reply
 }) => {
 
-  // 🔒 Solo owners definidos en config
-  if (!owner?.number?.includes(sender.split('@')[0])) {
+  // 🔐 VALIDAR OWNER
+  const isOwner = owner?.number?.includes(
+    sender.split('@')[0]
+  )
+
+  if (!isOwner) {
     return reply(
-`╭─〔 🚫 ACCESO RESTRINGIDO 〕
-│ 🎄 Solo el creador del bot
-│ puede usar este comando
-╰─〔 🤖 JoshiBot 〕`
+`╭─〔 🚫 ACCESO BLOQUEADO 〕
+│ Permisos insuficientes
+├────────────────────
+│ Solo el creador del
+│ sistema puede usar
+│ este comando
+╰─〔 🤖 JOSHI CORE 〕`
     )
   }
 
-  if (!args[0]) {
+  // 🔗 LINK DEL GRUPO
+  const link = args[0]
+  if (!link || !link.includes('chat.whatsapp.com')) {
     return reply(
-`╭─〔 ⚠️ USO INCORRECTO 〕
-│ ✨ Uso correcto:
+`╭─〔 ⚠️ INVITACIÓN INVÁLIDA 〕
+│ Link de grupo requerido
+├────────────────────
+│ Uso correcto:
 │ .join https://chat.whatsapp.com/XXXX
-╰─〔 🤖 JoshiBot 〕`
-    )
-  }
-
-  const linkRegex = /chat\.whatsapp\.com\/([0-9A-Za-z]{20,24})/i
-  const match = args[0].match(linkRegex)
-
-  if (!match) {
-    return reply(
-`╭─〔 ❌ LINK INVÁLIDO 〕
-│ 🎅 Proporciona un link válido
-╰─〔 🤖 JoshiBot 〕`
+╰─〔 🤖 JOSHI CORE 〕`
     )
   }
 
   try {
-    await sock.groupAcceptInvite(match[1])
+    // 🧬 EXTRAER CÓDIGO
+    const code = link.split('chat.whatsapp.com/')[1]
 
-    reply(
-`╭─〔 ✅ UNIÓN EXITOSA 🎄 〕
-│ 🤖 El bot se ha unido
-│ correctamente al grupo
-╰─〔 🎅 JoshiBot 〕`
+    // 🚀 UNIR BOT
+    await sock.groupAcceptInvite(code)
+
+    await reply(
+`╭─〔 🚀 ACCESO CONCEDIDO 〕
+│ El sistema se ha unido
+│ exitosamente al grupo
+├────────────────────
+│ Autorizado por:
+│ 👑 OWNER
+╰─〔 🤖 JOSHI CORE 〕`
     )
 
   } catch (e) {
     reply(
-`╭─〔 ❌ ERROR 🎄 〕
-│ 🚫 No pude unirme al grupo
-│ 🔐 Link inválido o vencido
-╰─〔 🤖 JoshiBot 〕`
+`╭─〔 ❌ ERROR DEL SISTEMA 〕
+│ No fue posible unirse
+│ al grupo solicitado
+├────────────────────
+│ Verifica el enlace
+│ o permisos
+╰─〔 🤖 JOSHI CORE 〕`
     )
   }
 }
 
 handler.command = ['join']
 handler.tags = ['owner']
+handler.owner = true
 handler.menu = true
