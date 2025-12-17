@@ -1,21 +1,8 @@
-<!-- JOSHI BOT README --><!-- Title --><!-- Banner --><div align="center"><!-- Banner --><img src="https://capsule-render.vercel.app/api?type=waving&color=0:ff0000,100:00ff00&height=200&section=header&text=JOSHI%20BOT&fontSize=60&fontColor=ffffff" alt="JOSHI BOT Banner" /><h1>
-  <span style="color:#ff0000">JOSHI</span>
-  <span style="color:#00ff00">BOT</span>
-</h1><p><b>Bot de WhatsApp • Estable • Optimizado para Termux</b></p><p>
+<!-- JOSHI BOT README --><div align="center"><!-- Banner --><img src="https://capsule-render.vercel.app/api?type=waving&color=0:ff0000,100:00ff00&height=200&section=header&text=JOSHI%20BOT&fontSize=60&fontColor=ffffff" alt="JOSHI BOT Banner" /><p><b>Bot de WhatsApp • Estable • Optimizado para Termux</b></p><p>
   <a href="https://f-droid.org/repo/com.termux_118.apk">
     <img alt="Descargar Termux" src="https://img.shields.io/badge/Descargar-Termux-1a1a1a?style=for-the-badge&logo=android" />
   </a>
-  <a href="https://wa.me/523310167470">
-    <img alt="Contacto WhatsApp" src="https://img.shields.io/badge/WhatsApp-Soporte-25D366?style=for-the-badge&logo=whatsapp&logoColor=white" />
-  </a>
-</p></div><div align="center"><h1>
-  <span style="color:#ff0000">JOSHI</span>
-  <span style="color:#00ff00">BOT</span>
-</h1><p><b>Bot de WhatsApp • Estable • Optimizado para Termux</b></p><p>
-  <a href="https://f-droid.org/repo/com.termux_118.apk">
-    <img alt="Descargar Termux" src="https://img.shields.io/badge/Descargar-Termux-1a1a1a?style=for-the-badge&logo=android" />
-  </a>
-  <a href="https://wa.me/523310167470">
+  <a href="https://wa.me/523310167470?text=Hola%20necesito%20ayuda%20o%20tengo%20dudas%20sobre%20JOSHI%20BOT">
     <img alt="Contacto WhatsApp" src="https://img.shields.io/badge/WhatsApp-Soporte-25D366?style=for-the-badge&logo=whatsapp&logoColor=white" />
   </a>
 </p></div>
@@ -135,8 +122,6 @@ Nombre del bot: JOSHI BOT
 
 Plataforma: Node.js + Baileys
 
-Soporte: WhatsApp +52 33 1016 7470
-
 
 
 ---
@@ -158,9 +143,9 @@ El autor no se hace responsable del mal uso del bot.
 
 ¿Problemas o dudas?
 
-👉 WhatsApp: +52 33 1016 7470
+👉 WhatsApp:
 
-<a href="https://wa.me/523310167470">
+<a href="https://wa.me/523310167470?text=Hola%20necesito%20ayuda%20o%20tengo%20dudas%20sobre%20JOSHI%20BOT">
   <img alt="Soporte WhatsApp" src="https://img.shields.io/badge/Soporte-WhatsApp-25D366?style=for-the-badge&logo=whatsapp&logoColor=white" />
 </a>
 ---
