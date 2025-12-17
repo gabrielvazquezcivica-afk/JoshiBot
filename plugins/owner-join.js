@@ -30,4 +30,5 @@ export const handler = async (m, { sock, args, sender, owner, reply }) => {
 }
 
 handler.command = ['join']
+handler.tags = ['owner']
 handler.owner = true
