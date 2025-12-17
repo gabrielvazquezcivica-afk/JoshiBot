@@ -7,9 +7,9 @@ export const handler = async (m, {
 }) => {
   // ❌ Solo grupos
   if (!isGroup)
-    return reply('🚫 Este comando solo funciona en grupos')
+    return reply('🎄 Este comando solo funciona en grupos 🎅')
 
-  // 📌 Metadata
+  // 📌 Obtener metadata
   const metadata = await sock.groupMetadata(from)
   const admins = metadata.participants
     .filter(p => p.admin)
@@ -17,68 +17,85 @@ export const handler = async (m, {
 
   // 🚫 Solo admins
   if (!admins.includes(sender)) {
-    return reply('🚫 Solo los administradores pueden usar este comando')
+    return reply(
+`╭─〔 🎄 ACCESO RESTRINGIDO 🎄 〕
+│ ❌ Solo administradores
+│ pueden usar este comando
+╰─〔 🤖 JoshiBot 〕`
+    )
   }
 
+  // 📝 Texto completo
   const text =
     m.message?.conversation ||
     m.message?.extendedTextMessage?.text ||
     ''
 
-  const option = text.split(' ')[1]
+  const args = text.trim().split(/\s+/)
+  const option = args[1]?.toLowerCase()
 
-  // ❌ Opción inválida
-  if (!['open', 'close'].includes(option)) {
+  // ❌ Uso incorrecto
+  if (!['abrir', 'cerrar'].includes(option)) {
     return reply(
-`╭─〔 ⚙️ CONFIG GRUPO 〕
-│ Uso correcto:
+`╭─〔 🔒 CONFIGURACIÓN DEL GRUPO 🎄 〕
+│ ⚙️ Uso correcto:
 ├────────────────
-│ .group open
-│ .group close
+│ 🔓 grupo abrir
+│ 🔒 grupo cerrar
 ╰─〔 🤖 JoshiBot 〕`
     )
   }
 
   try {
     // 🔒 CERRAR GRUPO
-    if (option === 'close') {
+    if (option === 'cerrar') {
       await sock.groupSettingUpdate(from, 'announcement')
 
       await sock.sendMessage(from, {
         text:
-`╭─〔 🔒 GRUPO CERRADO 〕
-│ 🎄 Modo solo admins
+`╭─〔 🔒 GRUPO CERRADO 🎄 〕
+│ ❄️ Solo administradores
+│ pueden enviar mensajes
 ├────────────────
-│ 👮 Cerrado por:
+│ 👮 Acción realizada por:
 │ @${sender.split('@')[0]}
 ╰─〔 🤖 JoshiBot 〕`,
         mentions: [sender]
+      })
+
+      await sock.sendMessage(from, {
+        react: { text: '🔒', key: m.key }
       })
     }
 
     // 🔓 ABRIR GRUPO
-    if (option === 'open') {
+    if (option === 'abrir') {
       await sock.groupSettingUpdate(from, 'not_announcement')
 
       await sock.sendMessage(from, {
         text:
-`╭─〔 🔓 GRUPO ABIERTO 〕
-│ 🎄 Todos pueden escribir
+`╭─〔 🔓 GRUPO ABIERTO 🎄 〕
+│ 🎁 Todos pueden
+│ enviar mensajes
 ├────────────────
-│ 👮 Abierto por:
+│ 👮 Acción realizada por:
 │ @${sender.split('@')[0]}
 ╰─〔 🤖 JoshiBot 〕`,
         mentions: [sender]
       })
+
+      await sock.sendMessage(from, {
+        react: { text: '🎁', key: m.key }
+      })
     }
-  } catch {
-    reply('❌ No pude cambiar la configuración del grupo')
+
+  } catch (e) {
+    reply('❌ No pude cambiar la configuración del grupo 🎄')
   }
 }
 
-handler.command = ['grupo abrir/cerrar', 'gc', 'config']
+handler.command = ['grupo']
 handler.tags = ['group']
 handler.group = true
 handler.admin = true
-handler.botAdmin = true
 handler.menu = true
