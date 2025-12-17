@@ -5,6 +5,9 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath, pathToFileURL } from 'url'
 
+// 🔑 CONFIG (OWNER)
+import config from './config.js'
+
 // 👋 WELCOME
 import { welcomeEvent } from './plugins/welcome.js'
 
@@ -33,6 +36,9 @@ const plugins = []
 
 // ⏱️ Ignorar mensajes antiguos
 const botStartTime = Math.floor(Date.now() / 1000)
+
+// 🔥 OWNER GLOBAL (CLAVE)
+global.owner = config.owner
 
 // 🎨 Banner
 function showBanner() {
@@ -92,7 +98,7 @@ async function start() {
     const m = messages?.[0]
     if (!m?.message || m.key.fromMe) return
 
-    // 🚫 ANTILINK (detecta links aunque no sean comandos)
+    // 🚫 ANTILINK
     try {
       await antiLinkEvent(sock, m)
     } catch (e) {
@@ -145,7 +151,7 @@ async function start() {
           args,
           command,
 
-          // ✅ Plugins para menu
+          // ✅ CONTEXTO GLOBAL
           plugins,
           owner: global.owner,
 
