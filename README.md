@@ -9,9 +9,11 @@
 
 🍟 INSTALACIÓN MANUAL POR TERMUX
 
-🔗 Instalar Termux: Clic aquí
-
-> 🧾 ESCRIBE LOS SIGUIENTES COMANDOS UNO POR UNO:
+<p align="left">
+  <a href="https://f-droid.org/packages/com.termux/">
+    <img src="https://img.shields.io/badge/Instalar%20Termux-Clic%20Aquí-000000?style=for-the-badge&logo=android&logoColor=white" />
+  </a>
+</p>> 🧾 ESCRIBE LOS SIGUIENTES COMANDOS UNO POR UNO:
 
 
 
@@ -51,6 +53,24 @@ npm start
 
 > 🧾 ESCRIBE LOS SIGUIENTES COMANDOS UNO POR UNO:
 
+
+
+cd JoshiBot
+
+rm -rf sessions
+
+npm start
+
+
+---
+
+<p align="center">
+  <b style="font-size:16px;">👑 CREADOR: SoyGabo</b>
+</p><p align="center">
+  <a href="https://wa.me/523310167470">
+    <img src="https://img.shields.io/badge/WhatsApp-Contactar-25D366?style=for-the-badge&logo=whatsapp&logoColor=white" />
+  </a>
+</p>
 
 
 cd JoshiBot
