@@ -16,7 +16,6 @@ import { antiLinkEvent } from './plugins/gc-antilink.js'
 
 // 🔔 AUTO-DETECT
 import { initAutoDetect } from './plugins/_autodetec.js'
-
 /* ───── MANEJO DE ERRORES ───── */
 process.on('uncaughtException', err => {
 if (String(err).includes('Bad MAC')) return
