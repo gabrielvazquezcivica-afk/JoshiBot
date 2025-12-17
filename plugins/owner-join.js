@@ -1,3 +1,7 @@
+function getNumber(jid = '') {
+  return jid.split('@')[0]
+}
+
 export const handler = async (m, {
   sock,
   args,
@@ -6,8 +10,11 @@ export const handler = async (m, {
   reply
 }) => {
 
-  // 🔐 VERIFICAR OWNER
-  if (!owner?.jid?.includes(sender)) {
+  // 🔐 VERIFICAR OWNER (ANTI LID FIX)
+  const senderNum = getNumber(sender)
+  const ownerNums = owner.jid.map(getNumber)
+
+  if (!ownerNums.includes(senderNum)) {
     return reply(`
 ╭─〔 ⛔ ACCESO DENEGADO 〕
 │ Solo el OWNER puede
@@ -16,40 +23,36 @@ export const handler = async (m, {
 `.trim())
   }
 
-  // 🔗 LINK DEL GRUPO
+  // 🔗 LINK
   const link = args[0]
   if (!link || !link.includes('chat.whatsapp.com')) {
     return reply(`
 ╭─〔 ⚙️ USO INCORRECTO 〕
-│ Usa el comando así:
-│ .join https://chat.whatsapp.com/XXXX
+│ .join <link del grupo>
 ╰─〔 🤖 SISTEMA JOSHI 〕
 `.trim())
   }
 
   try {
-    // 🧩 EXTRAER CÓDIGO
     const code = link.split('chat.whatsapp.com/')[1]
 
-    // 🚀 UNIR AL GRUPO
     await sock.groupAcceptInvite(code)
 
-    // 🎄 CONFIRMACIÓN
-    await reply(`
+    reply(`
 ╭─〔 🚀 ACCESO CONCEDIDO 〕
-│ El bot fue añadido
+│ JoshiBot se unió
 │ correctamente al grupo
 │
-│ 🎅 Bienvenido JoshiBot
+│ 🎄 Ho ho ho...
 ╰─〔 🤖 SISTEMA JOSHI 〕
 `.trim())
 
   } catch (e) {
-    console.error('❌ JOIN ERROR:', e)
+    console.error('JOIN ERROR:', e)
     reply(`
 ╭─〔 ❌ ERROR 〕
-│ No pude unirme al grupo
-│ Verifica el enlace
+│ No pude unirme
+│ Revisa el enlace
 ╰─〔 🤖 SISTEMA JOSHI 〕
 `.trim())
   }
