@@ -1,3 +1,5 @@
+import { lastAdmin } from './_autodetec.js'
+
 export const handler = async (m, {
   sock,
   from,
@@ -5,7 +7,6 @@ export const handler = async (m, {
   isGroup,
   reply
 }) => {
-  // ❌ Solo grupos
   if (!isGroup) return
 
   // 📌 Metadata
@@ -19,26 +20,28 @@ export const handler = async (m, {
     return reply('🚫 Solo los administradores pueden usar este comando')
   }
 
-  try {
-    // 🧠 Detectar subcomando
-    const text =
-      m.message?.conversation ||
-      m.message?.extendedTextMessage?.text ||
-      ''
+  // 🧠 GUARDAR ADMIN PARA AUTODETECT
+  lastAdmin.set(from, sender)
 
+  const text =
+    m.message?.conversation ||
+    m.message?.extendedTextMessage?.text ||
+    ''
+
+  try {
+    // 🔓 ABRIR
     if (text.includes('abrir')) {
       await sock.groupSettingUpdate(from, 'not_announcement')
 
-      // 🔓 Reacción
       await sock.sendMessage(from, {
         react: { text: '🔓', key: m.key }
       })
     }
 
+    // 🔒 CERRAR
     if (text.includes('cerrar')) {
       await sock.groupSettingUpdate(from, 'announcement')
 
-      // 🔒 Reacción
       await sock.sendMessage(from, {
         react: { text: '🔒', key: m.key }
       })
@@ -48,7 +51,7 @@ export const handler = async (m, {
   }
 }
 
-handler.command = ['grupo abrir/cerrar', 'gc']
+handler.command = ['gc', 'grupo']
 handler.tags = ['group']
 handler.group = true
 handler.admin = true
