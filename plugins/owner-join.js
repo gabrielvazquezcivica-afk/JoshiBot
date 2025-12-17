@@ -1,7 +1,7 @@
 import config from '../config.js'
 
 export const handler = async (m, { sock, sender, reply }) => {
-  if (!config.owner.jid.includes(sender)) {
+  if (!config.owner.numbers.includes(sender.split('@')[0])) {
     return reply('🎅 Solo el OWNER puede usar este comando')
   }
 
@@ -12,39 +12,46 @@ export const handler = async (m, { sock, sender, reply }) => {
 
   const link = text.split(' ')[1]
   if (!link) {
-    return reply('❄️ Usa:\n.join https://chat.whatsapp.com/XXXXX')
+    return reply('❄️ Uso correcto:\n.join https://chat.whatsapp.com/XXXXX')
   }
 
   try {
-    // ✅ Aceptar invitación
     const code = link.split('/').pop()
+
+    // ⚡ Intentar unirse
     const groupJid = await sock.groupAcceptInvite(code)
 
-    // 🎄 MENSAJE NAVIDEÑO FUTURISTA
-    const msg = `
-🎄✨ *JOSHI-BOT HA LLEGADO* ✨🎄
+    // 🎄 Aviso futurista navideño
+    const aviso = `
+🎄✨ *${config.bot.name} ACTIVADO* ✨🎄
 
-🤖 Bot: *${config.bot.name}*
-👑 Owner: *${config.owner.name}*
+🤖 Bot operativo
+🛡 Protección habilitada
+🎅 Modo navideño activo
 
-⚡ Funciones activas:
-• Anti-link
-• Welcome
-• Moderación
-• Comandos futuristas
-
-🎅 ¡Felices fiestas!
-🚀 Listo para proteger el grupo
+🚀 Gracias por invitarme
 `
 
-    // ✅ ENVIAR AL GRUPO REAL
-    await sock.sendMessage(groupJid, { text: msg })
+    await sock.sendMessage(groupJid, { text: aviso })
 
-    reply('✅ Unido al grupo y aviso enviado correctamente')
+    reply('✅ Me uní al grupo correctamente')
 
   } catch (e) {
-    console.error(e)
-    reply('❌ No pude unirme al grupo')
+    console.error('JOIN ERROR:', e)
+
+    let msg = '❌ No pude unirme al grupo'
+
+    if (e?.data === 400 || e?.status === 500) {
+      msg = `⚠️ WhatsApp bloqueó la invitación
+
+Posibles razones:
+• El bot ya estuvo en el grupo
+• El grupo bloquea bots
+• Intenta con otro link
+• Espera unos minutos`
+    }
+
+    reply(msg)
   }
 }
 
