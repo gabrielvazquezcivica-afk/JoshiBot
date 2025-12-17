@@ -147,6 +147,7 @@ async function start() {
 
           // ✅ Plugins para menu
           plugins,
+          owner: global.owner,
 
           reply: (text) =>
             sock.sendMessage(from, { text }, { quoted: m })
