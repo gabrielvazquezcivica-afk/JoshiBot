@@ -2,21 +2,38 @@
 // CONFIGURACIÓN GLOBAL JOSHI-BOT
 // ─────────────────────────────
 
+const toJid = (n) => {
+  if (!n) return null
+  if (n.includes('@')) return n
+  return n.length > 15
+    ? `${n}@lid`
+    : `${n}@s.whatsapp.net`
+}
+
 const config = {
 
   // ───── BOT ─────
   bot: {
     name: 'JOSHI-BOT',
     prefix: '.',
-    public: true
+    public: true,
+    version: '1.0.0'
   },
 
-  // ───── OWNER (NUM + LID) ─────
+  // ───── OWNER ─────
   owner: {
     name: 'Joshi',
+
+    // números crudos (para editar fácil)
     numbers: [
       '523310167470',      // 📱 Número real
       '215590228750567'    // 🔥 LID real (MD)
+    ],
+
+    // JID normalizados (USO INTERNO)
+    jid: [
+      '523310167470@s.whatsapp.net',
+      '215590228750567@lid'
     ]
   },
 
@@ -35,10 +52,10 @@ const config = {
 
   // ───── API KEYS ─────
   APIKeys: {
-    'https://api.openai.com/v1': process.env.OPENAI_KEY || '',
-    'https://generativelanguage.googleapis.com': process.env.GEMINI_KEY || '',
-    'https://api.remove.bg/v1.0': process.env.REMOVEBG_KEY || '',
-    'https://api.openweathermap.org/data/2.5': process.env.WEATHER_KEY || ''
+    openai: process.env.OPENAI_KEY || '',
+    gemini: process.env.GEMINI_KEY || '',
+    removebg: process.env.REMOVEBG_KEY || '',
+    weather: process.env.WEATHER_KEY || ''
   },
 
   // ───── LIMITES ─────
@@ -47,5 +64,10 @@ const config = {
     premium: 100
   }
 }
+
+// 🔥 EXPORTS ÚTILES PARA TODO EL BOT
+config.owner.jid = config.owner.jid
+  .concat(config.owner.numbers.map(toJid))
+  .filter(Boolean)
 
 export default config
