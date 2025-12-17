@@ -1,113 +1,86 @@
-import fs from 'fs'
+// 🔔 AUTO-DETECT SOLO CAMBIOS MANUALES (WhatsApp)
 
-const lastAdmin = new Map()
-
-// Guarda último admin que habló (fallback real)
 export function initAutoDetect(sock) {
 
-// 🧠 Detectar admins que escriben
-sock.ev.on('messages.upsert', async ({ messages }) => {
-const m = messages?.[0]
-if (!m?.key?.remoteJid?.endsWith('@g.us')) return
-if (!m.key.participant) return
+  // ⚙️ CAMBIOS DE CONFIGURACIÓN DEL GRUPO
+  sock.ev.on('group-update', async (u) => {
+    const { id, announce, subject, desc, author } = u
 
-try {  
-  const meta = await sock.groupMetadata(m.key.remoteJid)  
-  const isAdmin = meta.participants  
-    .filter(p => p.admin)  
-    .some(p => p.id === m.key.participant)  
+    // ❌ Si no hay autor → NO fue manual
+    if (!author) return
 
-  if (isAdmin) {  
-    lastAdmin.set(m.key.remoteJid, m.key.participant)  
-  }  
-} catch {}
+    const mentions = [author]
 
-})
+    // 🔒 ABRIR / CERRAR GRUPO
+    if (announce !== undefined) {
+      await sock.sendMessage(id, {
+        text:
+announce
+  ? `🔒 *Solo los administradores pueden enviar mensajes*\n\n👤 Acción realizada por @${author.split('@')[0]}`
+  : `🔓 *Todos los participantes pueden enviar mensajes*\n\n👤 Acción realizada por @${author.split('@')[0]}`,
+        mentions,
+        contextInfo: {
+          forwardingScore: 9999,
+          isForwarded: true
+        }
+      })
+    }
 
-// 🔔 AUTO-DETECT CAMBIOS
-sock.ev.on('group-update', async (u) => {
-const { id, announce, restrict, subject, desc, author } = u
+    // ✏️ CAMBIO DE NOMBRE
+    if (subject) {
+      await sock.sendMessage(id, {
+        text:
+`✏️ *El nombre del grupo fue cambiado*
 
-let text = ''  
-let mentions = []  
+📛 Nuevo nombre:
+*${subject}*
 
-// 🔒 Abrir / cerrar grupo  
-if (announce !== undefined) {  
-  const actor = author || lastAdmin.get(id)  
+👤 Acción realizada por @${author.split('@')[0]}`,
+        mentions,
+        contextInfo: {
+          forwardingScore: 9999,
+          isForwarded: true
+        }
+      })
+    }
 
-  if (actor) mentions.push(actor)  
+    // 📝 CAMBIO DE DESCRIPCIÓN
+    if (desc !== undefined) {
+      await sock.sendMessage(id, {
+        text:
+`📝 *La descripción del grupo fue actualizada*
 
-  text =  
-    announce === 'true'  
-      ? `🔒 Solo los administradores pueden enviar mensajes.\n\n👤 Acción realizada por @${actor?.split('@')[0] || 'un administrador'}`  
-      : `🔓 Todos los participantes pueden enviar mensajes.\n\n👤 Acción realizada por @${actor?.split('@')[0] || 'un administrador'}`  
+👤 Acción realizada por @${author.split('@')[0]}`,
+        mentions,
+        contextInfo: {
+          forwardingScore: 9999,
+          isForwarded: true
+        }
+      })
+    }
+  })
 
-  await sock.sendMessage(id, {  
-    text,  
-    mentions,  
-    contextInfo: {  
-      forwardingScore: 9999,  
-      isForwarded: true  
-    }  
-  })  
-}  
+  // 👑 PROMOTE / DEMOTE (SOLO MANUAL)
+  sock.ev.on('group-participants.update', async (u) => {
+    const { id, action, participants, actor } = u
+    if (!['promote', 'demote'].includes(action)) return
 
-// ✏️ Cambio de nombre  
-if (subject) {  
-  const actor = author || lastAdmin.get(id)  
-  if (actor) mentions.push(actor)  
+    // ❌ Si no hay actor → fue el bot
+    if (!actor) return
 
-  await sock.sendMessage(id, {  
-    text: `✏️ El nombre del grupo fue cambiado a:\n*${subject}*\n\n👤 Acción realizada por @${actor?.split('@')[0] || 'un administrador'}`,  
-    mentions,  
-    contextInfo: { forwardingScore: 9999, isForwarded: true }  
-  })  
-}  
+    const target = participants?.[0]
+    if (!target) return
 
-// 📝 Cambio de descripción  
-if (desc) {  
-  const actor = author || lastAdmin.get(id)  
-  if (actor) mentions.push(actor)  
-
-  await sock.sendMessage(id, {  
-    text: `📝 La descripción del grupo fue actualizada.\n\n👤 Acción realizada por @${actor?.split('@')[0] || 'un administrador'}`,  
-    mentions,  
-    contextInfo: { forwardingScore: 9999, isForwarded: true }  
-  })  
-}
-
-})
-
-// 👑 PROMOTE / DEMOTE
-sock.ev.on('group-participants.update', async (u) => {
-const { id, action, participants, actor } = u
-if (!['promote', 'demote'].includes(action)) return
-
-const target = participants?.[0]  
-
-// 🔥 actor real o fallback  
-const adminActor = actor || lastAdmin.get(id)  
-
-const mentions = []  
-if (target) mentions.push(target)  
-if (adminActor) mentions.push(adminActor)  
-
-const userTag = target ? `@${target.split('@')[0]}` : 'un usuario'  
-const adminTag = adminActor  
-  ? `@${adminActor.split('@')[0]}`  
-  : 'un administrador'  
-
-await sock.sendMessage(id, {  
-  text:  
-    action === 'promote'  
-      ? `👑 ${userTag} ahora es administrador.\n\n👤 Acción realizada por ${adminTag}`  
-      : `🧹 ${userTag} ya no es administrador.\n\n👤 Acción realizada por ${adminTag}`,  
-  mentions,  
-  contextInfo: {  
-    forwardingScore: 9999,  
-    isForwarded: true  
-  }  
-})
-
-})
-}
+    await sock.sendMessage(id, {
+      text:
+action === 'promote'
+  ? `👑 @${target.split('@')[0]} ahora es administrador.\n\n👤 Acción realizada por @${actor.split('@')[0]}`
+  : `🧹 @${target.split('@')[0]} ya no es administrador.\n\n👤 Acción realizada por @${actor.split('@')[0]}`,
+      mentions: [target, actor],
+      contextInfo: {
+        forwardingScore: 9999,
+        isForwarded: true
+      }
+    })
+  })
+        }
