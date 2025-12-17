@@ -1,7 +1,10 @@
-import fs from 'fs'
-import moment from 'moment-timezone'
+// ─────────────────────────────
+// CONFIGURACIÓN GLOBAL JOSHI-BOT
+// ─────────────────────────────
 
-/* ───── BOT INFO ───── */
+import fs from 'fs'
+
+// ───── DATOS DEL BOT ─────
 global.botnumber = ''
 
 global.bot = {
@@ -10,36 +13,39 @@ global.bot = {
   public: true
 }
 
-/* ───── OWNER (FORMATO AVANZADO) ─────
-  [ numero | lid , nombre , isCreator ]
-*/
+// ───── OWNERS (FORMATO AVANZADO) ─────
+// [ numero | nombre | isCreator ]
+
 global.owner = [
-  ['5218711426787', 'Propietario 👑', true],
-  ['239298850873418', 'creatorLid', true], // LID
-  ['5492916450307'],
-  ['5218712620915'],
-  ['5351524614']
+  ['523310167470', 'Joshi 👑', true], // OWNER PRINCIPAL
 ]
 
-/* ───── ROLES ───── */
+// ───── ROLES ─────
 global.mods = []
 global.suittag = []
 global.prems = []
 
-/* ───── LOGIN ───── */
+// ───── STICKERS ─────
+global.packsticker = 'Joshi-Bot'
+global.packname = 'JOSHI-BOT'
+global.author = 'Joshi'
+global.wm = 'JOSHI-BOT'
+global.titulowm = 'JOSHI-BOT'
+global.titulowm2 = 'Joshi'
+global.igfg = 'Joshi'
+global.botname = 'JOSHI-BOT'
+global.dev = 'Joshi'
+global.textbot = 'JOSHI-BOT'
+global.gt = '🤖 JOSHI'
+global.namechannel = 'JoshiBot'
+global.vs = 'v1.0.0'
+
+// ───── LOGIN ─────
 global.login = {
-  pairing: true
+  pairing: true // true = código | false = QR
 }
 
-/* ───── STICKERS ───── */
-global.packname = 'JoshiBot'
-global.author = 'Joshi'
-global.wm = 'JoshiBot'
-global.dev = 'Joshi'
-global.botname = 'JOSHI-BOT'
-global.vs = 'V1.0'
-
-/* ───── APIS ───── */
+// ───── APIS ─────
 global.APIs = {
   openai: 'https://api.openai.com/v1',
   gemini: 'https://generativelanguage.googleapis.com',
@@ -47,7 +53,7 @@ global.APIs = {
   weather: 'https://api.openweathermap.org/data/2.5'
 }
 
-/* ───── API KEYS ───── */
+// ───── API KEYS ─────
 global.APIKeys = {
   'https://api.openai.com/v1': process.env.OPENAI_KEY || '',
   'https://generativelanguage.googleapis.com': process.env.GEMINI_KEY || '',
@@ -55,14 +61,8 @@ global.APIKeys = {
   'https://api.openweathermap.org/data/2.5': process.env.WEATHER_KEY || ''
 }
 
-/* ───── LIMITES ───── */
+// ───── LIMITES ─────
 global.limits = {
   free: 10,
   premium: 100
 }
-
-/* ───── TIMEZONE ───── */
-global.timezone = 'America/Mexico_City'
-global.moment = moment
-
-export default {}
