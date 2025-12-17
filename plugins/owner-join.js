@@ -6,13 +6,16 @@ export const handler = async (m, {
   sock,
   args,
   sender,
-  owner,
   reply
 }) => {
 
-  // 🔐 VERIFICAR OWNER (ANTI LID FIX)
+  // 🧠 OBTENER OWNER SEGURO
+  const ownerData = global.owner || {}
+  const ownerJids = Array.isArray(ownerData.jid) ? ownerData.jid : []
+
+  // 🔐 VERIFICAR OWNER (ANTI LID / ANTI CRASH)
   const senderNum = getNumber(sender)
-  const ownerNums = owner.jid.map(getNumber)
+  const ownerNums = ownerJids.map(getNumber)
 
   if (!ownerNums.includes(senderNum)) {
     return reply(`
@@ -42,8 +45,6 @@ export const handler = async (m, {
 ╭─〔 🚀 ACCESO CONCEDIDO 〕
 │ JoshiBot se unió
 │ correctamente al grupo
-│
-│ 🎄 Ho ho ho...
 ╰─〔 🤖 SISTEMA JOSHI 〕
 `.trim())
 
