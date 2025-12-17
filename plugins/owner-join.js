@@ -1,72 +1,79 @@
 export const handler = async (m, {
   sock,
-  args,
+  from,
   sender,
-  owner,
-  reply
+  args,
+  reply,
+  owner
 }) => {
 
-  // 🔐 VALIDAR OWNER
-  const isOwner = owner?.number?.includes(
-    sender.split('@')[0]
-  )
-
-  if (!isOwner) {
-    return reply(
-`╭─〔 🚫 ACCESO BLOQUEADO 〕
-│ Permisos insuficientes
-├────────────────────
-│ Solo el creador del
-│ sistema puede usar
-│ este comando
-╰─〔 🤖 JOSHI CORE 〕`
-    )
+  // 🛡️ SOLO OWNER (POR JID)
+  if (!owner?.number?.includes(sender.split('@')[0])) {
+    return reply(`
+╭─〔 ⛔ ACCESO DENEGADO 〕
+│ Solo el OWNER puede
+│ ejecutar este comando
+╰─〔 🤖 SISTEMA JOSHI 〕
+`.trim())
   }
 
-  // 🔗 LINK DEL GRUPO
-  const link = args[0]
-  if (!link || !link.includes('chat.whatsapp.com')) {
-    return reply(
-`╭─〔 ⚠️ INVITACIÓN INVÁLIDA 〕
-│ Link de grupo requerido
-├────────────────────
+  // 🔗 LINK REQUERIDO
+  if (!args[0]) {
+    return reply(`
+╭─〔 ⚙️ OWNER JOIN 〕
 │ Uso correcto:
-│ .join https://chat.whatsapp.com/XXXX
-╰─〔 🤖 JOSHI CORE 〕`
-    )
+│ .join <link_del_grupo>
+╰─〔 🤖 SISTEMA JOSHI 〕
+`.trim())
+  }
+
+  const link = args[0]
+  const code = link.split('https://chat.whatsapp.com/')[1]
+
+  if (!code) {
+    return reply(`
+╭─〔 ❌ LINK INVÁLIDO 〕
+│ El enlace no es válido
+╰─〔 🤖 SISTEMA JOSHI 〕
+`.trim())
   }
 
   try {
-    // 🧬 EXTRAER CÓDIGO
-    const code = link.split('chat.whatsapp.com/')[1]
-
-    // 🚀 UNIR BOT
+    // 🚀 UNIR BOT AL GRUPO
     await sock.groupAcceptInvite(code)
 
-    await reply(
-`╭─〔 🚀 ACCESO CONCEDIDO 〕
-│ El sistema se ha unido
-│ exitosamente al grupo
-├────────────────────
-│ Autorizado por:
-│ 👑 OWNER
-╰─〔 🤖 JOSHI CORE 〕`
-    )
+    // 🎉 REACCIÓN FUTURISTA
+    await sock.sendMessage(from, {
+      react: {
+        text: '🚀',
+        key: m.key
+      }
+    })
+
+    // ✅ CONFIRMACIÓN
+    await sock.sendMessage(from, {
+      text: `
+╭─〔 🛰️ ACCESO AUTORIZADO 〕
+│ El bot se unió al grupo
+│ correctamente
+├────────────────
+│ 👑 Owner: @${sender.split('@')[0]}
+╰─〔 🤖 JoshiBot 〕
+`.trim(),
+      mentions: [sender]
+    }, { quoted: m })
 
   } catch (e) {
-    reply(
-`╭─〔 ❌ ERROR DEL SISTEMA 〕
-│ No fue posible unirse
-│ al grupo solicitado
-├────────────────────
-│ Verifica el enlace
-│ o permisos
-╰─〔 🤖 JOSHI CORE 〕`
-    )
+    return reply(`
+╭─〔 ❌ ERROR DEL SISTEMA 〕
+│ No pude unirme al grupo
+│ Puede que el link haya
+│ expirado o sea inválido
+╰─〔 🤖 JoshiBot 〕
+`.trim())
   }
 }
 
 handler.command = ['join']
 handler.tags = ['owner']
-handler.owner = true
 handler.menu = true
