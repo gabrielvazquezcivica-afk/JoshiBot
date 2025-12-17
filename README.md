@@ -116,7 +116,7 @@ Usa el bot solo en grupos autorizados
 
 👤 Créditos
 
-Autor: Gabriel Alex Indo
+Autor: SoyGabo
 
 Nombre del bot: JOSHI BOT
 
