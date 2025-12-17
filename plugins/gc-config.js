@@ -1,5 +1,3 @@
-import { lastAdmin } from './_autodetec.js'
-
 export const handler = async (m, {
   sock,
   from,
@@ -7,24 +5,20 @@ export const handler = async (m, {
   isGroup,
   reply
 }) => {
+  // ❌ Solo grupos
+  if (!isGroup)
+    return reply('🚫 Este comando solo funciona en grupos')
 
-  if (!isGroup) {
-    return reply('❌ Este comando solo funciona en grupos')
-  }
-
-  // 🔒 Obtener metadata
+  // 📌 Metadata
   const metadata = await sock.groupMetadata(from)
   const admins = metadata.participants
     .filter(p => p.admin)
     .map(p => p.id)
 
-  // 🚫 No admin
+  // 🚫 Solo admins
   if (!admins.includes(sender)) {
     return reply('🚫 Solo los administradores pueden usar este comando')
   }
-
-  // 🔥 Guardar admin para autodetect
-  lastAdmin.set(from, sender)
 
   const text =
     m.message?.conversation ||
@@ -33,43 +27,58 @@ export const handler = async (m, {
 
   const option = text.split(' ')[1]
 
+  // ❌ Opción inválida
+  if (!['open', 'close'].includes(option)) {
+    return reply(
+`╭─〔 ⚙️ CONFIG GRUPO 〕
+│ Uso correcto:
+├────────────────
+│ .group open
+│ .group close
+╰─〔 🤖 JoshiBot 〕`
+    )
+  }
+
   try {
     // 🔒 CERRAR GRUPO
-    if (option === 'close' || option === 'cerrar') {
+    if (option === 'close') {
       await sock.groupSettingUpdate(from, 'announcement')
 
-      // ✅ Reacción silenciosa
       await sock.sendMessage(from, {
-        react: { text: '🔒', key: m.key }
+        text:
+`╭─〔 🔒 GRUPO CERRADO 〕
+│ 🎄 Modo solo admins
+├────────────────
+│ 👮 Cerrado por:
+│ @${sender.split('@')[0]}
+╰─〔 🤖 JoshiBot 〕`,
+        mentions: [sender]
       })
-      return
     }
 
     // 🔓 ABRIR GRUPO
-    if (option === 'open' || option === 'abrir') {
+    if (option === 'open') {
       await sock.groupSettingUpdate(from, 'not_announcement')
 
-      // ✅ Reacción silenciosa
       await sock.sendMessage(from, {
-        react: { text: '🔓', key: m.key }
+        text:
+`╭─〔 🔓 GRUPO ABIERTO 〕
+│ 🎄 Todos pueden escribir
+├────────────────
+│ 👮 Abierto por:
+│ @${sender.split('@')[0]}
+╰─〔 🤖 JoshiBot 〕`,
+        mentions: [sender]
       })
-      return
     }
-
-    // ⚙️ Uso incorrecto
-    reply(
-      '⚙️ Uso correcto:\n' +
-      '.grupo abrir\n' +
-      '.grupo cerrar'
-    )
-
-  } catch (e) {
+  } catch {
     reply('❌ No pude cambiar la configuración del grupo')
   }
 }
 
-handler.command = ['grupo', 'group']
+handler.command = ['group', 'gc', 'config']
 handler.tags = ['group']
 handler.group = true
 handler.admin = true
+handler.botAdmin = true
 handler.menu = true
