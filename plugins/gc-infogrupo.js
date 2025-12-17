@@ -1,107 +1,73 @@
 export const handler = async (m, { sock, isGroup, sender, reply }) => {
-  if (!isGroup) {
-    return reply('🎄 Este comando solo funciona en grupos 🎅')
-  }
+  if (!isGroup) return reply('❌ Este comando solo funciona en grupos')
 
   const from = m.key.remoteJid
 
-  // 📌 Metadata
+  // 📌 Metadata del grupo
   const metadata = await sock.groupMetadata(from)
-  const participants = metadata.participants
 
-  // 👮 Admins
-  const admins = participants
+  const admins = metadata.participants
     .filter(p => p.admin)
     .map(p => p.id)
 
-  // 🚫 Solo admins
   if (!admins.includes(sender)) {
     return reply(
-`╭─🎄 ACCESO RESTRINGIDO 🎄
-│ 👮 Solo administradores
+`╭─❌ ACCESO DENEGADO
+│ 👮 Solo ADMINISTRADORES
 │ pueden usar este comando
-╰─🎅 JOSHI-BOT`
+╰─🤖 SISTEMA JOSHI`
     )
   }
 
-  // 📊 Datos
-  const totalMiembros = participants.length
-  const totalAdmins = participants.filter(p => p.admin).length
-  const creador = metadata.owner
-    ? `@${metadata.owner.split('@')[0]}`
-    : 'No disponible'
+  // 📌 Estados (ajusta si usas otro sistema)
+  const welcomeStatus = global.welcome?.includes(from) ? '✅ Activado' : '❌ Desactivado'
+  const antilinkStatus = global.antilink?.includes(from) ? '✅ Activado' : '❌ Desactivado'
 
-  // ⚙️ Estados (usa tus globals)
-  const welcome = global.welcome?.includes(from)
-    ? '🎁 Activado'
-    : '❄️ Desactivado'
+  // 📌 Lista admins
+  const adminList = admins
+    .map((id, i) => `${i + 1}. @${id.split('@')[0]}`)
+    .join('\n')
 
-  const antilink = global.antilink?.includes(from)
-    ? '🎄 Activado'
-    : '❄️ Desactivado'
-
-  // 🖼️ Foto del grupo
-  let groupImage = null
-  try {
-    groupImage = await sock.profilePictureUrl(from, 'image')
-  } catch {
-    groupImage = null
-  }
-
-  // 🎄 TEXTO NAVIDEÑO
-  const caption = `
-╭─🎄 INFORMACIÓN DEL GRUPO 🎄
+  // 📌 Texto
+  const text =
+`╭─📊 INFO DEL GRUPO
 │
 │ 🏷️ Nombre:
 │ ${metadata.subject}
 │
 │ 👥 Miembros:
-│ ${totalMiembros}
+│ ${metadata.participants.length}
 │
-│ 👮 Administradores:
-│ ${totalAdmins}
+│ ⚙️ CONFIGURACIÓN
+│ • Welcome: ${welcomeStatus}
+│ • Antilink: ${antilinkStatus}
 │
-│ 👑 Creador:
-│ ${creador}
-│
-├─🎁 CONFIGURACIÓN NAVIDEÑA
-│
-│ 👋 Welcome:
-│ ${welcome}
-│
-│ 🚫 AntiLink:
-│ ${antilink}
-│
-╰─🎅 JoshiBot 🎄
-`.trim()
+│ 👮 ADMINISTRADORES
+│ ${adminList}
+╰─🤖 JOSHI-BOT`
 
-  // 📤 Enviar con o sin imagen
-  if (groupImage) {
-    await sock.sendMessage(
-      from,
-      {
-        image: { url: groupImage },
-        caption,
-        mentions: metadata.owner ? [metadata.owner] : []
-      },
-      { quoted: m }
-    )
-  } else {
-    await sock.sendMessage(
-      from,
-      {
-        text: caption,
-        mentions: metadata.owner ? [metadata.owner] : []
-      },
-      { quoted: m }
-    )
+  try {
+    // 📸 Foto del grupo
+    const pp = await sock.profilePictureUrl(from, 'image')
+
+    await sock.sendMessage(from, {
+      image: { url: pp },
+      caption: text,
+      mentions: admins
+    }, { quoted: m })
+
+  } catch {
+    // 🧯 Sin foto
+    await sock.sendMessage(from, {
+      text,
+      mentions: admins
+    }, { quoted: m })
   }
 }
 
-// ───── CONFIG ─────
+// ───── CONFIG PARA MENÚ ─────
 handler.command = ['infogrupo', 'groupinfo']
 handler.tags = ['group']
 handler.help = ['infogrupo']
 handler.group = true
 handler.admin = true
-handler.menu = true
