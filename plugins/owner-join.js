@@ -1,7 +1,3 @@
-function getNumber(jid = '') {
-  return jid.split('@')[0]
-}
-
 export const handler = async (m, {
   sock,
   args,
@@ -9,56 +5,67 @@ export const handler = async (m, {
   reply
 }) => {
 
-  // 🧠 OBTENER OWNER SEGURO
-  const ownerData = global.owner || {}
-  const ownerJids = Array.isArray(ownerData.jid) ? ownerData.jid : []
+  // ───── VALIDAR OWNER ─────
+  const isOwner = global.owner.some(o => {
+    const num = o[0]
+    return sender.includes(num)
+  })
 
-  // 🔐 VERIFICAR OWNER (ANTI LID / ANTI CRASH)
-  const senderNum = getNumber(sender)
-  const ownerNums = ownerJids.map(getNumber)
-
-  if (!ownerNums.includes(senderNum)) {
-    return reply(`
-╭─〔 ⛔ ACCESO DENEGADO 〕
-│ Solo el OWNER puede
-│ ejecutar este comando
-╰─〔 🤖 SISTEMA JOSHI 〕
-`.trim())
+  if (!isOwner) {
+    return reply(
+`╭━━━〔 🚫 ACCESO DENEGADO 〕━━━╮
+│
+│ 👤 Usuario: @${sender.split('@')[0]}
+│ ❌ Solo el OWNER puede usar este comando
+│
+╰━━〔 🤖 SISTEMA JOSHI 〕━━╯`,
+      { mentions: [sender] }
+    )
   }
 
-  // 🔗 LINK
+  // ───── OBTENER LINK ─────
   const link = args[0]
   if (!link || !link.includes('chat.whatsapp.com')) {
-    return reply(`
-╭─〔 ⚙️ USO INCORRECTO 〕
-│ .join <link del grupo>
-╰─〔 🤖 SISTEMA JOSHI 〕
-`.trim())
+    return reply(
+`╭━━━〔 ❗ JOIN ERROR 〕━━━╮
+│
+│ 📎 Usa:
+│ .join <link-del-grupo>
+│
+╰━━〔 🤖 SISTEMA JOSHI 〕━━╯`
+    )
   }
 
-  try {
-    const code = link.split('chat.whatsapp.com/')[1]
+  // ───── EXTRAER CÓDIGO ─────
+  const code = link.split('chat.whatsapp.com/')[1]
 
+  try {
+    // 🤖 UNIR AL GRUPO
     await sock.groupAcceptInvite(code)
 
-    reply(`
-╭─〔 🚀 ACCESO CONCEDIDO 〕
-│ JoshiBot se unió
-│ correctamente al grupo
-╰─〔 🤖 SISTEMA JOSHI 〕
-`.trim())
+    await reply(
+`╭━━━〔 ✅ JOIN EXITOSO 〕━━━╮
+│
+│ 🤖 JOSHI-BOT se ha unido
+│ 👑 Autorizado por OWNER
+│
+╰━━〔 🚀 SISTEMA JOSHI 〕━━╯`
+    )
 
   } catch (e) {
-    console.error('JOIN ERROR:', e)
-    reply(`
-╭─〔 ❌ ERROR 〕
-│ No pude unirme
-│ Revisa el enlace
-╰─〔 🤖 SISTEMA JOSHI 〕
-`.trim())
+    console.error(e)
+    reply(
+`╭━━━〔 ❌ ERROR JOIN 〕━━━╮
+│
+│ ⚠️ No pude unirme al grupo
+│ 🔒 Link inválido o expirado
+│
+╰━━〔 🤖 SISTEMA JOSHI 〕━━╯`
+    )
   }
 }
 
+// ───── CONFIG DEL COMANDO ─────
 handler.command = ['join']
 handler.tags = ['owner']
-handler.menu = true
+handler.owner = true
