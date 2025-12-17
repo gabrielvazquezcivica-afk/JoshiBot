@@ -1,58 +1,83 @@
-export const handler = async (m, { sock, from, sender, isGroup, reply }) => {
-  if (!isGroup) return
+export const handler = async (m, {
+  sock,
+  from,
+  sender,
+  isGroup,
+  reply
+}) => {
+  if (!isGroup)
+    return reply('🎄 Este comando solo funciona en grupos 🎅')
 
-  // 🔒 Obtener metadata
+  // 🔎 Metadata del grupo
   const metadata = await sock.groupMetadata(from)
   const admins = metadata.participants
     .filter(p => p.admin)
     .map(p => p.id)
 
-  // ❌ NO es admin → AVISA
+  // 🚫 Solo admins
   if (!admins.includes(sender)) {
-    return reply('⛔ Solo los administradores pueden usar este comando.')
+    return reply(
+`╭─〔 🎄 ACCESO RESTRINGIDO 🎄 〕
+│ ❌ Solo administradores
+│ pueden usar este comando
+╰─〔 🤖 JoshiBot 〕`
+    )
   }
 
-  // 🎯 Usuario objetivo
-  let target = null
+  // 🎯 Usuario objetivo (reply o mención)
+  let target =
+    m.message?.extendedTextMessage?.contextInfo?.participant ||
+    m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0]
 
-  // 👉 Respondiendo mensaje
-  if (m.message?.extendedTextMessage?.contextInfo?.participant) {
-    target = m.message.extendedTextMessage.contextInfo.participant
-  }
-
-  // 👉 Mencionando
-  if (
-    !target &&
-    m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.length
-  ) {
-    target = m.message.extendedTextMessage.contextInfo.mentionedJid[0]
-  }
-
-  // ❌ No hay target
   if (!target) {
-    return reply('👤 Responde a un mensaje o menciona al usuario.')
+    return reply(
+`╭─〔 🎅 PROMOTE NAVIDEÑO 〕
+│ 🎄 Menciona a un usuario
+│ o responde a su mensaje
+├────────────────
+│ Ejemplo:
+│ .promote @usuario
+╰─〔 🤖 JoshiBot 〕`
+    )
   }
 
-  // 🚫 Ya es admin
-  if (admins.includes(target)) {
-    return reply('ℹ️ Ese usuario ya es administrador.')
-  }
+  // ❌ Ya es admin
+  if (admins.includes(target)) return
 
   try {
     // 👑 PROMOVER
     await sock.groupParticipantsUpdate(from, [target], 'promote')
 
-    // 👑 Reacción
+    // 🎄 REACCIÓN NAVIDEÑA
     await sock.sendMessage(from, {
-      react: { text: '👑', key: m.key }
+      react: { text: '🎁', key: m.key }
     })
+
+    // 🎁 AVISO NAVIDEÑO FUTURISTA
+    await sock.sendMessage(from, {
+      text:
+`╭─〔 🎄 SISTEMA JOSHI NAVIDEÑO 〕
+│ 👑 REGALO DE NAVIDAD
+├────────────────
+│ 🎅 Nuevo Admin:
+│ @${target.split('@')[0]}
+│
+│ 🎁 Regalo entregado por:
+│ @${sender.split('@')[0]}
+├────────────────
+│ ❄️ Permisos elevados
+│ 🎄 Ho ho ho…
+╰─〔 🤖 JoshiBot 〕`,
+      mentions: [target, sender]
+    })
+
   } catch (e) {
-    reply('❌ No se pudo promover al usuario.')
+    reply('❌ No pude otorgar el regalo navideño 🎁')
   }
 }
 
 handler.command = ['promote', 'admin']
+handler.tags = ['group']
 handler.group = true
 handler.admin = true
 handler.menu = true
-handler.tags = ['group']
