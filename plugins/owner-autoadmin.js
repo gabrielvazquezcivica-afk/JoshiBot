@@ -2,28 +2,33 @@ export const handler = async (m, { sock, from, sender, isGroup, owner, reply }) 
   if (!isGroup) return reply('🚫 Este comando solo funciona en grupos')
 
   const owners = owner?.numbers || []
-
-  // limpiar sender (jid o lid)
   const cleanSender = sender.replace(/[^0-9]/g, '')
 
   if (!owners.includes(cleanSender)) {
     return reply('🚫 Solo el OWNER puede usar este comando')
   }
 
-  // obtener metadata
   const metadata = await sock.groupMetadata(from)
   const participants = metadata.participants
 
-  const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net'
+  // 🔑 LIMPIAR ID DEL BOT (CORRECTO 2025)
+  const botNumber = sock.user.id.replace(/[^0-9]/g, '')
 
-  const botData = participants.find(p => p.id === botId)
+  const botData = participants.find(p =>
+    p.id.replace(/[^0-9]/g, '') === botNumber
+  )
+
   const ownerData = participants.find(p =>
     p.id.replace(/[^0-9]/g, '') === cleanSender
   )
 
-  // verificar permisos
-  if (!botData?.admin) {
-    return reply('❌ El bot no es administrador')
+  // 🛑 VALIDACIONES REALES
+  if (!botData) {
+    return reply('❌ No pude detectar al bot en el grupo')
+  }
+
+  if (!botData.admin) {
+    return reply('❌ El bot NO es administrador')
   }
 
   if (!ownerData) {
@@ -32,7 +37,7 @@ export const handler = async (m, { sock, from, sender, isGroup, owner, reply }) 
 
   if (ownerData.admin) {
     return reply(
-      `╭─❖ 「 𝗔𝗨𝗧𝗢 𝗔𝗗𝗠𝗜𝗡 」 ❖─╮
+`╭─❖ 「 𝗔𝗨𝗧𝗢 𝗔𝗗𝗠𝗜𝗡 」 ❖─╮
 │ 👑 Owner ya es Admin
 │ ⚡ Estado: ACTIVO
 │ 🤖 Bot: ONLINE
@@ -40,27 +45,23 @@ export const handler = async (m, { sock, from, sender, isGroup, owner, reply }) 
     )
   }
 
-  // promover
+  // 🚀 PROMOVER
   await sock.groupParticipantsUpdate(
     from,
     [ownerData.id],
     'promote'
   )
 
-  // mensaje futurista
   await reply(
-    `╭─❖ 「 𝗔𝗨𝗧𝗢 𝗔𝗗𝗠𝗜𝗡 」 ❖─╮
+`╭─❖ 「 𝗔𝗨𝗧𝗢 𝗔𝗗𝗠𝗜𝗡 」 ❖─╮
 │ 👑 Owner promovido con éxito
 │ 🛡️ Rol: ADMINISTRADOR
 │ ⚡ Sistema: ESTABLE
-│ 🤖 Bot: ${metadata.subject}
+│ 🤖 Grupo: ${metadata.subject}
 ╰───────────────╯`
   )
 }
 
-/* =========================
-   CONFIGURACIÓN DEL PLUGIN
-========================= */
 handler.command = ['autoadmin', 'owneradmin']
 handler.tags = ['owner']
 handler.owner = true
