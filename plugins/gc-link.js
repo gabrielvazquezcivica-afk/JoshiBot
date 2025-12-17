@@ -4,29 +4,48 @@ export const handler = async (m, {
   sender,
   isGroup
 }) => {
-  // ❌ Si no es grupo → no hacer nada
+  // ❌ Solo grupos
   if (!isGroup) return
 
-  // 📋 METADATA
-  const metadata = await sock.groupMetadata(from)
-  const admins = metadata.participants
-    .filter(p => p.admin)
-    .map(p => p.id)
+  try {
+    // 📋 METADATA
+    const metadata = await sock.groupMetadata(from)
+    const participants = metadata.participants || []
 
-  // ❌ Si no es admin → SILENCIO TOTAL
-  if (!admins.includes(sender)) return
+    const admins = participants
+      .filter(p => p.admin)
+      .map(p => p.id)
 
-  // 🔗 OBTENER LINK
-  const link = await sock.groupInviteCode(from)
-  const fullLink = `https://chat.whatsapp.com/${link}`
+    // 🤖 BOT ID
+    const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net'
 
-  const fecha = new Date().toLocaleDateString('es-MX', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric'
-  })
+    // ❌ Bot no admin → silencio
+    if (!admins.includes(botId)) return
 
-  const text = `
+    // ❌ Usuario no admin → silencio
+    if (!admins.includes(sender)) return
+
+    // 🔗 OBTENER LINK
+    let link
+    try {
+      link = await sock.groupInviteCode(from)
+    } catch {
+      // ❌ Reacción solamente
+      await sock.sendMessage(from, {
+        react: { text: '❌', key: m.key }
+      })
+      return
+    }
+
+    const fullLink = `https://chat.whatsapp.com/${link}`
+
+    const fecha = new Date().toLocaleDateString('es-MX', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    })
+
+    const text = `
 ╭─〔 🔗 SISTEMA DE ENLACES 〕
 │
 │ 🏷 Grupo:
@@ -47,11 +66,18 @@ export const handler = async (m, {
 ╰─〔 🤖 JoshiBot 〕
 `.trim()
 
-  await sock.sendMessage(
-    from,
-    { text },
-    { quoted: m }
-  )
+    await sock.sendMessage(
+      from,
+      { text },
+      { quoted: m }
+    )
+
+  } catch {
+    // fallo total → reacción ❌
+    await sock.sendMessage(from, {
+      react: { text: '❌', key: m.key }
+    })
+  }
 }
 
 handler.command = ['link', 'gclink', 'grupolink']
