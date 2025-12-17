@@ -8,12 +8,10 @@ export default {
   },
 
   // ───── OWNER ─────
-  module.exports = {
-  owner: {
-    name: 'Joshi',
-    number: ['523310167470']
-  }
-  }
+  export const owner = {
+  name: 'Joshi',
+  number: ['523310167470']
+}
 
   // ───── LOGIN ─────
   login: {
