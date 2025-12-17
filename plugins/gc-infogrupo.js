@@ -1,9 +1,15 @@
+import fs from 'fs'
+
+// ───── RUTAS DB ─────
+const welcomeDB = './database/welcome.json'
+const antilinkDB = './database/antilink.json' // si no existe, lo maneja solo
+
 export const handler = async (m, { sock, isGroup, sender, reply }) => {
   if (!isGroup) return reply('❌ Este comando solo funciona en grupos')
 
   const from = m.key.remoteJid
 
-  // 📌 Metadata del grupo
+  // ───── METADATA ─────
   const metadata = await sock.groupMetadata(from)
 
   const admins = metadata.participants
@@ -11,26 +17,35 @@ export const handler = async (m, { sock, isGroup, sender, reply }) => {
     .map(p => p.id)
 
   if (!admins.includes(sender)) {
-    return reply(
-`╭─❌ ACCESO DENEGADO
-│ 👮 Solo ADMINISTRADORES
+    return reply(`
+╭─〔 🚫 ACCESO DENEGADO 〕
+│ Solo administradores
 │ pueden usar este comando
-╰─🤖 SISTEMA JOSHI`
-    )
+╰─〔 🤖 JoshiBot 〕
+`.trim())
   }
 
-  // 📌 Estados (ajusta si usas otro sistema)
-  const welcomeStatus = global.welcome?.includes(from) ? '✅ Activado' : '❌ Desactivado'
-  const antilinkStatus = global.antilink?.includes(from) ? '✅ Activado' : '❌ Desactivado'
+  // ───── ESTADOS ─────
+  let welcomeStatus = '🔴 Desactivado'
+  let antilinkStatus = '🔴 Desactivado'
 
-  // 📌 Lista admins
+  if (fs.existsSync(welcomeDB)) {
+    const wdb = JSON.parse(fs.readFileSync(welcomeDB))
+    if (wdb[from]) welcomeStatus = '🟢 Activado'
+  }
+
+  if (fs.existsSync(antilinkDB)) {
+    const adb = JSON.parse(fs.readFileSync(antilinkDB))
+    if (adb[from]) antilinkStatus = '🟢 Activado'
+  }
+
+  // ───── LISTA ADMINS ─────
   const adminList = admins
-    .map((id, i) => `${i + 1}. @${id.split('@')[0]}`)
+    .map((id, i) => `│ ${i + 1}. @${id.split('@')[0]}`)
     .join('\n')
 
-  // 📌 Texto
-  const text =
-`╭─📊 INFO DEL GRUPO
+  const text = `
+╭─〔 📊 INFO DEL GRUPO 〕
 │
 │ 🏷️ Nombre:
 │ ${metadata.subject}
@@ -43,11 +58,11 @@ export const handler = async (m, { sock, isGroup, sender, reply }) => {
 │ • Antilink: ${antilinkStatus}
 │
 │ 👮 ADMINISTRADORES
-│ ${adminList}
-╰─🤖 JOSHI-BOT`
+${adminList}
+╰─〔 🤖 JoshiBot 〕
+`.trim()
 
   try {
-    // 📸 Foto del grupo
     const pp = await sock.profilePictureUrl(from, 'image')
 
     await sock.sendMessage(from, {
@@ -57,7 +72,6 @@ export const handler = async (m, { sock, isGroup, sender, reply }) => {
     }, { quoted: m })
 
   } catch {
-    // 🧯 Sin foto
     await sock.sendMessage(from, {
       text,
       mentions: admins
@@ -65,9 +79,9 @@ export const handler = async (m, { sock, isGroup, sender, reply }) => {
   }
 }
 
-// ───── CONFIG PARA MENÚ ─────
+// ───── CONFIG MENU ─────
 handler.command = ['infogrupo', 'groupinfo']
 handler.tags = ['group']
-handler.help = ['infogrupo']
 handler.group = true
 handler.admin = true
+handler.menu = true
