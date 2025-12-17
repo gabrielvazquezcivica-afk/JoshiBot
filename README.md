@@ -22,6 +22,10 @@
 
 🍟 INSTALACIÓN MANUAL POR TERMUX
 
+> 📋 Cada bloque tiene el ícono 📋 para copiar (arriba a la derecha)
+
+
+
 > ✍️ ESCRIBE LOS SIGUIENTES COMANDOS UNO POR UNO
 
 
@@ -34,6 +38,45 @@ pkg install git nodejs -y
 
 git clone https://github.com/tu-usuario/YoshiBot
 
+cd YoshiBot
+
+npm install
+
+node index.js
+
+
+---
+
+🍟 ACTIVAR EN TERMUX EN CASO DE DETENERSE
+
+> ✍️ ESCRIBE LOS SIGUIENTES COMANDOS UNO POR UNO
+
+
+
+> cd YoshiBot
+> node index.js
+
+
+---
+
+🔥 OBTENER OTRO CÓDIGO QR
+
+> ✍️ ESCRIBE LOS SIGUIENTES COMANDOS UNO POR UNO
+
+
+
+> cd YoshiBot
+> rm -rf sessions
+> node index.js
+
+
+---
+
+<p align="center">
+  <img src="https://img.shields.io/badge/YoshiBot-24%2F7-00ff3c?style=for-the-badge" />
+</p><p align="center">
+  <b>👑 CREADO POR SoyGabo</b>
+</p>
 cd YoshiBot
 
 npm install
