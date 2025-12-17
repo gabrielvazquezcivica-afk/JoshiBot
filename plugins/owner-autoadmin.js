@@ -1,51 +1,44 @@
-import chalk from 'chalk'
-
-const handler = async (m, { sock, from, isGroup, owner }) => {
+const handler = async (m, { sock, from, isGroup, botNumber }) => {
   if (!isGroup) return
 
-  // 🧠 OWNER JID
-  const ownerJid = owner
-    .replace(/[^0-9]/g, '') + '@s.whatsapp.net'
+  // 🔎 OBTENER OWNER DESDE CONFIG
+  let ownerJid = global.owner?.[0] || global.config?.owner?.jid?.[0]
+  if (!ownerJid) return
 
-  // 📊 Metadata del grupo
+  if (!ownerJid.includes('@')) {
+    ownerJid = ownerJid.replace(/\D/g, '') + '@s.whatsapp.net'
+  }
+
+  // 📊 Metadata
   const metadata = await sock.groupMetadata(from)
   const participants = metadata.participants
 
   // 🤖 Bot admin?
-  const botJid = sock.user.id.split(':')[0] + '@s.whatsapp.net'
   const botIsAdmin = participants.some(
-    p => p.id === botJid && p.admin
+    p => p.id === botNumber && p.admin
   )
   if (!botIsAdmin) return
 
-  // 👑 Owner ya es admin?
+  // 👑 Owner ya admin?
   const ownerIsAdmin = participants.some(
     p => p.id === ownerJid && p.admin
   )
   if (ownerIsAdmin) return
 
-  // ⚡ Dar admin
-  await sock.groupParticipantsUpdate(
-    from,
-    [ownerJid],
-    'promote'
-  )
+  // ⚡ PROMOVER OWNER
+  await sock.groupParticipantsUpdate(from, [ownerJid], 'promote')
 
   // 🚀 MENSAJE FUTURISTA
   const text = `
-╔══════════════════════╗
-║  ⚡ ACCESS GRANTED ⚡  ║
-╠══════════════════════╣
-║ 👑 OWNER PROMOTED    ║
-║ 🛡️ ADMIN MODE ACTIVE ║
-╠══════════════════════╣
-║ 🤖 BOT: ONLINE       ║
-║ 🔐 SECURITY: ENABLED ║
-╚══════════════════════╝
+╔═══〔 ⚡ SYSTEM ACCESS ⚡ 〕═══╗
+║ 👑 OWNER PROMOTED           ║
+║ 🛡️ ADMIN PERMISSIONS GRANTED║
+╠═════════════════════════════╣
+║ 🤖 BOT: JOSHI-BOT           ║
+║ 🔐 STATUS: SECURED          ║
+╚═════════════════════════════╝
 
-🚀 *${metadata.subject}*
-✅ El owner ahora es *Administrador*
-
+📌 *Grupo:* ${metadata.subject}
 👤 @${ownerJid.split('@')[0]}
 `.trim()
 
