@@ -1,14 +1,13 @@
 export const handler = async (m, {
   sock,
-  from,
-  sender,
   args,
-  reply,
-  owner
+  sender,
+  owner,
+  reply
 }) => {
 
-  // 🛡️ SOLO OWNER (POR JID)
-  if (!owner?.number?.includes(sender.split('@')[0])) {
+  // 🔐 VERIFICAR OWNER
+  if (!owner?.jid?.includes(sender)) {
     return reply(`
 ╭─〔 ⛔ ACCESO DENEGADO 〕
 │ Solo el OWNER puede
@@ -17,59 +16,41 @@ export const handler = async (m, {
 `.trim())
   }
 
-  // 🔗 LINK REQUERIDO
-  if (!args[0]) {
-    return reply(`
-╭─〔 ⚙️ OWNER JOIN 〕
-│ Uso correcto:
-│ .join <link_del_grupo>
-╰─〔 🤖 SISTEMA JOSHI 〕
-`.trim())
-  }
-
+  // 🔗 LINK DEL GRUPO
   const link = args[0]
-  const code = link.split('https://chat.whatsapp.com/')[1]
-
-  if (!code) {
+  if (!link || !link.includes('chat.whatsapp.com')) {
     return reply(`
-╭─〔 ❌ LINK INVÁLIDO 〕
-│ El enlace no es válido
+╭─〔 ⚙️ USO INCORRECTO 〕
+│ Usa el comando así:
+│ .join https://chat.whatsapp.com/XXXX
 ╰─〔 🤖 SISTEMA JOSHI 〕
 `.trim())
   }
 
   try {
-    // 🚀 UNIR BOT AL GRUPO
+    // 🧩 EXTRAER CÓDIGO
+    const code = link.split('chat.whatsapp.com/')[1]
+
+    // 🚀 UNIR AL GRUPO
     await sock.groupAcceptInvite(code)
 
-    // 🎉 REACCIÓN FUTURISTA
-    await sock.sendMessage(from, {
-      react: {
-        text: '🚀',
-        key: m.key
-      }
-    })
-
-    // ✅ CONFIRMACIÓN
-    await sock.sendMessage(from, {
-      text: `
-╭─〔 🛰️ ACCESO AUTORIZADO 〕
-│ El bot se unió al grupo
-│ correctamente
-├────────────────
-│ 👑 Owner: @${sender.split('@')[0]}
-╰─〔 🤖 JoshiBot 〕
-`.trim(),
-      mentions: [sender]
-    }, { quoted: m })
+    // 🎄 CONFIRMACIÓN
+    await reply(`
+╭─〔 🚀 ACCESO CONCEDIDO 〕
+│ El bot fue añadido
+│ correctamente al grupo
+│
+│ 🎅 Bienvenido JoshiBot
+╰─〔 🤖 SISTEMA JOSHI 〕
+`.trim())
 
   } catch (e) {
-    return reply(`
-╭─〔 ❌ ERROR DEL SISTEMA 〕
+    console.error('❌ JOIN ERROR:', e)
+    reply(`
+╭─〔 ❌ ERROR 〕
 │ No pude unirme al grupo
-│ Puede que el link haya
-│ expirado o sea inválido
-╰─〔 🤖 JoshiBot 〕
+│ Verifica el enlace
+╰─〔 🤖 SISTEMA JOSHI 〕
 `.trim())
   }
 }
