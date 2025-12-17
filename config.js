@@ -12,9 +12,12 @@ const config = {
   },
 
   // ───── OWNER (ESTILO UTAO / IMAGEN) ─────
-  owner: [
-    ['523310167470', 'Joshi 👑', true]
-  ],
+  owner: {
+  name: 'Joshi',
+  jid: [
+    '523310167470@s.whatsapp.net'
+  ]
+  }
 
   // ───── LOGIN ─────
   login: {
