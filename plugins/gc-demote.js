@@ -5,18 +5,23 @@ export const handler = async (m, {
   isGroup,
   reply
 }) => {
-  // ❌ Solo grupos
-  if (!isGroup) return
+  if (!isGroup)
+    return reply('🎄 Este comando solo funciona en grupos 🎅')
 
-  // 📌 Obtener metadata
+  // 🔎 Metadata
   const metadata = await sock.groupMetadata(from)
   const admins = metadata.participants
     .filter(p => p.admin)
     .map(p => p.id)
 
-  // 🚫 Si NO es admin → AVISA
+  // 🚫 Solo admins
   if (!admins.includes(sender)) {
-    return reply('🚫 Solo los administradores pueden usar este comando')
+    return reply(
+`╭─〔 🎄 ACCESO RESTRINGIDO 🎄 〕
+│ ❌ Solo administradores
+│ pueden usar este comando
+╰─〔 🤖 JoshiBot 〕`
+    )
   }
 
   // 🎯 Usuario objetivo (reply o mención)
@@ -24,22 +29,53 @@ export const handler = async (m, {
     m.message?.extendedTextMessage?.contextInfo?.participant ||
     m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0]
 
-  // ❌ Sin target → silencio
-  if (!target) return
+  if (!target) {
+    return reply(
+`╭─〔 🎅 DEMOTE NAVIDEÑO 〕
+│ 🎄 Menciona a un admin
+│ o responde a su mensaje
+├────────────────
+│ Ejemplo:
+│ .demote @usuario
+╰─〔 🤖 JoshiBot 〕`
+    )
+  }
 
-  // 🚫 Si no es admin → silencio
+  // ❌ No es admin
   if (!admins.includes(target)) return
 
+  // 🚫 No quitarse solo
+  if (target === sender) return
+
   try {
-    // 👑 QUITAR ADMIN
+    // 🧹 QUITAR ADMIN
     await sock.groupParticipantsUpdate(from, [target], 'demote')
 
-    // 🔁 Reacción al comando
+    // 🎄 REACCIÓN NAVIDEÑA
     await sock.sendMessage(from, {
-      react: { text: '⬇️', key: m.key }
+      react: { text: '❄️', key: m.key }
     })
-  } catch {
-    // ❌ Error = silencio
+
+    // 🎁 AVISO NAVIDEÑO FUTURISTA
+    await sock.sendMessage(from, {
+      text:
+`╭─〔 🎄 SISTEMA JOSHI NAVIDEÑO 〕
+│ 🧹 PERMISOS RETIRADOS
+├────────────────
+│ 🎅 Usuario:
+│ @${target.split('@')[0]}
+│
+│ 👮 Acción realizada por:
+│ @${sender.split('@')[0]}
+├────────────────
+│ ❄️ Fin del espíritu admin
+│ 🎄 Ho ho ho…
+╰─〔 🤖 JoshiBot 〕`,
+      mentions: [target, sender]
+    })
+
+  } catch (e) {
+    reply('❌ No pude retirar el espíritu admin 🎄')
   }
 }
 
