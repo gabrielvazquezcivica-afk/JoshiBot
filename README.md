@@ -5,8 +5,25 @@
 </p>
 ---
 
-💻 TERMINAL (FAKE)
+💻 TERMINAL (MATRIX MODE)
 
+███▓▒░ MATRIX INITIALIZING ░▒▓███
+
+root@YOSHI-BOT:~# echo "Wake up, Neo..."
+Wake up, Neo...
+root@YOSHI-BOT:~# loading matrix-core
+[██████████░░░░░░░░] 42%
+root@YOSHI-BOT:~# decrypting whatsapp protocol
+[ OK ] key-exchange bypassed
+root@YOSHI-BOT:~# injecting green-neon payload
+[ OK ] payload injected
+root@YOSHI-BOT:~# anti-ban matrix shield
+[ ACTIVE ] invisible mode enabled
+root@YOSHI-BOT:~# connecting...
+[ ONLINE ] whatsapp session established
+root@YOSHI-BOT:~# YOSHI BOT STATUS: MATRIX ONLINE
+root@YOSHI-BOT:~# follow the white rabbit 🐇
+```bash
 root@YOSHI-BOT:~# initializing system...
 root@YOSHI-BOT:~# loading modules
 root@YOSHI-BOT:~# connecting to whatsapp servers
@@ -20,30 +37,4 @@ root@YOSHI-BOT:~# listening commands...
 
 <p align="center">
   <b>CREADO POR SoyGabo</b>
-</p>
-pkg install git nodejs -y
-
-Paso 3
-
-git clone https://github.com/tu-usuario/YoshiBot
-
-Paso 4
-
-cd YoshiBot
-
-Paso 5
-
-npm install
-
-Paso 6
-
-node index.js
-
-
----
-
-<p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:00ff3c,100:ff0000&height=140&section=footer" />
-</p><p align="center">
-  <strong>CREADO POR SoyGabo</strong>
 </p>
