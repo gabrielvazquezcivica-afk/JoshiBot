@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://i.imgur.com/6QKQJkN.gif" width="420" />
+  <img src="https://i.imgur.com/YOSHI_PLACEHOLDER.png" width="420" />
 </p>
 ---
 
@@ -68,40 +68,6 @@ node index.js
 > cd YoshiBot
 > rm -rf sessions
 > node index.js
-
-
----
-
-<p align="center">
-  <img src="https://img.shields.io/badge/YoshiBot-24%2F7-00ff3c?style=for-the-badge" />
-</p><p align="center">
-  <b>👑 CREADO POR SoyGabo</b>
-</p>
-cd YoshiBot
-
-npm install
-
-node index.js
-
-
----
-
-🔄 ACTIVAR BOT EN TERMUX (SI SE DETIENE)
-
-cd YoshiBot
-
-node index.js
-
-
----
-
-🔑 OBTENER NUEVO CÓDIGO QR
-
-cd YoshiBot
-
-rm -rf sessions
-
-node index.js
 
 
 ---
