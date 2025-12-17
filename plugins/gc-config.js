@@ -7,20 +7,23 @@ export const handler = async (m, {
   isGroup,
   reply
 }) => {
-  if (!isGroup) return
 
-  // 📌 Metadata
+  if (!isGroup) {
+    return reply('❌ Este comando solo funciona en grupos')
+  }
+
+  // 🔒 Obtener metadata
   const metadata = await sock.groupMetadata(from)
   const admins = metadata.participants
     .filter(p => p.admin)
     .map(p => p.id)
 
-  // 🚫 No admin → aviso
+  // 🚫 No admin
   if (!admins.includes(sender)) {
     return reply('🚫 Solo los administradores pueden usar este comando')
   }
 
-  // 🧠 GUARDAR ADMIN PARA AUTODETECT
+  // 🔥 Guardar admin para autodetect
   lastAdmin.set(from, sender)
 
   const text =
@@ -28,30 +31,44 @@ export const handler = async (m, {
     m.message?.extendedTextMessage?.text ||
     ''
 
+  const option = text.split(' ')[1]
+
   try {
-    // 🔓 ABRIR
-    if (text.includes('abrir')) {
-      await sock.groupSettingUpdate(from, 'not_announcement')
-
-      await sock.sendMessage(from, {
-        react: { text: '🔓', key: m.key }
-      })
-    }
-
-    // 🔒 CERRAR
-    if (text.includes('cerrar')) {
+    // 🔒 CERRAR GRUPO
+    if (option === 'close' || option === 'cerrar') {
       await sock.groupSettingUpdate(from, 'announcement')
 
+      // ✅ Reacción silenciosa
       await sock.sendMessage(from, {
         react: { text: '🔒', key: m.key }
       })
+      return
     }
-  } catch {
-    // ❌ Error = silencio
+
+    // 🔓 ABRIR GRUPO
+    if (option === 'open' || option === 'abrir') {
+      await sock.groupSettingUpdate(from, 'not_announcement')
+
+      // ✅ Reacción silenciosa
+      await sock.sendMessage(from, {
+        react: { text: '🔓', key: m.key }
+      })
+      return
+    }
+
+    // ⚙️ Uso incorrecto
+    reply(
+      '⚙️ Uso correcto:\n' +
+      '.grupo abrir\n' +
+      '.grupo cerrar'
+    )
+
+  } catch (e) {
+    reply('❌ No pude cambiar la configuración del grupo')
   }
 }
 
-handler.command = ['gc', 'grupo']
+handler.command = ['grupo', 'group']
 handler.tags = ['group']
 handler.group = true
 handler.admin = true
