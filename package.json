@@ -5,15 +5,8 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "node index.js"
+    "start": "node index.js"
   },
-  "keywords": [
-    "whatsapp-bot",
-    "baileys",
-    "termux",
-    "pairing-code"
-  ],
   "author": "Joshi",
   "license": "MIT",
   "dependencies": {
