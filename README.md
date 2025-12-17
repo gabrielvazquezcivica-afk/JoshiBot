@@ -1,7 +1,7 @@
 <p align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Orbitron&size=45&pause=1000&color=00FF3C&center=true&vCenter=true&width=500&lines=JOSHI" />
+  <img src="https://readme-typing-svg.demolab.com?font=Orbitron&size=65&pause=1200&center=true&vCenter=true&width=700&lines=%F0%9F%9F%A2+JOSHI&color=00FF3C&shadow=3D3D3D" />
 </p><p align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Orbitron&size=45&pause=1000&color=FF2B2B&center=true&vCenter=true&width=500&lines=BOT" />
+  <img src="https://readme-typing-svg.demolab.com?font=Orbitron&size=65&pause=1200&center=true&vCenter=true&width=700&lines=%F0%9F%94%B4+BOT&color=FF2B2B&shadow=3D3D3D" />
 </p><p align="center">
   <b style="font-size:18px;">🤖 WhatsApp Bot • ⚡ Termux • 🔥 Animado</b>
 </p>
