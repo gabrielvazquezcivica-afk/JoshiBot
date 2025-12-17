@@ -1,15 +1,18 @@
-import moment from 'moment-timezone'
-
 export const handler = async (m, { sock, args, sender, owner, reply }) => {
-  const owners = owner.numbers || []
-  const cleanSender = sender.replace(/[^0-9]/g, '')
 
-  if (!owners.includes(cleanSender)) {
-    return reply('🚫 ACCESO DENEGADO\nSolo el OWNER puede ejecutar este comando')
+  // 🔐 OWNER CHECK (LIMPIO)
+  const owners = owner.jid.map(j => j.replace(/[^0-9]/g, ''))
+  const user = sender.replace(/[^0-9]/g, '')
+
+  if (!owners.includes(user)) {
+    return reply(`╔══🚫 ACCESO DENEGADO ══╗
+║ Solo el OWNER puede usar
+║ este comando
+╚══🤖 SISTEMA JOSHI ══╝`)
   }
 
   const link = args[0]
-  if (!link) return reply('❌ Usa: .join <link-del-grupo>')
+  if (!link) return reply('❌ Usa: .join <link>')
 
   const code = link.split('/').pop().split('?')[0]
 
@@ -19,48 +22,47 @@ export const handler = async (m, { sock, args, sender, owner, reply }) => {
     try {
       await sock.groupAcceptInviteV4(code)
     } catch (e) {
-      console.error('JOIN ERROR:', e)
-      return reply('❌ No pude unirme al grupo\n🔒 Enlace restringido o inválido')
+      console.error(e)
+      return reply('❌ No pude unirme al grupo')
     }
   }
 
-  reply('✅ Conectando al grupo...')
+  reply('✅ Conectándome al grupo...')
 
-  // esperar a que WhatsApp termine el join
-  await new Promise(res => setTimeout(res, 3000))
+  await new Promise(r => setTimeout(r, 3000))
 
-  // obtener grupo recién unido
   const groups = await sock.groupFetchAllParticipating()
   const group = Object.values(groups).pop()
   if (!group?.id) return
 
-  const fecha = moment().tz('America/Mexico_City').format('DD/MM/YYYY')
-  const hora = moment().tz('America/Mexico_City').format('HH:mm:ss')
+  const now = new Date()
+  const fecha = now.toLocaleDateString('es-MX')
+  const hora = now.toLocaleTimeString('es-MX')
 
-  const mensaje = `
+  const text = `
 ╔══════════════════════╗
    🤖 𝗝𝗢𝗦𝗛𝗜-𝗕𝗢𝗧
 ╚══════════════════════╝
 
-🎄✨ *MENSAJE NAVIDEÑO DEL SISTEMA* ✨🎄
+🎄✨ MENSAJE NAVIDEÑO ✨🎄
 
-👋 Hola a todos
-He sido conectado exitosamente al grupo
+👋 Hola grupo
+He sido conectado correctamente
 
-🎅 Que esta Navidad esté llena de paz,
-🎁 alegría, unión y buenos momentos
+🎅 Que esta Navidad traiga
+🎁 paz, unión y buena vibra
 
-⚙️ *Sistema activado correctamente*
 📅 Fecha: ${fecha}
 ⏰ Hora: ${hora}
 
 ╔══════════════════════╗
-   🚀 𝗦𝗜𝗦𝗧𝗘𝗠𝗔 𝗝𝗢𝗦𝗛𝗜
+   🚀 SISTEMA JOSHI
 ╚══════════════════════╝
 `
 
-  await sock.sendMessage(group.id, { text: mensaje })
+  await sock.sendMessage(group.id, { text })
 }
 
 handler.command = ['join']
+handler.tags = ['owner']
 handler.owner = true
