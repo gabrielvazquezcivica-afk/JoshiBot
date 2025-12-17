@@ -1,18 +1,22 @@
-export const handler = async (m, { sock, args, sender, owner, reply }) => {
+import config from '../config.js'
 
-  // 🔐 OWNER CHECK (LIMPIO)
-  const owners = owner.jid.map(j => j.replace(/[^0-9]/g, ''))
+export const handler = async (m, { sock, args, sender, reply }) => {
+
+  const owners = config.owner.jid.map(j =>
+    j.replace(/[^0-9]/g, '')
+  )
+
   const user = sender.replace(/[^0-9]/g, '')
 
   if (!owners.includes(user)) {
     return reply(`╔══🚫 ACCESO DENEGADO ══╗
-║ Solo el OWNER puede usar
-║ este comando
-╚══🤖 SISTEMA JOSHI ══╝`)
+║ 👑 Solo el OWNER
+║ puede usar este comando
+╚══🤖 JOSHI SYSTEM ══╝`)
   }
 
   const link = args[0]
-  if (!link) return reply('❌ Usa: .join <link>')
+  if (!link) return reply('❌ Usa: .join <link del grupo>')
 
   const code = link.split('/').pop().split('?')[0]
 
@@ -21,13 +25,12 @@ export const handler = async (m, { sock, args, sender, owner, reply }) => {
   } catch {
     try {
       await sock.groupAcceptInviteV4(code)
-    } catch (e) {
-      console.error(e)
+    } catch {
       return reply('❌ No pude unirme al grupo')
     }
   }
 
-  reply('✅ Conectándome al grupo...')
+  reply('🚀 Uniéndome al grupo...')
 
   await new Promise(r => setTimeout(r, 3000))
 
@@ -44,25 +47,26 @@ export const handler = async (m, { sock, args, sender, owner, reply }) => {
    🤖 𝗝𝗢𝗦𝗛𝗜-𝗕𝗢𝗧
 ╚══════════════════════╝
 
-🎄✨ MENSAJE NAVIDEÑO ✨🎄
+🎄✨ AVISO NAVIDEÑO ✨🎄
 
-👋 Hola grupo
-He sido conectado correctamente
+👋 He ingresado al grupo
+por autorización del OWNER
 
-🎅 Que esta Navidad traiga
-🎁 paz, unión y buena vibra
+📅 ${fecha}
+⏰ ${hora}
 
-📅 Fecha: ${fecha}
-⏰ Hora: ${hora}
+⚡ Owner: ${config.owner.name}
 
 ╔══════════════════════╗
-   🚀 SISTEMA JOSHI
+   🚀 SISTEMA ACTIVO
 ╚══════════════════════╝
 `
 
   await sock.sendMessage(group.id, { text })
 }
 
-handler.command = ['join']
+/* 🔥 METADATA PARA MENÚ 🔥 */
+handler.help = ['join <link>']
 handler.tags = ['owner']
+handler.command = ['join']
 handler.owner = true
