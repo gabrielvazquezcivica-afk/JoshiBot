@@ -1,68 +1,75 @@
+function normalizeJid(jid = '') {
+  return jid.replace(/[^0-9]/g, '')
+}
+
 export const handler = async (m, { sock, from, sender, isGroup, owner, reply }) => {
-  if (!isGroup) return reply('🚫 Este comando solo funciona en grupos')
+  if (!isGroup) return reply('🚫 Solo funciona en grupos')
 
   const owners = owner?.numbers || []
-  const cleanSender = sender.replace(/[^0-9]/g, '')
+  const senderNum = normalizeJid(sender)
 
-  if (!owners.includes(cleanSender)) {
+  if (!owners.includes(senderNum)) {
     return reply('🚫 Solo el OWNER puede usar este comando')
   }
 
   const metadata = await sock.groupMetadata(from)
   const participants = metadata.participants
 
-  // 🔑 LIMPIAR ID DEL BOT (CORRECTO 2025)
-  const botNumber = sock.user.id.replace(/[^0-9]/g, '')
+  const botNum = normalizeJid(sock.user.id)
 
-  const botData = participants.find(p =>
-    p.id.replace(/[^0-9]/g, '') === botNumber
-  )
+  // 🔥 DETECCIÓN REAL DEL BOT
+  const botParticipant = participants.find(p => {
+    return normalizeJid(p.id) === botNum
+  })
 
-  const ownerData = participants.find(p =>
-    p.id.replace(/[^0-9]/g, '') === cleanSender
-  )
-
-  // 🛑 VALIDACIONES REALES
-  if (!botData) {
-    return reply('❌ No pude detectar al bot en el grupo')
-  }
-
-  if (!botData.admin) {
-    return reply('❌ El bot NO es administrador')
-  }
-
-  if (!ownerData) {
-    return reply('❌ El owner no está en el grupo')
-  }
-
-  if (ownerData.admin) {
+  if (!botParticipant) {
     return reply(
-`╭─❖ 「 𝗔𝗨𝗧𝗢 𝗔𝗗𝗠𝗜𝗡 」 ❖─╮
-│ 👑 Owner ya es Admin
-│ ⚡ Estado: ACTIVO
-│ 🤖 Bot: ONLINE
-╰───────────────╯`
+`╭─❖ 「 ERROR SISTEMA 」 ❖─╮
+│ 🤖 Bot no detectable
+│ ⚠️ WhatsApp MD ocultó el JID
+│ ✅ El bot SÍ está en el grupo
+│ ❌ Pero no es detectable
+╰────────────────────╯`
     )
   }
 
-  // 🚀 PROMOVER
+  if (!botParticipant.admin) {
+    return reply('❌ El bot NO es administrador')
+  }
+
+  const ownerParticipant = participants.find(p =>
+    normalizeJid(p.id) === senderNum
+  )
+
+  if (!ownerParticipant) {
+    return reply('❌ El owner no está en el grupo')
+  }
+
+  if (ownerParticipant.admin) {
+    return reply(
+`╭─❖ 「 AUTO ADMIN 」 ❖─╮
+│ 👑 Owner ya es Admin
+│ ⚡ Estado: ACTIVO
+╰──────────────────╯`
+    )
+  }
+
   await sock.groupParticipantsUpdate(
     from,
-    [ownerData.id],
+    [ownerParticipant.id],
     'promote'
   )
 
-  await reply(
-`╭─❖ 「 𝗔𝗨𝗧𝗢 𝗔𝗗𝗠𝗜𝗡 」 ❖─╮
-│ 👑 Owner promovido con éxito
-│ 🛡️ Rol: ADMINISTRADOR
-│ ⚡ Sistema: ESTABLE
-│ 🤖 Grupo: ${metadata.subject}
-╰───────────────╯`
+  reply(
+`╭─❖ 「 AUTO ADMIN 」 ❖─╮
+│ 👑 Owner promovido
+│ 🛡️ Rol: ADMIN
+│ 🤖 Bot verificado
+╰──────────────────╯`
   )
 }
 
-handler.command = ['autoadmin', 'owneradmin']
+handler.command = ['autoadmin']
 handler.tags = ['owner']
 handler.owner = true
 handler.group = true
