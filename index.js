@@ -6,8 +6,10 @@ import path from 'path'
 import { fileURLToPath, pathToFileURL } from 'url'
 
 // 🔑 CONFIG (OWNER)
-import config from './config.js'
-global.owner = config.owner
+import { owner } from './config.js'
+
+// 🌐 OWNER GLOBAL
+global.owner = owner
 
 // 👋 WELCOME
 import { welcomeEvent } from './plugins/welcome.js'
