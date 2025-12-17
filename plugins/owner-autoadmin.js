@@ -1,57 +1,63 @@
-const handler = async (m, { sock, from, isGroup, botNumber }) => {
+export default async function handler(m, { conn, isGroup }) {
   if (!isGroup) return
 
-  // 🔎 OBTENER OWNER DESDE CONFIG
-  let ownerJid = global.owner?.[0] || global.config?.owner?.jid?.[0]
-  if (!ownerJid) return
+  const chat = m.chat
+  const botNumber = conn.user.id
 
-  if (!ownerJid.includes('@')) {
-    ownerJid = ownerJid.replace(/\D/g, '') + '@s.whatsapp.net'
+  // 👑 OWNER (compatible con tu bot)
+  let owner =
+    global.owner?.[0] ||
+    global.config?.owner?.jid?.[0]
+
+  if (!owner) return
+
+  if (!owner.includes('@')) {
+    owner = owner.replace(/\D/g, '') + '@s.whatsapp.net'
   }
 
-  // 📊 Metadata
-  const metadata = await sock.groupMetadata(from)
+  const metadata = await conn.groupMetadata(chat)
   const participants = metadata.participants
 
-  // 🤖 Bot admin?
-  const botIsAdmin = participants.some(
+  // 🤖 BOT ES ADMIN?
+  const botAdmin = participants.find(
     p => p.id === botNumber && p.admin
   )
-  if (!botIsAdmin) return
+  if (!botAdmin) {
+    return m.reply('❌ El bot no es admin.')
+  }
 
-  // 👑 Owner ya admin?
-  const ownerIsAdmin = participants.some(
-    p => p.id === ownerJid && p.admin
+  // 👑 OWNER YA ADMIN?
+  const ownerAdmin = participants.find(
+    p => p.id === owner && p.admin
   )
-  if (ownerIsAdmin) return
+  if (ownerAdmin) {
+    return m.reply('✅ El owner ya es admin.')
+  }
 
   // ⚡ PROMOVER OWNER
-  await sock.groupParticipantsUpdate(from, [ownerJid], 'promote')
+  await conn.groupParticipantsUpdate(chat, [owner], 'promote')
 
-  // 🚀 MENSAJE FUTURISTA
   const text = `
-╔═══〔 ⚡ SYSTEM ACCESS ⚡ 〕═══╗
-║ 👑 OWNER PROMOTED           ║
-║ 🛡️ ADMIN PERMISSIONS GRANTED║
-╠═════════════════════════════╣
-║ 🤖 BOT: JOSHI-BOT           ║
-║ 🔐 STATUS: SECURED          ║
-╚═════════════════════════════╝
+╔════〔 ⚡ JOSHI SYSTEM ⚡ 〕════╗
+║ 👑 OWNER AUTORIZADO          ║
+║ 🛡️ ADMIN CONCEDIDO           ║
+╠══════════════════════════════╣
+║ 🤖 BOT: JOSHI-BOT            ║
+║ 🔐 ACCESS: GRANTED           ║
+╚══════════════════════════════╝
 
-📌 *Grupo:* ${metadata.subject}
-👤 @${ownerJid.split('@')[0]}
+👤 @${owner.split('@')[0]}
 `.trim()
 
-  await sock.sendMessage(from, {
+  await conn.sendMessage(chat, {
     text,
-    mentions: [ownerJid]
+    mentions: [owner]
   })
 }
 
+// 📌 CONFIGURACIÓN DEL COMANDO
 handler.command = ['autoadmin']
 handler.tags = ['owner']
 handler.help = ['autoadmin']
 handler.group = true
 handler.owner = true
-
-export { handler }
