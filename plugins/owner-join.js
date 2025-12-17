@@ -1,25 +1,21 @@
 export const handler = async (m, {
   sock,
-  from,
   sender,
   args,
   reply,
   owner
 }) => {
-  // ───── VALIDAR OWNER ─────
-  const isOwner = owner?.some(o => {
-    const number = o[0]
-    return (
-      sender === number ||
-      sender === number + '@s.whatsapp.net'
-    )
-  })
+
+  // ───── VALIDACIÓN OWNER REAL ─────
+  const ownerJids = owner?.jid || []
+
+  const isOwner = ownerJids.includes(sender)
 
   if (!isOwner) {
     return reply(
 `╭━━━〔 🚫 ACCESO DENEGADO 〕━━━╮
-┃ ❌ Solo el OWNER puede usar
-┃ este comando
+┃ ❌ Solo el OWNER puede
+┃ ejecutar este comando
 ╰━━━〔 🤖 SISTEMA JOSHI 〕━━━╯`
     )
   }
@@ -28,8 +24,8 @@ export const handler = async (m, {
   const link = args[0]
   if (!link || !link.includes('chat.whatsapp.com')) {
     return reply(
-`╭━━━〔 ⚠️ ERROR 〕━━━╮
-┃ Uso correcto:
+`╭━━━〔 ⚠️ USO INCORRECTO 〕━━━╮
+┃ Usa:
 ┃ .join https://chat.whatsapp.com/XXXX
 ╰━━━〔 🤖 SISTEMA JOSHI 〕━━━╯`
     )
@@ -42,16 +38,15 @@ export const handler = async (m, {
     await sock.groupAcceptInvite(code)
 
     reply(
-`╭━━━〔 ✅ OPERACIÓN EXITOSA 〕━━━╮
-┃ 🤖 El bot se unió al grupo
+`╭━━━〔 ✅ GRUPO UNIDO 〕━━━╮
+┃ 🤖 JoshiBot entró al grupo
 ┃ correctamente
-╰━━━〔 🚀 JOSHI-BOT 〕━━━╯`
+╰━━━〔 🚀 SISTEMA JOSHI 〕━━━╯`
     )
   } catch (e) {
     reply(
 `╭━━━〔 ❌ ERROR 〕━━━╮
-┃ No pude unirme al grupo
-┃ Posibles causas:
+┃ No pude entrar al grupo
 ┃ • Link inválido
 ┃ • Expirado
 ┃ • Bot bloqueado
