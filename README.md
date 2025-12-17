@@ -67,19 +67,4 @@ node index.js
   <img src="https://img.shields.io/badge/YoshiBot-24%2F7-00ff3c?style=for-the-badge" />
 </p><p align="center">
   <b>👑 CREADO POR SoyGabo</b>
-</p>root@YOSHI-BOT:~# follow the white rabbit 🐇
-```bash
-root@YOSHI-BOT:~# initializing system...
-root@YOSHI-BOT:~# loading modules
-root@YOSHI-BOT:~# connecting to whatsapp servers
-root@YOSHI-BOT:~# bypass rate-limit ✔
-root@YOSHI-BOT:~# anti-ban active ✔
-root@YOSHI-BOT:~# bot status: ONLINE
-root@YOSHI-BOT:~# listening commands...
-
-
----
-
-<p align="center">
-  <b>CREADO POR SoyGabo</b>
 </p>
