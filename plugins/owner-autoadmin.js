@@ -1,63 +1,67 @@
-export default async function handler(m, { conn, isGroup }) {
-  if (!isGroup) return
+export const handler = async (m, { sock, from, sender, isGroup, owner, reply }) => {
+  if (!isGroup) return reply('🚫 Este comando solo funciona en grupos')
 
-  const chat = m.chat
-  const botNumber = conn.user.id
+  const owners = owner?.numbers || []
 
-  // 👑 OWNER (compatible con tu bot)
-  let owner =
-    global.owner?.[0] ||
-    global.config?.owner?.jid?.[0]
+  // limpiar sender (jid o lid)
+  const cleanSender = sender.replace(/[^0-9]/g, '')
 
-  if (!owner) return
-
-  if (!owner.includes('@')) {
-    owner = owner.replace(/\D/g, '') + '@s.whatsapp.net'
+  if (!owners.includes(cleanSender)) {
+    return reply('🚫 Solo el OWNER puede usar este comando')
   }
 
-  const metadata = await conn.groupMetadata(chat)
+  // obtener metadata
+  const metadata = await sock.groupMetadata(from)
   const participants = metadata.participants
 
-  // 🤖 BOT ES ADMIN?
-  const botAdmin = participants.find(
-    p => p.id === botNumber && p.admin
+  const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net'
+
+  const botData = participants.find(p => p.id === botId)
+  const ownerData = participants.find(p =>
+    p.id.replace(/[^0-9]/g, '') === cleanSender
   )
-  if (!botAdmin) {
-    return m.reply('❌ El bot no es admin.')
+
+  // verificar permisos
+  if (!botData?.admin) {
+    return reply('❌ El bot no es administrador')
   }
 
-  // 👑 OWNER YA ADMIN?
-  const ownerAdmin = participants.find(
-    p => p.id === owner && p.admin
-  )
-  if (ownerAdmin) {
-    return m.reply('✅ El owner ya es admin.')
+  if (!ownerData) {
+    return reply('❌ El owner no está en el grupo')
   }
 
-  // ⚡ PROMOVER OWNER
-  await conn.groupParticipantsUpdate(chat, [owner], 'promote')
+  if (ownerData.admin) {
+    return reply(
+      `╭─❖ 「 𝗔𝗨𝗧𝗢 𝗔𝗗𝗠𝗜𝗡 」 ❖─╮
+│ 👑 Owner ya es Admin
+│ ⚡ Estado: ACTIVO
+│ 🤖 Bot: ONLINE
+╰───────────────╯`
+    )
+  }
 
-  const text = `
-╔════〔 ⚡ JOSHI SYSTEM ⚡ 〕════╗
-║ 👑 OWNER AUTORIZADO          ║
-║ 🛡️ ADMIN CONCEDIDO           ║
-╠══════════════════════════════╣
-║ 🤖 BOT: JOSHI-BOT            ║
-║ 🔐 ACCESS: GRANTED           ║
-╚══════════════════════════════╝
+  // promover
+  await sock.groupParticipantsUpdate(
+    from,
+    [ownerData.id],
+    'promote'
+  )
 
-👤 @${owner.split('@')[0]}
-`.trim()
-
-  await conn.sendMessage(chat, {
-    text,
-    mentions: [owner]
-  })
+  // mensaje futurista
+  await reply(
+    `╭─❖ 「 𝗔𝗨𝗧𝗢 𝗔𝗗𝗠𝗜𝗡 」 ❖─╮
+│ 👑 Owner promovido con éxito
+│ 🛡️ Rol: ADMINISTRADOR
+│ ⚡ Sistema: ESTABLE
+│ 🤖 Bot: ${metadata.subject}
+╰───────────────╯`
+  )
 }
 
-// 📌 CONFIGURACIÓN DEL COMANDO
-handler.command = ['autoadmin']
+/* =========================
+   CONFIGURACIÓN DEL PLUGIN
+========================= */
+handler.command = ['autoadmin', 'owneradmin']
 handler.tags = ['owner']
-handler.help = ['autoadmin']
-handler.group = true
 handler.owner = true
+handler.group = true
