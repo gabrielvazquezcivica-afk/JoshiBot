@@ -1,5 +1,5 @@
 // ─────────────────────────────
-// CONFIGURACIÓN GLOBAL JOSHI-BOT
+// CONFIGURACIÓN GLOBAL DEL BOT
 // ─────────────────────────────
 
 const config = {
@@ -11,17 +11,17 @@ const config = {
     public: true
   },
 
-  // ───── OWNER (ESTILO UTAO / IMAGEN) ─────
+  // ───── OWNER (POR JID REAL) ─────
   owner: {
-  name: 'Joshi',
-  jid: [
-    '523310167470@s.whatsapp.net'
-  ]
-  }
+    name: 'Joshi',
+    jid: [
+      '523310167470@s.whatsapp.net'
+    ]
+  },
 
   // ───── LOGIN ─────
   login: {
-    pairing: true
+    pairing: true // true = código | false = QR
   },
 
   // ───── APIS ─────
