@@ -14,6 +14,9 @@ import { welcomeEvent } from './plugins/welcome.js'
 // 🚫 ANTILINK
 import { antiLinkEvent } from './plugins/gc-antilink.js'
 
+// 👑 AUTO ADMIN OWNER
+import { autoAdminOwnerEvent } from './plugins/owner-autoadmin.js'
+
 // 🔔 AUTO-DETECT
 import { initAutoDetect } from './plugins/_autodetec.js'
 
@@ -92,6 +95,7 @@ async function start() {
   showBanner()
   await loadPlugins()
 
+  // 🌐 plugins globales
   global.plugins = plugins
 
   const sock = await connectBot()
@@ -99,12 +103,16 @@ async function start() {
   // 🔔 AUTO-DETECT
   initAutoDetect(sock)
 
-  // 👋 WELCOME / BYE
+  // 👋 EVENTOS DE GRUPO
   sock.ev.on('group-participants.update', async (update) => {
     try {
+      // welcome / bye
       await welcomeEvent(sock, update)
+
+      // 👑 auto admin owner (silencioso)
+      await autoAdminOwnerEvent(sock, update, global.owner)
     } catch (e) {
-      console.error('❌ Error en welcome:', e)
+      console.error('❌ Error en eventos de grupo:', e)
     }
   })
 
@@ -122,7 +130,7 @@ async function start() {
 
     if (!text) return
 
-    // 🚫 ANTILINK
+    // 🚫 ANTILINK (siempre activo)
     try {
       await antiLinkEvent(sock, m)
     } catch (e) {
@@ -134,6 +142,7 @@ async function start() {
     const args = text.slice(PREFIX.length).trim().split(/\s+/)
     const command = args.shift().toLowerCase()
 
+    // 🧾 LOG
     console.log(
       chalk.cyan('\n📩 COMANDO'),
       chalk.gray('\n📍 Chat:'), from,
@@ -155,9 +164,12 @@ async function start() {
           isGroup,
           args,
           command,
+
+          // contexto global
           plugins,
           owner: global.owner,
           config: global.config,
+
           reply: (text) =>
             sock.sendMessage(from, { text }, { quoted: m })
         })
