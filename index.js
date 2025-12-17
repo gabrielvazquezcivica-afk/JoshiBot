@@ -17,28 +17,30 @@ import { antiLinkEvent } from './plugins/gc-antilink.js'
 // 🔔 AUTO-DETECT
 import { initAutoDetect } from './plugins/_autodetec.js'
 
-/* ───── Silenciar errores molestos ───── */
+/* ───── MANEJO DE ERRORES ───── */
 process.on('uncaughtException', err => {
   if (String(err).includes('Bad MAC')) return
-  console.error(err)
+  console.error('❌ uncaughtException:', err)
 })
+
 process.on('unhandledRejection', err => {
   if (String(err).includes('Bad MAC')) return
-  console.error(err)
+  console.error('❌ unhandledRejection:', err)
 })
-/* ───────────────────────────────────── */
+/* ─────────────────────────── */
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-/* ───── GLOBAL CONFIG ───── */
+/* ───── VARIABLES GLOBALES ───── */
+global.config = config
 global.bot = config.bot
 global.owner = config.owner
 global.prefix = config.bot.prefix
 global.APIs = config.APIs
 global.APIKeys = config.APIKeys
 global.limits = config.limits
-/* ──────────────────────── */
+/* ───────────────────────────── */
 
 const PREFIX = global.prefix
 const plugins = []
@@ -49,7 +51,7 @@ const botStartTime = Math.floor(Date.now() / 1000)
 // 🎨 Banner
 function showBanner() {
   console.clear()
-  const banner = figlet.textSync('JoshiBot', { font: 'Slant' })
+  const banner = figlet.textSync(config.bot.name, { font: 'Slant' })
   console.log(chalk.cyanBright(banner))
   console.log(chalk.gray('────────────────────────────────────'))
 }
@@ -63,26 +65,32 @@ async function loadPlugins() {
 
   for (const file of files) {
     try {
-      const plugin = await import(
-        pathToFileURL(path.join(pluginsDir, file)).href
-      )
-
-      if (plugin?.handler) {
-        plugins.push(plugin)
-      }
+      const plugin = await import(pathToFileURL(path.join(pluginsDir, file)).href)
+      if (plugin?.handler) plugins.push(plugin)
     } catch (e) {
-      console.error('❌ Error cargando plugin:', file)
+      console.error(`❌ Error cargando plugin: ${file}`, e)
     }
   }
 
   console.log(chalk.green(`🔌 Plugins cargados: ${plugins.length}`))
 }
 
+// 🧠 UTILIDADES
+const getText = (m) =>
+  m.message?.conversation ||
+  m.message?.extendedTextMessage?.text ||
+  m.message?.imageMessage?.caption ||
+  m.message?.videoMessage?.caption ||
+  ''
+
+const isOldMessage = (m) =>
+  !m.messageTimestamp || Number(m.messageTimestamp) < botStartTime
+
 async function start() {
   showBanner()
   await loadPlugins()
 
-  // 🔥 FIX MENU GLOBAL
+  // 🌐 Plugins globales (menu, ayuda, etc.)
   global.plugins = plugins
 
   const sock = await connectBot()
@@ -103,31 +111,23 @@ async function start() {
   sock.ev.on('messages.upsert', async ({ messages }) => {
     const m = messages?.[0]
     if (!m?.message || m.key.fromMe) return
+    if (isOldMessage(m)) return
 
-    // 🚫 ANTILINK (aunque no sea comando)
+    const from = m.key.remoteJid
+    const isGroup = from.endsWith('@g.us')
+    const sender = isGroup ? m.key.participant : from
+    const pushName = m.pushName || 'Sin nombre'
+    const text = getText(m)
+
+    if (!text) return
+
+    // 🚫 ANTILINK (detecta siempre)
     try {
       await antiLinkEvent(sock, m)
     } catch (e) {
       console.error('❌ Error en antilink:', e)
     }
 
-    // ❌ Ignorar mensajes viejos
-    if (!m.messageTimestamp) return
-    if (Number(m.messageTimestamp) < botStartTime) return
-
-    const from = m.key.remoteJid
-    const isGroup = from.endsWith('@g.us')
-    const sender = isGroup ? m.key.participant : from
-    const pushName = m.pushName || 'Sin nombre'
-
-    const text =
-      m.message.conversation ||
-      m.message.extendedTextMessage?.text ||
-      m.message.imageMessage?.caption ||
-      m.message.videoMessage?.caption ||
-      ''
-
-    if (!text) return
     if (!text.startsWith(PREFIX)) return
 
     const args = text.slice(PREFIX.length).trim().split(/\s+/)
@@ -135,10 +135,9 @@ async function start() {
 
     // 🧾 LOG
     console.log(
-      chalk.cyan('\n📩 MENSAJE'),
+      chalk.cyan('\n📩 COMANDO'),
       chalk.gray('\n📍 Chat:'), from,
       chalk.gray('\n👤 Usuario:'), pushName,
-      chalk.gray('\n⚙️ Tipo:'), 'Comando',
       chalk.gray('\n💬 Texto:'), text
     )
 
@@ -157,9 +156,10 @@ async function start() {
           args,
           command,
 
-          // ✅ CONTEXTO GLOBAL
+          // 🔑 CONTEXTO GLOBAL
           plugins,
           owner: global.owner,
+          config: global.config,
 
           reply: (text) =>
             sock.sendMessage(from, { text }, { quoted: m })
