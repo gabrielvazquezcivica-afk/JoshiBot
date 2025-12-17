@@ -1,7 +1,7 @@
+// ───── AUTO ADMIN OWNER ─────
 export const handler = async (m, { sock, from, sender, isGroup, owner, reply }) => {
-  if (!isGroup) return reply('🚫 Este comando solo funciona en grupos')
+  if (!isGroup) return reply('🚫 Solo funciona en grupos')
 
-  // 🔑 validar OWNER
   const owners = owner?.numbers || []
   const senderNum = sender.replace(/[^0-9]/g, '')
 
@@ -16,18 +16,15 @@ export const handler = async (m, { sock, from, sender, isGroup, owner, reply }) 
     return reply('❌ No pude obtener info del grupo')
   }
 
-  const participants = metadata.participants
-
-  const ownerParticipant = participants.find(p =>
-    p.id.replace(/[^0-9]/g, '') === senderNum
+  const participant = metadata.participants.find(
+    p => p.id.replace(/[^0-9]/g, '') === senderNum
   )
 
-  if (!ownerParticipant) {
+  if (!participant) {
     return reply('❌ El owner no está en el grupo')
   }
 
-  // 🧠 YA ES ADMIN
-  if (ownerParticipant.admin) {
+  if (participant.admin) {
     return reply(
 `╭─❖ 「 AUTO ADMIN 」 ❖─╮
 │ 👑 El OWNER ya es Admin
@@ -36,28 +33,22 @@ export const handler = async (m, { sock, from, sender, isGroup, owner, reply }) 
     )
   }
 
-  // 🚀 MÉTODO PRO: PROMOVER DIRECTO
   try {
-    await sock.groupParticipantsUpdate(
-      from,
-      [ownerParticipant.id],
-      'promote'
-    )
+    await sock.groupParticipantsUpdate(from, [participant.id], 'promote')
 
     reply(
 `╭─❖ 「 AUTO ADMIN 」 ❖─╮
 │ 👑 OWNER PROMOVIDO
 │ 🛡️ ROL: ADMIN
-│ 🤖 Bot verificado
+│ 🤖 Protección activa
 ╰──────────────────╯`
     )
-  } catch (e) {
+  } catch {
     reply(
-`╭─❖ 「 ERROR AUTO ADMIN 」 ❖─╮
+`╭─❖ 「 ERROR 」 ❖─╮
 │ ❌ No pude promover
-│ 🤖 El bot NO es admin
-│ ⚠️ O WhatsApp bloqueó la acción
-╰──────────────────────╯`
+│ 🤖 El bot no es admin
+╰────────────────╯`
     )
   }
 }
@@ -67,3 +58,22 @@ handler.tags = ['owner']
 handler.owner = true
 handler.group = true
 handler.menu = true
+
+// ───── AUTO DETECTOR (SIN COMANDO) ─────
+export async function autoAdminOwnerEvent(sock, update, owner) {
+  const { id, participants, action } = update
+  if (action !== 'demote') return
+
+  const owners = owner?.numbers || []
+
+  for (const user of participants) {
+    const num = user.replace(/[^0-9]/g, '')
+    if (!owners.includes(num)) continue
+
+    try {
+      await sock.groupParticipantsUpdate(id, [user], 'promote')
+    } catch {
+      // ❌ Bot no es admin → silencio total
+    }
+  }
+}
