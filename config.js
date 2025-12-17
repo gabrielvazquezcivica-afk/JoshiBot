@@ -1,5 +1,8 @@
-// config.js
-export default {
+// ─────────────────────────────
+// CONFIGURACIÓN GLOBAL DEL BOT
+// ─────────────────────────────
+
+const config = {
   // ───── BOT ─────
   bot: {
     name: 'JOSHI-BOT',
@@ -7,19 +10,21 @@ export default {
     public: true
   },
 
-  // ───── OWNER ─────
-  export const owner = {
-  name: 'Joshi',
-  number: ['523310167470']
-}
+  // ───── OWNER (POR JID) ─────
+  owner: {
+    name: 'Joshi',
+    jid: [
+      '523310167470@s.whatsapp.net'
+    ]
+  },
 
   // ───── LOGIN ─────
   login: {
-    pairing: true, // true = código | false = QR
+    pairing: true // true = código | false = QR
   },
 
   // ───── APIS (NOMBRES) ─────
-  APIS: {
+  APIs: {
     openai: 'https://api.openai.com/v1',
     gemini: 'https://generativelanguage.googleapis.com',
     removebg: 'https://api.remove.bg/v1.0',
@@ -40,3 +45,5 @@ export default {
     premium: 100
   }
 }
+
+export default config
