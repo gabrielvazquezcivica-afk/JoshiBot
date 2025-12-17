@@ -9,6 +9,8 @@
 
 🍟 INSTALACIÓN MANUAL POR TERMUX
 
+🔗 Instalar Termux: Clic aquí
+
 > 🧾 ESCRIBE LOS SIGUIENTES COMANDOS UNO POR UNO:
 
 
@@ -19,6 +21,54 @@ pkg update && pkg upgrade -y
 
 pkg install git nodejs -y
 
+git clone https://github.com/tu-usuario/JoshiBot
+
+cd JoshiBot
+
+npm install
+
+npm start
+
+
+---
+
+🍟 ACTIVAR EN TERMUX EN CASO DE DETENERSE
+
+> 🧾 ESCRIBE LOS SIGUIENTES COMANDOS UNO POR UNO:
+
+
+
+cd
+
+cd JoshiBot
+
+npm start
+
+
+---
+
+🔥 OBTENER OTRO CÓDIGO QR
+
+> 🧾 ESCRIBE LOS SIGUIENTES COMANDOS UNO POR UNO:
+
+
+
+cd JoshiBot
+
+rm -rf sessions
+
+npm start
+
+
+---
+
+<p align="center">
+  <b style="font-size:16px;">👑 CREADOR: SoyGabo</b>
+</p><p align="center">
+  <a href="https://wa.me/523310167470">
+    <img src="https://img.shields.io/badge/WhatsApp-Contactar-25D366?style=for-the-badge&logo=whatsapp&logoColor=white" />
+  </a>
+</p>
 git clone https://github.com/tu-usuario/JoshiBot
 
 cd JoshiBot
