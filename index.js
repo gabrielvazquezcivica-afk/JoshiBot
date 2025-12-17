@@ -15,7 +15,7 @@ import { welcomeEvent } from './plugins/welcome.js'
 import { antiLinkEvent } from './plugins/gc-antilink.js'
 
 // 🔔 AUTO-DETECT
-import { initAutoDetect } from './plugins/_autodetec.js'
+import { initAutoDetect } from './plugins/_autodetec.js''
 
 /* ───── MANEJO DE ERRORES ───── */
 process.on('uncaughtException', err => {
