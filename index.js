@@ -63,8 +63,7 @@ if (plugin?.handler) {
 }
 
 }
-
-console.log(chalk.green(🔌 Plugins cargados: ${plugins.length}))
+console.log(chalk.green(`🔌 Plugins cargados: ${plugins.length}`))
 }
 
 async function start() {
