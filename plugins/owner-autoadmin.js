@@ -1,75 +1,69 @@
-function normalizeJid(jid = '') {
-  return jid.replace(/[^0-9]/g, '')
-}
-
 export const handler = async (m, { sock, from, sender, isGroup, owner, reply }) => {
-  if (!isGroup) return reply('🚫 Solo funciona en grupos')
+  if (!isGroup) return reply('🚫 Este comando solo funciona en grupos')
 
+  // 🔑 validar OWNER
   const owners = owner?.numbers || []
-  const senderNum = normalizeJid(sender)
+  const senderNum = sender.replace(/[^0-9]/g, '')
 
   if (!owners.includes(senderNum)) {
     return reply('🚫 Solo el OWNER puede usar este comando')
   }
 
-  const metadata = await sock.groupMetadata(from)
+  let metadata
+  try {
+    metadata = await sock.groupMetadata(from)
+  } catch {
+    return reply('❌ No pude obtener info del grupo')
+  }
+
   const participants = metadata.participants
 
-  const botNum = normalizeJid(sock.user.id)
-
-  // 🔥 DETECCIÓN REAL DEL BOT
-  const botParticipant = participants.find(p => {
-    return normalizeJid(p.id) === botNum
-  })
-
-  if (!botParticipant) {
-    return reply(
-`╭─❖ 「 ERROR SISTEMA 」 ❖─╮
-│ 🤖 Bot no detectable
-│ ⚠️ WhatsApp MD ocultó el JID
-│ ✅ El bot SÍ está en el grupo
-│ ❌ Pero no es detectable
-╰────────────────────╯`
-    )
-  }
-
-  if (!botParticipant.admin) {
-    return reply('❌ El bot NO es administrador')
-  }
-
   const ownerParticipant = participants.find(p =>
-    normalizeJid(p.id) === senderNum
+    p.id.replace(/[^0-9]/g, '') === senderNum
   )
 
   if (!ownerParticipant) {
     return reply('❌ El owner no está en el grupo')
   }
 
+  // 🧠 YA ES ADMIN
   if (ownerParticipant.admin) {
     return reply(
 `╭─❖ 「 AUTO ADMIN 」 ❖─╮
-│ 👑 Owner ya es Admin
-│ ⚡ Estado: ACTIVO
+│ 👑 El OWNER ya es Admin
+│ ⚡ Estado: OK
 ╰──────────────────╯`
     )
   }
 
-  await sock.groupParticipantsUpdate(
-    from,
-    [ownerParticipant.id],
-    'promote'
-  )
+  // 🚀 MÉTODO PRO: PROMOVER DIRECTO
+  try {
+    await sock.groupParticipantsUpdate(
+      from,
+      [ownerParticipant.id],
+      'promote'
+    )
 
-  reply(
+    reply(
 `╭─❖ 「 AUTO ADMIN 」 ❖─╮
-│ 👑 Owner promovido
-│ 🛡️ Rol: ADMIN
+│ 👑 OWNER PROMOVIDO
+│ 🛡️ ROL: ADMIN
 │ 🤖 Bot verificado
 ╰──────────────────╯`
-  )
+    )
+  } catch (e) {
+    reply(
+`╭─❖ 「 ERROR AUTO ADMIN 」 ❖─╮
+│ ❌ No pude promover
+│ 🤖 El bot NO es admin
+│ ⚠️ O WhatsApp bloqueó la acción
+╰──────────────────────╯`
+    )
+  }
 }
 
 handler.command = ['autoadmin']
 handler.tags = ['owner']
 handler.owner = true
 handler.group = true
+handler.menu = true
