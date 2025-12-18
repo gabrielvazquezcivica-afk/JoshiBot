@@ -3,53 +3,47 @@ import { sticker } from '../lib/sticker.js'
 export const handler = async (m, {
   sock,
   from,
+  text,
   reply
 }) => {
-
-  // 📌 Debe responder a imagen o video
-  if (!m.quoted) {
-    return reply(
-`╭─〔 🖼️ STICKER WM 〕
-│ Responde a una
-│ imagen o video
-├────────────────
-│ Ejemplo:
-│ .wm Gabo
-╰─〔 🤖 JoshiBot 〕`
-    )
+  // ❌ Debe responder a un sticker
+  if (!m.quoted || !m.quoted.msg || !/sticker/i.test(m.quoted.mtype)) {
+    return reply('❌ Responde a un sticker\nEjemplo:\n.wm Gabo')
   }
 
-  // 🏷️ Texto EXACTO que escriben
-  const text =
-    m.message?.conversation ||
-    m.message?.extendedTextMessage?.text ||
-    ''
-
-  const wm = text.split(' ').slice(1).join(' ').trim()
-  if (!wm) return reply('❌ Escribe el texto del sticker')
+  // ❌ Texto obligatorio
+  if (!text) {
+    return reply('❌ Escribe el WM\nEjemplo:\n.wm Gabo')
+  }
 
   try {
-    // ⚙️ Sticker SIN AUTOR, SIN BOT
-    const st = await sticker(
-      m.quoted.msg || m.quoted,
+    // 📥 Obtener sticker original
+    const media = await m.quoted.download()
+
+    // 🏷️ WM limpio
+    const wmText = text.trim()
+
+    // 🔁 Crear nuevo sticker
+    const newSticker = await sticker(
+      media,
       null,
-      wm,     // PACKNAME = lo que escriben
-      ''      // AUTHOR = vacío
+      wmText, // packname
+      wmText  // author
     )
 
-    // 📤 Enviar
+    // 📤 Enviar sticker
     await sock.sendMessage(from, {
-      sticker: st
+      sticker: newSticker
     }, { quoted: m })
 
-    // ⚡ Reacción
+    // 🔥 Reacción
     await sock.sendMessage(from, {
-      react: { text: '✨', key: m.key }
+      react: { text: '🧷', key: m.key }
     })
 
   } catch (e) {
     console.error(e)
-    reply('❌ Error creando el sticker')
+    reply('❌ Error al crear el sticker')
   }
 }
 
