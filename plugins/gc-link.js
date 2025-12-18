@@ -1,50 +1,43 @@
-export const handler = async (m, {
-  sock,
-  from,
-  sender,
-  isGroup
-}) => {
+export const handler = async (m, { sock, from, sender, isGroup }) => {
   if (!isGroup) return
 
-  const cleanJid = (jid = '') =>
-    jid.replace(/[^0-9]/g, '') + '@s.whatsapp.net'
+  const normalize = (jid) => jid?.split(':')[0]
 
+  let metadata
   try {
-    const metadata = await sock.groupMetadata(from)
-    const participants = metadata.participants || []
+    metadata = await sock.groupMetadata(from)
+  } catch {
+    await sock.sendMessage(from, { react: { text: '❌', key: m.key } })
+    return
+  }
 
-    const admins = participants
-      .filter(p => p.admin)
-      .map(p => cleanJid(p.id))
+  const admins = metadata.participants
+    .filter(p => p.admin)
+    .map(p => normalize(p.id))
 
-    const senderId = cleanJid(sender)
-    const botId = cleanJid(sock.user.id)
+  const user = normalize(sender)
 
-    // ❌ Bot no admin → silencio
-    if (!admins.includes(botId)) return
+  // 🚫 No admin → reacción silenciosa
+  if (!admins.includes(user)) {
+    await sock.sendMessage(from, { react: { text: '❌', key: m.key } })
+    return
+  }
 
-    // ❌ Usuario no admin → silencio
-    if (!admins.includes(senderId)) return
+  let code
+  try {
+    code = await sock.groupInviteCode(from)
+  } catch {
+    await sock.sendMessage(from, { react: { text: '❌', key: m.key } })
+    return
+  }
 
-    let link
-    try {
-      link = await sock.groupInviteCode(from)
-    } catch {
-      await sock.sendMessage(from, {
-        react: { text: '❌', key: m.key }
-      })
-      return
-    }
+  const fecha = new Date().toLocaleDateString('es-MX', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric'
+  })
 
-    const fullLink = `https://chat.whatsapp.com/${link}`
-
-    const fecha = new Date().toLocaleDateString('es-MX', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric'
-    })
-
-    const text = `
+  const text = `
 ╭─〔 🔗 SISTEMA DE ENLACES 〕
 │
 │ 🏷 Grupo:
@@ -52,11 +45,11 @@ export const handler = async (m, {
 │
 ├────────────────────
 │ 🔗 LINK OFICIAL:
-│ ${fullLink}
+│ https://chat.whatsapp.com/${code}
 │
 ├────────────────────
-│ 🛡 Acceso: Privado
 │ 👑 Admin: Autorizado
+│ 🛡 Acceso: Privado
 │
 ├────────────────────
 │ 📅 Fecha:
@@ -65,15 +58,8 @@ export const handler = async (m, {
 ╰─〔 🤖 JoshiBot 〕
 `.trim()
 
-    await sock.sendMessage(from, { text }, { quoted: m })
-
-  } catch {
-    await sock.sendMessage(from, {
-      react: { text: '❌', key: m.key }
-    })
-  }
+  await sock.sendMessage(from, { text }, { quoted: m })
 }
 
 handler.command = ['link', 'gclink', 'grupolink']
 handler.tags = ['group']
-handler.admin = true
