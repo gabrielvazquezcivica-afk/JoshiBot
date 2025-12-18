@@ -7,50 +7,53 @@ export const handler = async (m, {
   reply
 }) => {
 
-  // 1️⃣ Texto obligatorio
+  // 📝 Texto obligatorio
   if (!text || !text.trim()) {
-    return reply('❌ Usa el comando así:\n.wm Gabo')
+    return reply('❌ Uso correcto:\n.wm Gabo\n\nResponde a un sticker')
   }
 
-  // 2️⃣ Obtener contextInfo (RESPUESTA REAL)
-  const context =
-    m.message?.extendedTextMessage?.contextInfo ||
-    m.message?.imageMessage?.contextInfo ||
-    m.message?.videoMessage?.contextInfo
+  // 🔎 Buscar mensaje citado (TODAS LAS FORMAS)
+  const msg = m.message || {}
+  let contextInfo = null
 
-  if (!context) {
-    return reply('❌ Responde a un sticker\nEjemplo:\n.wm Gabo')
+  if (msg.extendedTextMessage?.contextInfo)
+    contextInfo = msg.extendedTextMessage.contextInfo
+  else if (msg.imageMessage?.contextInfo)
+    contextInfo = msg.imageMessage.contextInfo
+  else if (msg.videoMessage?.contextInfo)
+    contextInfo = msg.videoMessage.contextInfo
+  else if (msg.conversation) 
+    contextInfo = msg.contextInfo
+
+  if (!contextInfo || !contextInfo.quotedMessage) {
+    return reply('❌ Debes responder a un *sticker*\nEjemplo:\n.wm Gabo')
   }
 
-  // 3️⃣ Obtener mensaje citado REAL
-  const quoted = context.quotedMessage
-  if (!quoted) {
-    return reply('❌ Responde a un sticker\nEjemplo:\n.wm Gabo')
-  }
+  const quoted = contextInfo.quotedMessage
 
-  // 4️⃣ Verificar que sea sticker
+  // 🧷 Verificar sticker
   if (!quoted.stickerMessage) {
-    return reply('❌ Eso no es un sticker')
+    return reply('❌ El mensaje respondido no es un sticker')
   }
 
   try {
-    // 5️⃣ Descargar sticker citado (FORMA COMPATIBLE)
+    // 📥 Descargar sticker citado (FORMA SEGURA)
     const media = await sock.downloadMediaMessage({
       key: {
         remoteJid: from,
-        id: context.stanzaId,
-        participant: context.participant
+        id: contextInfo.stanzaId,
+        participant: contextInfo.participant
       },
       message: quoted
     })
 
     if (!media) {
-      return reply('❌ No pude descargar el sticker')
+      return reply('❌ No pude obtener el sticker')
     }
 
     const wm = text.trim()
 
-    // 6️⃣ Crear sticker con WM
+    // 🧪 Crear sticker con watermark
     const result = await sticker(
       media,
       null,
@@ -58,19 +61,19 @@ export const handler = async (m, {
       wm  // author
     )
 
-    // 7️⃣ Enviar sticker
+    // 📤 Enviar sticker
     await sock.sendMessage(from, {
       sticker: result
     }, { quoted: m })
 
-    // 8️⃣ Reacción
+    // ✨ Reacción
     await sock.sendMessage(from, {
       react: { text: '🧷', key: m.key }
     })
 
   } catch (e) {
-    console.error('WM ERROR:', e)
-    reply('❌ Error al procesar el sticker')
+    console.error('[WM ERROR]', e)
+    reply('❌ Error procesando el sticker')
   }
 }
 
