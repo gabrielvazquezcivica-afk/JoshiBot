@@ -9,7 +9,6 @@ export const handler = async (m, {
   if (!isGroup)
     return reply('❌ Este comando solo funciona en grupos')
 
-  // 🔎 Metadata
   const metadata = await sock.groupMetadata(from)
   const participants = metadata.participants
 
@@ -17,28 +16,30 @@ export const handler = async (m, {
     .filter(p => p.admin)
     .map(p => p.id)
 
-  // 🚫 Solo admins
+  // 👤 Verificar admin usuario
   if (!admins.includes(sender)) {
-    return reply(
-`╭─〔 🎯 RULETA BAN 〕
-│ ❌ Solo admins
-╰─〔 🤖 JoshiBot 〕`
-    )
+    return reply('❌ Solo admins pueden usar este comando')
   }
 
-  // 🤖 Bot admin?
-  const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net'
-  if (!admins.includes(botId)) {
+  // 🤖 JID REAL DEL BOT (MD)
+  const botId = sock.user.id
+
+  // 🤖 Verificar admin bot (FORMA CORRECTA)
+  const botIsAdmin = participants.some(
+    p => p.id === botId && p.admin
+  )
+
+  if (!botIsAdmin) {
     return reply('❌ Necesito ser admin para ejecutar la ruleta')
   }
 
-  // 🎯 Candidatos (no admins, no bot)
+  // 🎯 Candidatos válidos
   const candidates = participants
-    .map(p => p.id)
-    .filter(id =>
-      !admins.includes(id) &&
-      id !== botId
+    .filter(p =>
+      !p.admin &&
+      p.id !== botId
     )
+    .map(p => p.id)
 
   if (!candidates.length)
     return reply('⚠️ No hay usuarios válidos para la ruleta')
@@ -51,7 +52,7 @@ export const handler = async (m, {
     react: { text: '🎰', key: m.key }
   })
 
-  // 🧨 Anuncio
+  // 📢 Mensaje
   await sock.sendMessage(from, {
     text:
 `╭─〔 🎯 RULETA DEL BAN 〕
@@ -62,8 +63,7 @@ export const handler = async (m, {
     mentions: [target]
   })
 
-  // ⏱️ Pequeña pausa
-  await new Promise(r => setTimeout(r, 1500))
+  await new Promise(r => setTimeout(r, 1200))
 
   // 🔨 BAN
   await sock.groupParticipantsUpdate(from, [target], 'remove')
