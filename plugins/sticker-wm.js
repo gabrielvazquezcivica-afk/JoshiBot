@@ -1,73 +1,57 @@
-import { sticker } from '../lib/sticker.js'
+import { writeFile } from 'fs/promises'
+import { tmpdir } from 'os'
+import path from 'path'
+import { exec } from 'child_process'
 
-export const handler = async (m, { sock, from, text, reply }) => {
+let handler = async (m, { conn, text }) => {
+  if (!m.quoted) {
+    return m.reply('❌ Responde a un *sticker*')
+  }
 
-  // Texto obligatorio
+  // Obtener mensaje real (incluye viewOnce)
+  let q = m.quoted.msg || m.quoted
+
+  // Detectar cualquier sticker válido
+  let isSticker =
+    q.stickerMessage ||
+    q.imageMessage?.mimetype === 'image/webp' ||
+    q.videoMessage?.mimetype === 'video/webp'
+
+  if (!isSticker) {
+    return m.reply('❌ Responde a un *sticker*')
+  }
+
   if (!text) {
-    return reply('❌ Uso:\n.wm Gabo\n\nResponde a un sticker')
+    return m.reply('❌ Escribe el texto\nEjemplo:\n.wm Gabo')
   }
 
-  // ───── EXTRAER MENSAJE CITADO (MÉTODO REAL) ─────
-  let quoted = null
-  let qkey = null
+  let media = await m.quoted.download()
+  let input = path.join(tmpdir(), `${Date.now()}.webp`)
+  let output = path.join(tmpdir(), `${Date.now()}-wm.webp`)
 
-  const msg = m.message || {}
+  await writeFile(input, media)
 
-  for (const type of Object.keys(msg)) {
-    const v = msg[type]
-    if (v?.contextInfo?.quotedMessage) {
-      quoted = v.contextInfo.quotedMessage
-      qkey = {
-        remoteJid: from,
-        id: v.contextInfo.stanzaId,
-        participant: v.contextInfo.participant
-      }
-      break
+  // Reescribe metadata SIN librerías rotas
+  let cmd = `
+webpmux -set exif <(
+  printf "RIFF$$$$WEBPVP8X\\x0A\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00"
+) ${input} -o ${output}
+`
+
+  exec(cmd, async (err) => {
+    if (err) {
+      console.error(err)
+      return m.reply('❌ Error al procesar el sticker')
     }
-  }
 
-  if (!quoted || !qkey) {
-    return reply('❌ Debes RESPONDER a un sticker\nEjemplo:\n.wm Gabo')
-  }
-
-  if (!quoted.stickerMessage) {
-    return reply('❌ El mensaje respondido NO es un sticker')
-  }
-
-  try {
-    // Descargar sticker
-    const media = await sock.downloadMediaMessage({
-      key: qkey,
-      message: quoted
-    })
-
-    if (!media) return reply('❌ No pude leer el sticker')
-
-    const wm = text.trim()
-
-    // Crear sticker con watermark
-    const out = await sticker(
-      media,
-      null,
-      wm, // packname
-      wm  // author
-    )
-
-    await sock.sendMessage(from, {
-      sticker: out
+    await conn.sendMessage(m.chat, {
+      sticker: await (await import('fs')).readFileSync(output)
     }, { quoted: m })
-
-    // Reacción
-    await sock.sendMessage(from, {
-      react: { text: '🧷', key: m.key }
-    })
-
-  } catch (err) {
-    console.error('[WM]', err)
-    reply('❌ Error creando el sticker')
-  }
+  })
 }
 
-handler.command = ['wm']
+handler.help = ['wm <texto>']
 handler.tags = ['sticker']
-handler.menu = true
+handler.command = /^wm$/i
+
+export default handler
