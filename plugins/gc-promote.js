@@ -6,7 +6,7 @@ export const handler = async (m, {
   reply
 }) => {
   if (!isGroup)
-    return reply('🎄 Este comando solo funciona en grupos 🎅')
+    return reply('🚫 Este comando solo funciona en grupos')
 
   // 🔎 Metadata del grupo
   const metadata = await sock.groupMetadata(from)
@@ -17,9 +17,9 @@ export const handler = async (m, {
   // 🚫 Solo admins
   if (!admins.includes(sender)) {
     return reply(
-`╭─〔 🎄 ACCESO RESTRINGIDO 🎄 〕
-│ ❌ Solo administradores
-│ pueden usar este comando
+`╭─〔 ⛔ ACCESO RESTRINGIDO 〕
+│ Permisos insuficientes
+│ Solo administradores
 ╰─〔 🤖 JoshiBot 〕`
     )
   }
@@ -31,8 +31,8 @@ export const handler = async (m, {
 
   if (!target) {
     return reply(
-`╭─〔 🎅 PROMOTE NAVIDEÑO 〕
-│ 🎄 Menciona a un usuario
+`╭─〔 ⚙️ PROMOTE DEL SISTEMA 〕
+│ Menciona a un usuario
 │ o responde a su mensaje
 ├────────────────
 │ Ejemplo:
@@ -48,31 +48,30 @@ export const handler = async (m, {
     // 👑 PROMOVER
     await sock.groupParticipantsUpdate(from, [target], 'promote')
 
-    // 🎄 REACCIÓN NAVIDEÑA
+    // ⚙️ REACCIÓN
     await sock.sendMessage(from, {
-      react: { text: '🎁', key: m.key }
+      react: { text: '⚙️', key: m.key }
     })
 
-    // 🎁 AVISO NAVIDEÑO FUTURISTA
+    // 📢 AVISO FUTURISTA
     await sock.sendMessage(from, {
       text:
-`╭─〔 🎄 SISTEMA JOSHI NAVIDEÑO 〕
-│ 👑 REGALO DE NAVIDAD
+`╭─〔 ⚠️ SISTEMA DE PERMISOS 〕
+│ PERMISOS ELEVADOS
 ├────────────────
-│ 🎅 Nuevo Admin:
+│ 👤 Usuario:
 │ @${target.split('@')[0]}
 │
-│ 🎁 Regalo entregado por:
+│ 👮 Acción ejecutada por:
 │ @${sender.split('@')[0]}
 ├────────────────
-│ ❄️ Permisos elevados
-│ 🎄 Ho ho ho…
+│ Estado: USUARIO → ADMIN
 ╰─〔 🤖 JoshiBot 〕`,
       mentions: [target, sender]
     })
 
   } catch (e) {
-    reply('❌ No pude otorgar el regalo navideño 🎁')
+    reply('❌ No se pudo otorgar permisos de administrador')
   }
 }
 
