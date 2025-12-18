@@ -112,7 +112,7 @@ export const handler = async (m, {
 }
 
 handler.command = ['play', 'mp3', 'yta', 'ytmp3', 'playaudio']
-handler.tags = ['downloader']
+handler.tags = ['descargas']
 handler.menu = true
 handler.group = false
 
