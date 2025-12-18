@@ -1,4 +1,4 @@
-import { sticker } from '../lib/Sticker.js'
+import { sticker } from '../lib/sticker.js'
 
 export const handler = async (m, {
   sock,
