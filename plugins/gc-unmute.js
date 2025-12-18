@@ -1,78 +1,77 @@
 import fs from 'fs'
-import path from 'path'
 
-const DB_PATH = path.resolve('./data/muted.json')
+const DB_FILE = './database/mutes.json'
 
-/* ───── DB ───── */
 function loadDB () {
-  if (!fs.existsSync(DB_PATH)) fs.writeFileSync(DB_PATH, '{}')
-  return JSON.parse(fs.readFileSync(DB_PATH))
+  if (!fs.existsSync(DB_FILE)) {
+    fs.mkdirSync('./database', { recursive: true })
+    fs.writeFileSync(DB_FILE, JSON.stringify({}))
+  }
+  return JSON.parse(fs.readFileSync(DB_FILE))
 }
 
 function saveDB (db) {
-  fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2))
+  fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2))
 }
 
-const handler = async (m, { sock, from, sender, isGroup, reply }) => {
+export const handler = async (m, {
+  sock,
+  reply,
+  isGroup,
+  sender
+}) => {
+  if (!isGroup) {
+    return reply('🚫 Este comando solo funciona en grupos')
+  }
 
-  if (!isGroup)
-    return reply('❌ Solo en grupos')
-
+  const from = m.key.remoteJid
   const metadata = await sock.groupMetadata(from)
+
   const admins = metadata.participants
     .filter(p => p.admin)
     .map(p => p.id)
 
-  const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net'
+  if (!admins.includes(sender)) {
+    return reply('⛔ Solo administradores pueden usar este comando')
+  }
 
-  if (!admins.includes(sender))
-    return reply('❌ Solo admins')
+  const user =
+    m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0] ||
+    m.message?.extendedTextMessage?.contextInfo?.participant
 
-  if (!admins.includes(botId))
-    return reply('❌ Necesito ser admin')
-
-  /* ───── CONTEXT INFO UNIVERSAL ───── */
-  const msg =
-    m.message?.extendedTextMessage ||
-    m.message?.imageMessage ||
-    m.message?.videoMessage ||
-    m.message?.stickerMessage ||
-    m.message?.audioMessage
-
-  const ctx = msg?.contextInfo
-  let target = null
-
-  if (ctx?.participant) target = ctx.participant
-  else if (ctx?.mentionedJid?.length) target = ctx.mentionedJid[0]
-
-  if (!target)
-    return reply('⚠️ Responde o menciona a un usuario')
+  if (!user) {
+    return reply(
+      '⚠️ Menciona a un usuario o responde a su mensaje\nEjemplo:\n.unmute @usuario'
+    )
+  }
 
   const db = loadDB()
+  db[from] = db[from] || []
 
-  if (!db[from] || !db[from].includes(target))
+  if (!db[from].includes(user)) {
     return reply('⚠️ Ese usuario no está muteado')
+  }
 
-  db[from] = db[from].filter(jid => jid !== target)
-
-  if (db[from].length === 0) delete db[from]
-
+  db[from] = db[from].filter(u => u !== user)
   saveDB(db)
 
   await sock.sendMessage(from, {
-    text:
-`╭─〔 🔊 UNMUTE 〕
-│ 👤 @${target.split('@')[0]}
-│ ✅ Puede hablar
-╰────────────`,
-    mentions: [target]
+    react: { text: '🔊', key: m.key }
   })
+
+  await sock.sendMessage(from, {
+    text: `
+╭─〔 🔊 USUARIO DESMUTEADO 〕
+│ 👤 @${user.split('@')[0]}
+│ 👮 Admin: @${sender.split('@')[0]}
+╰─〔 🤖 JoshiBot 〕
+`.trim(),
+    mentions: [user, sender]
+  }, { quoted: m })
 }
 
 handler.command = ['unmute']
-handler.tags = ['group', 'admin']
+handler.tags = ['group']
 handler.group = true
 handler.admin = true
-
-export { handler }
-export default handler
+handler.menu = true
