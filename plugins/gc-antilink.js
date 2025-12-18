@@ -7,22 +7,22 @@ const dbFile = './database/antilink.json'
 if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir)
 if (!fs.existsSync(dbFile)) fs.writeFileSync(dbFile, '{}')
 
-// ───── DETECTOR DE LINKS (TODO) ─────
+// ───── DETECTOR DE LINKS ─────
 const linkRegex =
   /(https?:\/\/|www\.|chat\.whatsapp\.com\/|t\.me\/|discord\.gg\/|instagram\.com\/|facebook\.com\/|fb\.me\/|twitter\.com\/|x\.com\/|youtube\.com\/|youtu\.be\/)/i
 
-// ───── FRASES NAVIDEÑAS ─────
+// ───── FRASES SISTEMA ─────
 const frasesWarn = [
-  '🎄 Santa vio ese link…',
-  '❄️ Links congelados',
-  '🎅 Este grupo no acepta regalos con links',
-  '☃️ El link se perdió en la nieve',
-  '✨ Link detectado por el sistema'
+  'Link bloqueado por el sistema',
+  'Contenido no permitido detectado',
+  'Acción restringida',
+  'Filtro de seguridad activado',
+  'Enlace eliminado automáticamente'
 ]
 
 // ───── COMANDO .antilink ─────
 export const handler = async (m, { sock, from, sender, isGroup, reply }) => {
-  if (!isGroup) return reply('❌ Solo funciona en grupos')
+  if (!isGroup) return reply('🚫 Este comando solo funciona en grupos')
 
   const text =
     m.message?.conversation ||
@@ -36,7 +36,7 @@ export const handler = async (m, { sock, from, sender, isGroup, reply }) => {
   try {
     metadata = await sock.groupMetadata(from)
   } catch {
-    return reply('❌ No pude obtener info del grupo')
+    return reply('❌ No se pudo obtener información del grupo')
   }
 
   const admins = metadata.participants
@@ -45,10 +45,9 @@ export const handler = async (m, { sock, from, sender, isGroup, reply }) => {
 
   if (!admins.includes(sender)) {
     return reply(`
-╭─〔 🚫 SISTEMA ANTILINK 〕
-│ Solo admins
-│ pueden usar
-│ este sistema
+╭─〔 ⛔ SISTEMA ANTILINK 〕
+│ Acceso restringido
+│ Solo administradores
 ╰─〔 🤖 JoshiBot 〕
 `.trim())
   }
@@ -58,29 +57,29 @@ export const handler = async (m, { sock, from, sender, isGroup, reply }) => {
 
   // 🟢 ACTIVAR
   if (option === 'on') {
-    if (db[from]) return reply('⚠️ Antilink ya estaba activo')
+    if (db[from]) return reply('⚠️ El sistema ya está activado')
     db[from] = true
     fs.writeFileSync(dbFile, JSON.stringify(db, null, 2))
     return reply(`
 ╭─〔 🚀 ANTILINK 〕
-│ 🟢 ESTADO: ACTIVADO
+│ ESTADO: 🟢 ACTIVADO
 ├────────────────
-│ Links bloqueados
-│ (excepto admins)
+│ Enlaces bloqueados
+│ (admins exentos)
 ╰─〔 🤖 JoshiBot 〕
 `.trim())
   }
 
   // 🔴 DESACTIVAR
   if (option === 'off') {
-    if (!db[from]) return reply('⚠️ Antilink ya estaba apagado')
+    if (!db[from]) return reply('⚠️ El sistema ya está desactivado')
     db[from] = false
     fs.writeFileSync(dbFile, JSON.stringify(db, null, 2))
     return reply(`
 ╭─〔 🚀 ANTILINK 〕
-│ 🔴 ESTADO: DESACTIVADO
+│ ESTADO: 🔴 DESACTIVADO
 ├────────────────
-│ Links permitidos
+│ Enlaces permitidos
 ╰─〔 🤖 JoshiBot 〕
 `.trim())
   }
@@ -159,8 +158,7 @@ export async function antiLinkEvent(sock, m) {
 │ ${frase}
 ├────────────────
 │ 👤 @${sender.split('@')[0]}
-│ ❄️ Links no permitidos
-│ 🎁 Advertencia navideña
+│ Acción no permitida
 ╰─〔 🤖 JoshiBot 〕
 `.trim(),
     mentions: [sender]
