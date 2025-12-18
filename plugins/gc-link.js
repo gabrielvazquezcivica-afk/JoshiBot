@@ -4,33 +4,32 @@ export const handler = async (m, {
   sender,
   isGroup
 }) => {
-  // ❌ Solo grupos
   if (!isGroup) return
 
+  const cleanJid = (jid = '') =>
+    jid.replace(/[^0-9]/g, '') + '@s.whatsapp.net'
+
   try {
-    // 📋 METADATA
     const metadata = await sock.groupMetadata(from)
     const participants = metadata.participants || []
 
     const admins = participants
       .filter(p => p.admin)
-      .map(p => p.id)
+      .map(p => cleanJid(p.id))
 
-    // 🤖 BOT ID
-    const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net'
+    const senderId = cleanJid(sender)
+    const botId = cleanJid(sock.user.id)
 
     // ❌ Bot no admin → silencio
     if (!admins.includes(botId)) return
 
     // ❌ Usuario no admin → silencio
-    if (!admins.includes(sender)) return
+    if (!admins.includes(senderId)) return
 
-    // 🔗 OBTENER LINK
     let link
     try {
       link = await sock.groupInviteCode(from)
     } catch {
-      // ❌ Reacción solamente
       await sock.sendMessage(from, {
         react: { text: '❌', key: m.key }
       })
@@ -66,14 +65,9 @@ export const handler = async (m, {
 ╰─〔 🤖 JoshiBot 〕
 `.trim()
 
-    await sock.sendMessage(
-      from,
-      { text },
-      { quoted: m }
-    )
+    await sock.sendMessage(from, { text }, { quoted: m })
 
   } catch {
-    // fallo total → reacción ❌
     await sock.sendMessage(from, {
       react: { text: '❌', key: m.key }
     })
