@@ -3,21 +3,18 @@ import path from 'path'
 
 const DB_PATH = path.resolve('./data/muted.json')
 
-// 📦 CARGAR DB
-function loadDB() {
-  if (!fs.existsSync(DB_PATH)) {
-    fs.writeFileSync(DB_PATH, '{}')
-  }
+/* ───── DB ───── */
+function loadDB () {
+  if (!fs.existsSync(DB_PATH)) fs.writeFileSync(DB_PATH, '{}')
   return JSON.parse(fs.readFileSync(DB_PATH))
 }
 
-// 💾 GUARDAR DB
-function saveDB(db) {
+function saveDB (db) {
   fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2))
 }
 
-// 🔥 WATCHER (BORRA MENSAJES)
-export async function muteWatcher(sock, m) {
+/* ───── WATCHER ───── */
+export async function muteWatcher (sock, m) {
   if (!m?.message) return
   if (!m.key.remoteJid.endsWith('@g.us')) return
 
@@ -29,38 +26,22 @@ export async function muteWatcher(sock, m) {
   if (!db[groupId].includes(sender)) return
 
   try {
-    await sock.sendMessage(groupId, {
-      delete: m.key
-    })
+    await sock.sendMessage(groupId, { delete: m.key })
   } catch {}
 }
 
-// 🔇 COMANDO
-export const handler = async (m, {
-  sock,
-  from,
-  sender,
-  isGroup,
-  reply
-}) => {
+/* ───── COMANDO ───── */
+const handler = async (m, { sock, from, sender, isGroup, reply }) => {
 
   if (!isGroup)
-    return reply('❌ Solo funciona en grupos')
-
-  let target =
-    m.mentionedJid?.[0] ||
-    m.quoted?.sender
-
-  if (!target)
-    return reply('⚠️ Menciona o responde a un usuario')
-
-  const botId =
-    sock.user.id.split(':')[0] + '@s.whatsapp.net'
+    return reply('❌ Este comando solo funciona en grupos')
 
   const metadata = await sock.groupMetadata(from)
   const admins = metadata.participants
     .filter(p => p.admin)
     .map(p => p.id)
+
+  const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net'
 
   if (!admins.includes(sender))
     return reply('❌ Solo admins pueden usar este comando')
@@ -68,11 +49,28 @@ export const handler = async (m, {
   if (!admins.includes(botId))
     return reply('❌ Necesito ser admin')
 
+  /* ───── OBTENER USUARIO ───── */
+  let target = null
+  const ctx =
+    m.message?.extendedTextMessage?.contextInfo
+
+  // responder
+  if (ctx?.participant) {
+    target = ctx.participant
+  }
+
+  // mencionar
+  if (!target && ctx?.mentionedJid?.length) {
+    target = ctx.mentionedJid[0]
+  }
+
+  if (!target)
+    return reply('⚠️ Responde o menciona a un usuario')
+
   if (admins.includes(target))
     return reply('⚠️ No puedes mutear admins')
 
   const db = loadDB()
-
   if (!db[from]) db[from] = []
 
   if (db[from].includes(target))
@@ -83,11 +81,11 @@ export const handler = async (m, {
 
   await sock.sendMessage(from, {
     text:
-`╭─〔 🔇 MUTE PERMANENTE 〕
+`╭─〔 🔇 MUTE 〕
 │ 👤 Usuario:
 │ @${target.split('@')[0]}
-│ 💾 Guardado incluso al reiniciar
-╰────────────────────`,
+│ 💾 Persistente
+╰────────────`,
     mentions: [target]
   })
 }
@@ -97,4 +95,5 @@ handler.tags = ['group']
 handler.group = true
 handler.admin = true
 
+export { handler }
 export default handler
