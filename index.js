@@ -17,13 +17,10 @@ import { antiLinkEvent } from './plugins/gc-antilink.js'
 // 👑 AUTO ADMIN OWNER
 import { autoAdminOwnerEvent } from './plugins/owner-autoadmin.js'
 
-// 👻 FANTASMAS
-import { fantasmasEvent } from './plugins/gc-fantasmas.js'
-
 // 🔔 AUTO-DETECT
 import { initAutoDetect } from './plugins/_autodetec.js'
 
-/* ───── MANEJO DE ERRORES ───── */
+/* ───── MANEJO DE ERRORES GLOBALES ───── */
 process.on('uncaughtException', err => {
   if (String(err).includes('Bad MAC')) return
   console.error(chalk.red('❌ uncaughtException:'), err)
@@ -33,7 +30,7 @@ process.on('unhandledRejection', err => {
   if (String(err).includes('Bad MAC')) return
   console.error(chalk.red('❌ unhandledRejection:'), err)
 })
-/* ─────────────────────────── */
+/* ─────────────────────────────────── */
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -54,7 +51,7 @@ const plugins = []
 // ⏱️ Ignorar mensajes antiguos
 const botStartTime = Math.floor(Date.now() / 1000)
 
-// 🎨 Banner
+// 🎨 BANNER
 function showBanner () {
   console.clear()
   const banner = figlet.textSync(config.bot.name, { font: 'Slant' })
@@ -62,7 +59,7 @@ function showBanner () {
   console.log(chalk.gray('────────────────────────────────────'))
 }
 
-// 📦 Cargar plugins
+// 📦 CARGAR PLUGINS
 async function loadPlugins () {
   const pluginsDir = path.join(__dirname, 'plugins')
   if (!fs.existsSync(pluginsDir)) return
@@ -97,6 +94,7 @@ const getText = (m) =>
 const isOldMessage = (m) =>
   !m.messageTimestamp || Number(m.messageTimestamp) < botStartTime
 
+// 🚀 START
 async function start () {
   showBanner()
   await loadPlugins()
@@ -108,7 +106,7 @@ async function start () {
   // 🔔 AUTO-DETECT
   initAutoDetect(sock)
 
-  // 👋 EVENTOS DE GRUPO
+  // 👥 EVENTOS DE GRUPO
   sock.ev.on('group-participants.update', async (update) => {
     try {
       await welcomeEvent(sock, update)
@@ -123,13 +121,6 @@ async function start () {
     const m = messages?.[0]
     if (!m?.message || m.key.fromMe) return
     if (isOldMessage(m)) return
-
-    // 👻 registrar actividad (fantasmas)
-    try {
-      await fantasmasEvent(m)
-    } catch (e) {
-      console.error(chalk.red('❌ Error fantasmasEvent:'), e)
-    }
 
     const from = m.key.remoteJid
     const isGroup = from.endsWith('@g.us')
