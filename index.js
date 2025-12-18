@@ -26,9 +26,6 @@ import { autoAdminOwnerEvent } from './plugins/owner-autoadmin.js'
 // 🔔 AUTO-DETECT
 import { initAutoDetect } from './plugins/_autodetec.js'
 
-// 🔇 MUTE WATCHER (persistente)
-import { muteWatcher } from './plugins/gc-mute.js'
-
 /* ───── MANEJO DE ERRORES GLOBALES ───── */
 process.on('uncaughtException', err => {
   if (String(err).includes('Bad MAC')) return
@@ -59,6 +56,17 @@ const plugins = []
 
 // ⏱️ Ignorar mensajes antiguos
 const botStartTime = Math.floor(Date.now() / 1000)
+
+// 📁 DB MUTES (PERSISTENTE)
+const MUTE_DB = './database/mutes.json'
+
+function getMutes () {
+  if (!fs.existsSync(MUTE_DB)) {
+    fs.mkdirSync('./database', { recursive: true })
+    fs.writeFileSync(MUTE_DB, JSON.stringify({}))
+  }
+  return JSON.parse(fs.readFileSync(MUTE_DB))
+}
 
 // 🎨 BANNER
 function showBanner () {
@@ -137,11 +145,19 @@ async function start () {
     const pushName = m.pushName || 'Sin nombre'
     const text = getText(m)
 
-    // 🔇 BORRAR MENSAJES DE USUARIOS MUTEADOS (PERSISTENTE)
+    // 🔇 WATCHER DE MUTE (NO ES PLUGIN)
     try {
-      await muteWatcher(sock, m)
+      if (isGroup) {
+        const db = getMutes()
+        const muted = db[from] || []
+
+        if (muted.includes(sender)) {
+          await sock.sendMessage(from, { delete: m.key })
+          return
+        }
+      }
     } catch (e) {
-      console.error(chalk.red('❌ Error muteWatcher:'), e)
+      console.error(chalk.red('❌ Error mute watcher:'), e)
     }
 
     if (!text) return
