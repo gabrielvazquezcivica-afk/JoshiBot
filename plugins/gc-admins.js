@@ -7,27 +7,29 @@ export const handler = async (m, {
 }) => {
   // ❌ Solo grupos
   if (!isGroup)
-    return reply('🎄 Este comando solo funciona en grupos')
+    return reply('🚫 Este comando solo funciona en grupos')
 
-  // 📌 Metadata
+  // 📌 Metadata del grupo
   const metadata = await sock.groupMetadata(from)
   const participants = metadata.participants
   const owner = metadata.owner
 
-  // 👮 Admins
-  const admins = participants.filter(p => p.admin).map(p => p.id)
+  // 👮 Obtener admins
+  const admins = participants
+    .filter(p => p.admin)
+    .map(p => p.id)
 
   // 🚫 Solo admins pueden usarlo
   if (!admins.includes(sender)) {
     return reply(
-`╭─〔 🚫 ACCESO DENEGADO 🎄 〕
-│ ❄️ Solo administradores
+`╭─〔 ⛔ ACCESO DENEGADO 〕
+│ Solo administradores
 │ pueden usar este comando
 ╰─〔 🤖 JoshiBot 〕`
     )
   }
 
-  // 🖼️ Imagen del grupo
+  // 🖼️ Foto del grupo
   let groupImage = null
   try {
     groupImage = await sock.profilePictureUrl(from, 'image')
@@ -35,7 +37,7 @@ export const handler = async (m, {
     groupImage = null
   }
 
-  // 🧾 Ordenar: creador primero
+  // 🧾 Lista: creador primero
   let list = ''
   let index = 1
 
@@ -46,31 +48,39 @@ export const handler = async (m, {
 
   for (const id of admins) {
     if (id === owner) continue
-    list += `│ ${index}. 👮 @${id.split('@')[0]}\n`
+    list += `│ ${index}. 🛡 @${id.split('@')[0]}\n`
     index++
   }
 
   const text =
-`╭─〔 🎄 ADMINISTRADORES DEL GRUPO 〕
-│ 🎅 Total: ${admins.length}
+`╭─〔 👥 ADMINISTRADORES DEL GRUPO 〕
+│ Total: ${admins.length}
 ├────────────────────
 ${list}├────────────────────
-│ ⚙️ Comando ejecutado por:
+│ ⚙️ Ejecutado por:
 │ 👤 @${sender.split('@')[0]}
 ╰─〔 🤖 JoshiBot 〕`
 
-  // 📤 Enviar
+  // 📤 Enviar mensaje
   if (groupImage) {
-    await sock.sendMessage(from, {
-      image: { url: groupImage },
-      caption: text,
-      mentions: [...admins, sender]
-    }, { quoted: m })
+    await sock.sendMessage(
+      from,
+      {
+        image: { url: groupImage },
+        caption: text,
+        mentions: [...admins, sender]
+      },
+      { quoted: m }
+    )
   } else {
-    await sock.sendMessage(from, {
-      text,
-      mentions: [...admins, sender]
-    }, { quoted: m })
+    await sock.sendMessage(
+      from,
+      {
+        text,
+        mentions: [...admins, sender]
+      },
+      { quoted: m }
+    )
   }
 }
 
