@@ -1,79 +1,70 @@
 import { sticker } from '../lib/sticker.js'
 
-export const handler = async (m, {
-  sock,
-  from,
-  text,
-  reply
-}) => {
+export const handler = async (m, { sock, from, text, reply }) => {
 
-  // 📝 Texto obligatorio
-  if (!text || !text.trim()) {
-    return reply('❌ Uso correcto:\n.wm Gabo\n\nResponde a un sticker')
+  // Texto obligatorio
+  if (!text) {
+    return reply('❌ Uso:\n.wm Gabo\n\nResponde a un sticker')
   }
 
-  // 🔎 Buscar mensaje citado (TODAS LAS FORMAS)
+  // ───── EXTRAER MENSAJE CITADO (MÉTODO REAL) ─────
+  let quoted = null
+  let qkey = null
+
   const msg = m.message || {}
-  let contextInfo = null
 
-  if (msg.extendedTextMessage?.contextInfo)
-    contextInfo = msg.extendedTextMessage.contextInfo
-  else if (msg.imageMessage?.contextInfo)
-    contextInfo = msg.imageMessage.contextInfo
-  else if (msg.videoMessage?.contextInfo)
-    contextInfo = msg.videoMessage.contextInfo
-  else if (msg.conversation) 
-    contextInfo = msg.contextInfo
-
-  if (!contextInfo || !contextInfo.quotedMessage) {
-    return reply('❌ Debes responder a un *sticker*\nEjemplo:\n.wm Gabo')
+  for (const type of Object.keys(msg)) {
+    const v = msg[type]
+    if (v?.contextInfo?.quotedMessage) {
+      quoted = v.contextInfo.quotedMessage
+      qkey = {
+        remoteJid: from,
+        id: v.contextInfo.stanzaId,
+        participant: v.contextInfo.participant
+      }
+      break
+    }
   }
 
-  const quoted = contextInfo.quotedMessage
+  if (!quoted || !qkey) {
+    return reply('❌ Debes RESPONDER a un sticker\nEjemplo:\n.wm Gabo')
+  }
 
-  // 🧷 Verificar sticker
   if (!quoted.stickerMessage) {
-    return reply('❌ El mensaje respondido no es un sticker')
+    return reply('❌ El mensaje respondido NO es un sticker')
   }
 
   try {
-    // 📥 Descargar sticker citado (FORMA SEGURA)
+    // Descargar sticker
     const media = await sock.downloadMediaMessage({
-      key: {
-        remoteJid: from,
-        id: contextInfo.stanzaId,
-        participant: contextInfo.participant
-      },
+      key: qkey,
       message: quoted
     })
 
-    if (!media) {
-      return reply('❌ No pude obtener el sticker')
-    }
+    if (!media) return reply('❌ No pude leer el sticker')
 
     const wm = text.trim()
 
-    // 🧪 Crear sticker con watermark
-    const result = await sticker(
+    // Crear sticker con watermark
+    const out = await sticker(
       media,
       null,
       wm, // packname
       wm  // author
     )
 
-    // 📤 Enviar sticker
     await sock.sendMessage(from, {
-      sticker: result
+      sticker: out
     }, { quoted: m })
 
-    // ✨ Reacción
+    // Reacción
     await sock.sendMessage(from, {
       react: { text: '🧷', key: m.key }
     })
 
-  } catch (e) {
-    console.error('[WM ERROR]', e)
-    reply('❌ Error procesando el sticker')
+  } catch (err) {
+    console.error('[WM]', err)
+    reply('❌ Error creando el sticker')
   }
 }
 
