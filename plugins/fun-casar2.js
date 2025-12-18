@@ -84,7 +84,7 @@ ${finales[Math.floor(Math.random() * finales.length)]}
 }
 
 handler.command = ['casar2', 'boda18', 'casar18']
-handler.tags = ['fun']
+handler.tags = ['juegos']
 handler.group = true
 handler.menu = true
 
