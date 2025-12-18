@@ -6,12 +6,12 @@ export const handler = async (m, {
   plugins
 }) => {
 
-  // 🛑 FIX REAL
+  // 🛑 FIX
   if (!Array.isArray(plugins) || plugins.length === 0) {
     return reply('❌ No hay plugins cargados.')
   }
 
-  // ⚡ Reacción futurista
+  // ⚡ Reacción
   await sock.sendMessage(from, {
     react: { text: '⚡', key: m.key }
   })
@@ -21,7 +21,7 @@ export const handler = async (m, {
   const dev = 'SoyGabo'
   const saludo = getGreeting()
 
-  // 🤖 EMOJIS FIJOS POR CATEGORÍA
+  // 🎯 Emoji fijo por categoría
   const tagEmoji = {
     main: '📌',
     group: '🛠️',
@@ -43,7 +43,6 @@ export const handler = async (m, {
 
   for (const plugin of plugins) {
     if (!plugin?.handler) continue
-
     const h = plugin.handler
     if (!h.command || !h.tags) continue
 
@@ -59,21 +58,19 @@ export const handler = async (m, {
 ║ 🤖 JOSHI BOT SYSTEM ║
 ╚══════════════════════╝
 
-🧠 IA: ${botName}
+🧠 BOT: ${botName}
 👨‍💻 DEV: ${dev}
 ${saludo}
 ⏱️ UPTIME: ${uptime}
-
-━━━━━━━━━━━━━━━━━━━━━━
-⚡ MÓDULOS DISPONIBLES
-━━━━━━━━━━━━━━━━━━━━━━
 `
 
   for (const tag in categories) {
     const emoji = tagEmoji[tag] || defaultEmoji
 
     menu += `
-▸▸ ${emoji} ${tag.toUpperCase()} MODULE
+══════════════════════
+${emoji} ${tag.toUpperCase()}
+══════════════════════
 `
 
     for (const cmd of categories[tag]) {
@@ -82,8 +79,8 @@ ${saludo}
   }
 
   menu += `
-━━━━━━━━━━━━━━━━━━━━━━
-⚙️ Sistema activo • IA ONLINE
+══════════════════════
+⚙️ Sistema activo
 `
 
   await sock.sendMessage(
