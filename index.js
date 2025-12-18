@@ -17,18 +17,21 @@ import { antiLinkEvent } from './plugins/gc-antilink.js'
 // 👑 AUTO ADMIN OWNER
 import { autoAdminOwnerEvent } from './plugins/owner-autoadmin.js'
 
+// 👻 FANTASMAS
+import { fantasmasEvent } from './plugins/gc-fantasmas.js'
+
 // 🔔 AUTO-DETECT
 import { initAutoDetect } from './plugins/_autodetec.js'
 
 /* ───── MANEJO DE ERRORES ───── */
 process.on('uncaughtException', err => {
   if (String(err).includes('Bad MAC')) return
-  console.error('❌ uncaughtException:', err)
+  console.error(chalk.red('❌ uncaughtException:'), err)
 })
 
 process.on('unhandledRejection', err => {
   if (String(err).includes('Bad MAC')) return
-  console.error('❌ unhandledRejection:', err)
+  console.error(chalk.red('❌ unhandledRejection:'), err)
 })
 /* ─────────────────────────── */
 
@@ -52,7 +55,7 @@ const plugins = []
 const botStartTime = Math.floor(Date.now() / 1000)
 
 // 🎨 Banner
-function showBanner() {
+function showBanner () {
   console.clear()
   const banner = figlet.textSync(config.bot.name, { font: 'Slant' })
   console.log(chalk.cyanBright(banner))
@@ -60,7 +63,7 @@ function showBanner() {
 }
 
 // 📦 Cargar plugins
-async function loadPlugins() {
+async function loadPlugins () {
   const pluginsDir = path.join(__dirname, 'plugins')
   if (!fs.existsSync(pluginsDir)) return
 
@@ -73,11 +76,14 @@ async function loadPlugins() {
       )
       if (plugin?.handler) plugins.push(plugin)
     } catch (e) {
-      console.error(`❌ Error cargando plugin: ${file}`, e)
+      console.error(chalk.red(`❌ Error cargando plugin: ${file}`), e)
     }
   }
 
-  console.log(chalk.green(`🔌 Plugins cargados: ${plugins.length}`))
+  console.log(
+    chalk.green('🔌 Plugins cargados:'),
+    chalk.cyan(plugins.length)
+  )
 }
 
 // 🧠 UTILIDADES
@@ -91,11 +97,10 @@ const getText = (m) =>
 const isOldMessage = (m) =>
   !m.messageTimestamp || Number(m.messageTimestamp) < botStartTime
 
-async function start() {
+async function start () {
   showBanner()
   await loadPlugins()
 
-  // 🌐 plugins globales
   global.plugins = plugins
 
   const sock = await connectBot()
@@ -106,13 +111,10 @@ async function start() {
   // 👋 EVENTOS DE GRUPO
   sock.ev.on('group-participants.update', async (update) => {
     try {
-      // welcome / bye
       await welcomeEvent(sock, update)
-
-      // 👑 auto admin owner (silencioso)
       await autoAdminOwnerEvent(sock, update, global.owner)
     } catch (e) {
-      console.error('❌ Error en eventos de grupo:', e)
+      console.error(chalk.red('❌ Error en eventos de grupo:'), e)
     }
   })
 
@@ -122,6 +124,13 @@ async function start() {
     if (!m?.message || m.key.fromMe) return
     if (isOldMessage(m)) return
 
+    // 👻 registrar actividad (fantasmas)
+    try {
+      await fantasmasEvent(m)
+    } catch (e) {
+      console.error(chalk.red('❌ Error fantasmasEvent:'), e)
+    }
+
     const from = m.key.remoteJid
     const isGroup = from.endsWith('@g.us')
     const sender = isGroup ? m.key.participant : from
@@ -130,11 +139,11 @@ async function start() {
 
     if (!text) return
 
-    // 🚫 ANTILINK (siempre activo)
+    // 🚫 ANTILINK
     try {
       await antiLinkEvent(sock, m)
     } catch (e) {
-      console.error('❌ Error en antilink:', e)
+      console.error(chalk.red('❌ Error antilink:'), e)
     }
 
     if (!text.startsWith(PREFIX)) return
@@ -142,12 +151,28 @@ async function start() {
     const args = text.slice(PREFIX.length).trim().split(/\s+/)
     const command = args.shift().toLowerCase()
 
-    // 🧾 LOG
+    // 🏷️ NOMBRE DEL CHAT
+    let chatName = 'Privado'
+    if (isGroup) {
+      try {
+        const metadata = await sock.groupMetadata(from)
+        chatName = metadata.subject
+      } catch {}
+    }
+
+    // 🧾 LOGS COLORIDOS
     console.log(
-      chalk.cyan('\n📩 COMANDO'),
-      chalk.gray('\n📍 Chat:'), from,
-      chalk.gray('\n👤 Usuario:'), pushName,
-      chalk.gray('\n💬 Texto:'), text
+      chalk.magentaBright('\n══════════ 📩 COMANDO ══════════'),
+      '\n',
+      chalk.blueBright('🏷 Chat:'), chalk.white(chatName),
+      '\n',
+      chalk.greenBright('👤 Usuario:'), chalk.white(pushName),
+      '\n',
+      chalk.yellowBright('🆔 JID:'), chalk.gray(sender),
+      '\n',
+      chalk.cyanBright('💬 Texto:'), chalk.white(text),
+      '\n',
+      chalk.magentaBright('════════════════════════════════')
     )
 
     for (const plugin of plugins) {
@@ -164,23 +189,20 @@ async function start() {
           isGroup,
           args,
           command,
-
-          // contexto global
           plugins,
           owner: global.owner,
           config: global.config,
-
           reply: (text) =>
             sock.sendMessage(from, { text }, { quoted: m })
         })
       } catch (e) {
-        console.error('❌ Error en plugin:', e)
+        console.error(chalk.red('❌ Error en plugin:'), e)
       }
       break
     }
   })
 
-  console.log(chalk.green('🤖 JoshiBot listo\n'))
+  console.log(chalk.greenBright('🤖 JoshiBot listo y operativo\n'))
 }
 
 start()
