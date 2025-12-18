@@ -1,11 +1,21 @@
 import fs from 'fs'
 
-const DB = './data/mutes.json'
-const getDB = () => JSON.parse(fs.readFileSync(DB))
-const saveDB = (db) => fs.writeFileSync(DB, JSON.stringify(db, null, 2))
+const DB = './database/mutes.json'
+
+function getDB () {
+  if (!fs.existsSync(DB)) return {}
+  return JSON.parse(fs.readFileSync(DB))
+}
+
+function saveDB (db) {
+  fs.writeFileSync(DB, JSON.stringify(db, null, 2))
+}
 
 export const handler = async (m, {
-  sock, isGroup, sender, reply
+  sock,
+  isGroup,
+  sender,
+  reply
 }) => {
   if (!isGroup) return reply('🚫 Solo en grupos')
 
@@ -17,7 +27,7 @@ export const handler = async (m, {
     .map(p => p.id)
 
   if (!admins.includes(sender))
-    return reply('⛔ Solo admins')
+    return reply('⛔ Solo administradores')
 
   const user =
     m.message?.extendedTextMessage?.contextInfo?.participant ||
@@ -27,14 +37,15 @@ export const handler = async (m, {
     return reply('⚠️ Responde o menciona a alguien')
 
   const db = getDB()
-  if (!db[from]) return reply('❌ Nadie está muteado')
+  if (!db[from] || !db[from].includes(user))
+    return reply('❌ Ese usuario no está muteado')
 
   db[from] = db[from].filter(u => u !== user)
   saveDB(db)
 
   await sock.sendMessage(from, {
     text:
-`╭─〔 🔊 UNMUTE 〕
+`╭─〔 🔊 USUARIO DESMUTEADO 〕
 │ 👤 @${user.split('@')[0]}
 ╰─〔 🤖 JoshiBot 〕`,
     mentions: [user]
@@ -46,3 +57,4 @@ handler.tags = ['group']
 handler.group = true
 handler.admin = true
 handler.botAdmin = true
+handler.menu = true
