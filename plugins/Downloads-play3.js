@@ -1,15 +1,24 @@
-import fetch from "node-fetch"
-import yts from "yt-search"
-import axios from "axios"
+import fetch from 'node-fetch'
+import yts from 'yt-search'
+import axios from 'axios'
 
-const formatAudio = ['mp3']
+// 🧠 Obtener texto real
+function getText(m) {
+  return (
+    m.message?.conversation ||
+    m.message?.extendedTextMessage?.text ||
+    m.message?.imageMessage?.caption ||
+    m.message?.videoMessage?.caption ||
+    ''
+  )
+}
 
+// ⬇️ Downloader
 const ddownr = {
-  download: async (url, format) => {
+  download: async (url) => {
     const res = await axios.get(
-      `https://p.savenow.to/ajax/download.php?format=${format}&url=${encodeURIComponent(url)}&api=dfcb6d76f2f6a9894gjkege8a4ab232222`
+      `https://p.savenow.to/ajax/download.php?format=mp3&url=${encodeURIComponent(url)}&api=dfcb6d76f2f6a9894gjkege8a4ab232222`
     )
-
     if (!res.data?.success) throw new Error('Error')
 
     const { id } = res.data
@@ -18,7 +27,9 @@ const ddownr = {
 
   wait: async (id) => {
     while (true) {
-      const r = await axios.get(`https://p.savenow.to/ajax/progress?id=${id}`)
+      const r = await axios.get(
+        `https://p.savenow.to/ajax/progress?id=${id}`
+      )
       if (r.data?.success && r.data.progress === 1000) {
         return r.data.download_url
       }
@@ -27,31 +38,39 @@ const ddownr = {
   }
 }
 
-const handler = async (m, { conn, text, command }) => {
+export const handler = async (m, {
+  sock,
+  from,
+  command,
+  reply
+}) => {
   try {
+    const text = getText(m)
+      .replace(/^\.\w+\s?/, '')
+      .trim()
+
     if (!text) {
-      return conn.reply(
-        m.chat,
-        '🎧 Escribe el nombre de la canción',
-        m
-      )
+      return reply('📁 Escribe el nombre de la canción')
     }
 
-    // 🔍 Buscar en YouTube
+    // 🔎 Buscar
     const search = await yts(text)
     if (!search.all.length) {
-      return conn.reply(m.chat, '❌ No se encontraron resultados', m)
+      return reply('❌ No se encontraron resultados')
     }
 
     const v = search.all.find(x => x.seconds) || search.all[0]
     const { title, thumbnail, timestamp, views, ago, url } = v
 
-    const thumb = (await conn.getFile(thumbnail)).data
+    // 🎧 Reacción inicial
+    await sock.sendMessage(from, {
+      react: { text: '📁', key: m.key }
+    })
 
-    // 🎛️ MENSAJE FUTURISTA
-    const info = `
-╭─〔 🎧 AUDIO DOCUMENTO 〕
-│ 🎶 ${title}
+    // 🧾 Mensaje futurista
+    const msg = `
+╭─〔 📁 AUDIO DOCUMENTO 〕
+│ 🎵 ${title}
 ├────────────────
 │ ⏱ Duración: ${timestamp}
 │ 👁 Vistas: ${views.toLocaleString()}
@@ -61,29 +80,15 @@ const handler = async (m, { conn, text, command }) => {
 ╰─〔 🤖 JoshiBot 〕
 `.trim()
 
-    await conn.reply(m.chat, info, m, {
-      contextInfo: {
-        externalAdReply: {
-          title: title,
-          body: 'Audio en documento',
-          mediaType: 1,
-          mediaUrl: url,
-          sourceUrl: url,
-          thumbnail: thumb,
-          renderLargerThumbnail: true
-        }
-      }
-    })
+    await sock.sendMessage(from, {
+      image: { url: thumbnail },
+      caption: msg
+    }, { quoted: m })
 
-    // 🔁 REACCIÓN
-    await conn.sendMessage(m.chat, {
-      react: { text: '📄', key: m.key }
-    })
-
-    // ⬇️ DESCARGA
+    // ⬇️ Descargar
     let dl
     try {
-      dl = await ddownr.download(url, 'mp3')
+      dl = await ddownr.download(url)
     } catch {
       const api = await fetch(
         `https://api.stellarwa.xyz/dl/ytmp3?url=${url}&key=proyectsV2`
@@ -91,29 +96,27 @@ const handler = async (m, { conn, text, command }) => {
       dl = api.data.dl
     }
 
-    // 📄 ENVIAR DOCUMENTO
-    await conn.sendMessage(
-      m.chat,
-      {
-        document: { url: dl },
-        mimetype: 'audio/mpeg',
-        fileName: `${title}.mp3`
-      },
-      { quoted: m }
-    )
+    // 📁 Enviar como DOCUMENTO
+    await sock.sendMessage(from, {
+      document: { url: dl },
+      mimetype: 'audio/mpeg',
+      fileName: `${title}.mp3`
+    }, { quoted: m })
 
-    await conn.sendMessage(m.chat, {
+    // ✅ Reacción final
+    await sock.sendMessage(from, {
       react: { text: '✅', key: m.key }
     })
 
   } catch (e) {
     console.error(e)
-    m.reply('❌ Error al procesar el audio')
+    reply('❌ Error al enviar el audio')
   }
 }
 
-handler.command = ['play3', 'ytadoc', 'playdoc', 'mp3doc']
+handler.command = ['play3', 'ytadoc', 'playdoc', 'ytmp3doc']
 handler.tags = ['descargas']
 handler.menu = true
+handler.group = false
 
 export default handler
