@@ -1,64 +1,77 @@
 import fs from 'fs'
 
-const dbDir = './database'
-const dbFile = './database/fantasmas.json'
+/* ───── CONFIG ───── */
+const DB_DIR = './database'
+const DB_FILE = './database/fantasmas.json'
+const RECENT_TIME = 1000 * 60 * 60 * 24 // 24h
+const NEW_USER_TIME = 1000 * 60 * 10   // 10 min (evita falsos positivos)
 
-if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir)
-if (!fs.existsSync(dbFile)) fs.writeFileSync(dbFile, '{}')
+/* ───── INIT DB ───── */
+if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR)
+if (!fs.existsSync(DB_FILE)) fs.writeFileSync(DB_FILE, JSON.stringify({}, null, 2))
 
-// ───── UTILS ─────
-function cleanJid(jid) {
-  return jid?.split(':')[0]
-}
+/* ───── UTILS ───── */
+const cleanJid = (jid = '') => jid.split(':')[0]
 
-function isAdmin(participants, jid) {
+const loadDB = () => JSON.parse(fs.readFileSync(DB_FILE))
+const saveDB = (db) => fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2))
+
+const isAdmin = (participants, jid) => {
   const c = cleanJid(jid)
   return participants.some(p => p.admin && cleanJid(p.id) === c)
 }
 
-// ───── REGISTRAR MENSAJES ─────
-export async function fantasmasEvent(m) {
+const isOwner = (jid) => {
+  const c = cleanJid(jid)
+  return global.owner?.jid?.some(o => cleanJid(o) === c)
+}
+
+/* ───── EVENTO: registrar actividad ───── */
+export async function fantasmasEvent (m) {
   if (!m?.key?.remoteJid?.endsWith('@g.us')) return
+  if (!m.key.participant) return
 
   const from = m.key.remoteJid
   const sender = cleanJid(m.key.participant)
-  if (!sender) return
 
-  const db = JSON.parse(fs.readFileSync(dbFile))
+  const db = loadDB()
   if (!db[from]) db[from] = {}
 
   db[from][sender] = Date.now()
-  fs.writeFileSync(dbFile, JSON.stringify(db, null, 2))
+  saveDB(db)
 }
 
-// ───── COMANDO ─────
+/* ───── COMANDO: .fantasmas ───── */
 export const handler = async (m, { sock, from, sender, isGroup, reply }) => {
   if (!isGroup) return
 
   const metadata = await sock.groupMetadata(from)
   const participants = metadata.participants
 
-  if (!isAdmin(participants, sender)) {
-    return reply('🚫 Solo administradores pueden usar este comando')
-  }
+  // 🔐 solo admins
+  if (!isAdmin(participants, sender)) return
 
-  const db = JSON.parse(fs.readFileSync(dbFile))
+  const db = loadDB()
   const activity = db[from] || {}
-
   const now = Date.now()
-  const RECENT = 1000 * 60 * 60 * 24 // 24h
 
   const fantasmas = participants.filter(p => {
     const jid = cleanJid(p.id)
 
+    // excluir admins y owner
     if (p.admin) return false
-    if (global.owner?.jid?.some(o => cleanJid(o) === jid)) return false
+    if (isOwner(jid)) return false
 
     const last = activity[jid]
-    if (!last) return true
-    if (now - last < RECENT) return false
 
-    return true
+    // nunca ha hablado
+    if (!last) return true
+
+    // muy reciente (nuevo en el grupo)
+    if (now - last < NEW_USER_TIME) return false
+
+    // inactivo
+    return now - last > RECENT_TIME
   })
 
   if (!fantasmas.length) {
@@ -72,19 +85,21 @@ export const handler = async (m, { sock, from, sender, isGroup, reply }) => {
   await sock.sendMessage(from, {
     text: `
 ╭─〔 👻 FANTASMAS DETECTADOS 〕
-│ Total: ${fantasmas.length}
+│ 🧮 Total: ${fantasmas.length}
 ├────────────────
 ${list}
 ├────────────────
-│ Usa:
+│ ⚠ Acción disponible:
 │ .kickfantasmas
-│ para expulsarlos
+│
+│ (Admins y owner excluidos)
 ╰─〔 🤖 JoshiBot 〕
 `.trim(),
     mentions: fantasmas.map(p => p.id)
   })
 }
 
+/* ───── METADATA ───── */
 handler.command = ['fantasmas']
 handler.tags = ['group']
 handler.group = true
