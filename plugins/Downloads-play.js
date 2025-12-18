@@ -1,116 +1,157 @@
-import fetch from 'node-fetch'
-import yts from 'yt-search'
-import axios from 'axios'
+import fetch from "node-fetch";
+import yts from "yt-search";
+import axios from "axios";
 
-const formatAudio = ['mp3', 'm4a', 'webm', 'aac', 'flac', 'opus', 'ogg', 'wav']
+const formatAudio = ['mp3', 'm4a', 'webm', 'acc', 'flac', 'opus', 'ogg', 'wav'];
+const formatVideo = ['360', '480', '720', '1080', '1440', '4k'];
 
 const ddownr = {
   download: async (url, format) => {
-    if (!formatAudio.includes(format)) {
-      throw new Error('Formato no soportado')
+    if (!formatAudio.includes(format) && !formatVideo.includes(format)) {
+      throw new Error("Formato no soportado.");
     }
 
     const res = await axios.get(
-      `https://p.savenow.to/ajax/download.php?format=${format}&url=${encodeURIComponent(url)}`
-    )
+      `https://p.savenow.to/ajax/download.php?format=${format}&url=${encodeURIComponent(url)}&api=dfcb6d76f2f6a9894gjkege8a4ab232222`
+    );
 
-    if (!res.data?.success) throw new Error('Error al procesar')
+    if (!res.data?.success) throw new Error("Error al procesar.");
 
-    const { id } = res.data
-    return { downloadUrl: await ddownr.cekProgress(id) }
+    const { id } = res.data;
+    const downloadUrl = await ddownr.cekProgress(id);
+
+    return { downloadUrl };
   },
 
   cekProgress: async (id) => {
     while (true) {
-      const r = await axios.get(`https://p.savenow.to/ajax/progress?id=${id}`)
+      const r = await axios.get(`https://p.savenow.to/ajax/progress?id=${id}`);
       if (r.data?.success && r.data.progress === 1000) {
-        return r.data.download_url
+        return r.data.download_url;
       }
-      await new Promise(res => setTimeout(res, 2500))
+      await new Promise(r => setTimeout(r, 2500));
     }
   }
-}
+};
 
-export const handler = async (m, { sock, from, args, command, reply }) => {
+const handler = async (m, { conn, text, command }) => {
   try {
-    const text = args.join(' ')
-    if (!text) return reply('🎵 Escribe el nombre de la canción')
+    if (!text)
+      return conn.reply(m.chat, '⚠️ Escribe el nombre de una canción', m);
 
-    const search = await yts(text)
-    if (!search.all.length) return reply('❌ No encontré resultados')
+    const search = await yts(text);
+    if (!search.all.length)
+      return m.reply('❌ No se encontraron resultados');
 
-    const v = search.all.find(x => x.ago) || search.all[0]
-    const { title, timestamp, views, ago, url } = v
+    const v = search.all.find(x => x.ago) || search.all[0];
+    const { title, thumbnail, timestamp, views, ago, url } = v;
+
+    const thumb = (await conn.getFile(thumbnail)).data;
+    const vistaTexto = formatViews(views);
 
     const mensaje = `
-🎵 *CANCIÓN*
-${title}
+╭─〔 🤖 SISTEMA MULTIMEDIA 〕
+├────────────────
+│ 🎵 TÍTULO:
+│ ${title}
+│
+│ ⏱ DURACIÓN:
+│ ${timestamp}
+│
+│ 👁 VISTAS:
+│ ${vistaTexto}
+│
+│ 📡 CANAL:
+│ ${v.author.name || 'Desconocido'}
+│
+│ 🕒 PUBLICADO:
+│ ${ago}
+│
+│ 🔗 URL:
+│ ${url}
+├────────────────
+│ ⏳ PROCESANDO AUDIO…
+╰─〔 ⚡ ${global.botname || conn.user?.name || 'JoshiBot'} 〕
+`.trim();
 
-⏱ *DURACIÓN*
-${timestamp}
+    await conn.reply(m.chat, mensaje, m, {
+      contextInfo: {
+        externalAdReply: {
+          title: global.botname || 'JOSHI PLAYER',
+          body: 'Sistema de Audio Digital',
+          mediaType: 1,
+          mediaUrl: url,
+          sourceUrl: url,
+          thumbnail: thumb,
+          renderLargerThumbnail: true
+        }
+      }
+    });
 
-👁 *VISTAS*
-${formatViews(views)}
+    // ▶ AUDIO NORMAL
+    if (['play', 'yta', 'mp3', 'ytmp3', 'playaudio'].includes(command)) {
 
-🕒 *PUBLICADO*
-${ago}
+      await conn.sendMessage(m.chat, {
+        react: { text: '⚡', key: m.key }
+      });
 
-🔗 ${url}
+      try {
+        const api = await ddownr.download(url, 'mp3');
 
-⏳ Preparando audio...
-    `.trim()
+        await conn.sendMessage(m.chat, {
+          audio: { url: api.downloadUrl },
+          mimetype: 'audio/mpeg',
+          ptt: false
+        }, { quoted: m });
 
-    await reply(mensaje)
+        await conn.sendMessage(m.chat, {
+          react: { text: '✅', key: m.key }
+        });
 
-    await sock.sendMessage(from, {
-      react: { text: '🎧', key: m.key }
-    })
+      } catch {
+        const api = await fetch(
+          `https://api.stellarwa.xyz/dl/ytmp3?url=${url}&key=proyectsV2`
+        ).then(r => r.json());
 
-    let audioUrl
+        await conn.sendMessage(m.chat, {
+          audio: { url: api.data.dl },
+          mimetype: 'audio/mpeg',
+          ptt: false
+        }, { quoted: m });
 
-    try {
-      const api = await ddownr.download(url, 'mp3')
-      audioUrl = api.downloadUrl
-    } catch {
-      const api = await fetch(
-        `https://api.stellarwa.xyz/dl/ytmp3?url=${url}`
-      ).then(r => r.json())
-      audioUrl = api?.data?.dl
+        await conn.sendMessage(m.chat, {
+          react: { text: '✅', key: m.key }
+        });
+      }
     }
 
-    if (!audioUrl) return reply('❌ No se pudo obtener el audio')
+    // 🎧 AUDIO DOCUMENTO
+    else if (['play3', 'ytadoc', 'playdoc', 'ytmp3doc'].includes(command)) {
+      const api = await ddownr.download(url, 'mp3');
 
-    await sock.sendMessage(from, {
-      audio: { url: audioUrl },
-      mimetype: 'audio/mpeg',
-      ptt: false
-    }, { quoted: m })
-
-    await sock.sendMessage(from, {
-      react: { text: '✅', key: m.key }
-    })
+      await conn.sendMessage(m.chat, {
+        document: { url: api.downloadUrl },
+        mimetype: 'audio/mpeg',
+        fileName: `${title}.mp3`
+      }, { quoted: m });
+    }
 
   } catch (e) {
-    console.error(e)
-    reply('❌ Error inesperado')
+    console.error(e);
+    m.reply('❌ Error al procesar la solicitud');
   }
-}
+};
 
-handler.command = [
-  'play',
-  'mp3',
-  'yta',
-  'ytmp3',
-  'playaudio'
-]
+handler.command = handler.help = [
+  'play', 'mp3', 'yta', 'ytmp3', 'playaudio',
+  'play3', 'ytadoc', 'playdoc', 'ytmp3doc'
+];
 
-handler.tags = ['descargas']
-handler.menu = true
+handler.tags = ['descargas'];
+export default handler;
 
-export default handler
-
-function formatViews (v = 0) {
+function formatViews(v) {
   return v >= 1000
     ? `${(v / 1000).toFixed(1)}k (${v.toLocaleString()})`
-    : String(v)
-}
+    : v.toString();
+      }
