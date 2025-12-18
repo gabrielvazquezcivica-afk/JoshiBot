@@ -7,13 +7,14 @@ export const handler = async (m, {
 }) => {
 
   if (!isGroup)
-    return reply('❌ Este comando solo funciona en grupos')
+    return reply('❌ Solo funciona en grupos')
 
   const metadata = await sock.groupMetadata(from)
   const participants = metadata.participants
 
+  // 👑 Admins reales
   const admins = participants
-    .filter(p => p.admin)
+    .filter(p => p.admin === 'admin' || p.admin === 'superadmin')
     .map(p => p.id)
 
   // 👤 Verificar admin usuario
@@ -21,38 +22,38 @@ export const handler = async (m, {
     return reply('❌ Solo admins pueden usar este comando')
   }
 
-  // 🤖 JID REAL DEL BOT (MD)
+  // 🤖 JID REAL DEL BOT
   const botId = sock.user.id
 
-  // 🤖 Verificar admin bot (FORMA CORRECTA)
+  // 🤖 Verificar admin bot (FIX REAL)
   const botIsAdmin = participants.some(
-    p => p.id === botId && p.admin
+    p =>
+      p.id === botId &&
+      (p.admin === 'admin' || p.admin === 'superadmin')
   )
 
   if (!botIsAdmin) {
     return reply('❌ Necesito ser admin para ejecutar la ruleta')
   }
 
-  // 🎯 Candidatos válidos
+  // 🎯 Usuarios válidos (no admins, no bot)
   const candidates = participants
     .filter(p =>
-      !p.admin &&
+      !admins.includes(p.id) &&
       p.id !== botId
     )
     .map(p => p.id)
 
   if (!candidates.length)
-    return reply('⚠️ No hay usuarios válidos para la ruleta')
+    return reply('⚠️ No hay usuarios válidos')
 
-  // 🎲 Elegir víctima
+  // 🎰 Elegir víctima
   const target = candidates[Math.floor(Math.random() * candidates.length)]
 
-  // 🎰 Reacción
   await sock.sendMessage(from, {
     react: { text: '🎰', key: m.key }
   })
 
-  // 📢 Mensaje
   await sock.sendMessage(from, {
     text:
 `╭─〔 🎯 RULETA DEL BAN 〕
@@ -65,7 +66,6 @@ export const handler = async (m, {
 
   await new Promise(r => setTimeout(r, 1200))
 
-  // 🔨 BAN
   await sock.groupParticipantsUpdate(from, [target], 'remove')
 }
 
@@ -73,4 +73,5 @@ handler.command = ['ruletaban', 'rb']
 handler.tags = ['group']
 handler.group = true
 handler.admin = true
-handler.menu = true
+
+export default handler
