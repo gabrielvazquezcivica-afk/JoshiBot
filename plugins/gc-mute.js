@@ -13,42 +13,27 @@ function saveDB (db) {
   fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2))
 }
 
-/* ───── WATCHER ───── */
-export async function muteWatcher (sock, m) {
-  if (!m?.message) return
-  if (!m.key.remoteJid.endsWith('@g.us')) return
-
-  const db = loadDB()
-  const groupId = m.key.remoteJid
-  const sender = m.key.participant
-
-  if (!db[groupId]?.includes(sender)) return
-
-  try {
-    await sock.sendMessage(groupId, { delete: m.key })
-  } catch {}
-}
-
-/* ───── COMANDO ───── */
 const handler = async (m, { sock, from, sender, isGroup, reply }) => {
 
   if (!isGroup)
     return reply('❌ Solo en grupos')
 
   const metadata = await sock.groupMetadata(from)
+
+  // ✅ ADMIN CORRECTO
   const admins = metadata.participants
-    .filter(p => p.admin)
+    .filter(p => p.admin !== null)
     .map(p => p.id)
 
-  const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net'
+  const botJid = sock.user.id.split(':')[0] + '@s.whatsapp.net'
 
   if (!admins.includes(sender))
-    return reply('❌ Solo admins')
+    return reply('❌ Solo admins pueden usar este comando')
 
-  if (!admins.includes(botId))
-    return reply('❌ Necesito ser admin')
+  if (!admins.includes(botJid))
+    return reply('❌ Necesito ser admin para ejecutar esto')
 
-  /* ───── CONTEXT INFO UNIVERSAL ───── */
+  /* ───── DETECTAR TARGET ───── */
   const msg =
     m.message?.extendedTextMessage ||
     m.message?.imageMessage ||
@@ -65,30 +50,28 @@ const handler = async (m, { sock, from, sender, isGroup, reply }) => {
   if (!target)
     return reply('⚠️ Responde o menciona a un usuario')
 
-  if (admins.includes(target))
-    return reply('⚠️ No puedes mutear admins')
-
   const db = loadDB()
-  if (!db[from]) db[from] = []
 
-  if (db[from].includes(target))
-    return reply('⚠️ Ya está muteado')
+  if (!db[from] || !db[from].includes(target))
+    return reply('⚠️ Ese usuario no está muteado')
 
-  db[from].push(target)
+  db[from] = db[from].filter(jid => jid !== target)
+  if (db[from].length === 0) delete db[from]
+
   saveDB(db)
 
   await sock.sendMessage(from, {
     text:
-`╭─〔 🔇 MUTE 〕
+`╭─〔 🔊 UNMUTE 〕
 │ 👤 @${target.split('@')[0]}
-│ 💾 Persistente
+│ ✅ Puede hablar nuevamente
 ╰────────────`,
     mentions: [target]
   })
 }
 
-handler.command = ['mute']
-handler.tags = ['group', 'admin']
+handler.command = ['unmute']
+handler.tags = ['group']
 handler.group = true
 handler.admin = true
 
