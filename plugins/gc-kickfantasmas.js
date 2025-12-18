@@ -2,39 +2,74 @@ import fs from 'fs'
 
 const dbFile = './database/fantasmas.json'
 
-// ⚙️ CONFIGURACIÓN
-const CHUNK_SIZE = 30        // seguro para WhatsApp
-const DIAS_RECIENTES = 3    // usuarios protegidos (ajusta si quieres)
+// ───── UTILS ─────
+function cleanJid(jid) {
+  return jid?.split(':')[0]
+}
 
-// ─────────────────────────────
+function isAdmin(participants, jid) {
+  const c = cleanJid(jid)
+  return participants.some(p => p.admin && cleanJid(p.id) === c)
+}
 
-export const handler = async (m, {
-  sock,
-  from,
-  sender,
-  isGroup,
-  reply,
-  owner
-}) => {
+export const handler = async (m, { sock, from, sender, isGroup, reply }) => {
   if (!isGroup) return
 
   const metadata = await sock.groupMetadata(from)
+  const participants = metadata.participants
 
-  // 👑 ADMINS
-  const admins = metadata.participants
-    .filter(p => p.admin)
+  // ✅ VALIDACIÓN REAL
+  if (!isAdmin(participants, sender)) {
+    return reply('🚫 Solo administradores pueden usar este comando')
+  }
+
+  const botJid = cleanJid(sock.user.id)
+  if (!isAdmin(participants, botJid)) {
+    return reply('🤖 El bot no es administrador')
+  }
+
+  const db = JSON.parse(fs.readFileSync(dbFile))
+  const activity = db[from] || {}
+
+  const now = Date.now()
+  const RECENT = 1000 * 60 * 60 * 24
+
+  const fantasmas = participants
+    .filter(p => {
+      const jid = cleanJid(p.id)
+
+      if (p.admin) return false
+      if (global.owner?.jid?.some(o => cleanJid(o) === jid)) return false
+
+      const last = activity[jid]
+      if (!last) return true
+      if (now - last < RECENT) return false
+
+      return true
+    })
     .map(p => p.id)
 
-  // 🔒 SOLO ADMINS
-  if (!admins.includes(sender)) return
+  if (!fantasmas.length) {
+    return reply('✨ No hay fantasmas para expulsar')
+  }
 
-  // 🤖 BOT ADMIN
-  const botId = sock.user.id.split(':')[0]
-  const botData = metadata.participants.find(
-    p => p.id.includes(botId)
-  )
+  // 🚀 EXPULSIÓN MASIVA
+  await sock.groupParticipantsUpdate(from, fantasmas, 'remove')
 
-  if (!botData || !botData.admin) {
+  reply(`
+╭─〔 💥 LIMPIEZA COMPLETA 〕
+│ Fantasmas expulsados:
+│ ${fantasmas.length}
+╰─〔 🤖 JoshiBot 〕
+`.trim())
+}
+
+handler.command = ['kickfantasmas']
+handler.tags = ['group']
+handler.group = true
+handler.admin = true
+handler.botAdmin = true
+handler.menu = true  if (!botData || !botData.admin) {
     return reply('❌ El bot no es administrador del grupo')
   }
 
