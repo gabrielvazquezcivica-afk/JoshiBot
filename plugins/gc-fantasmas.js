@@ -1,139 +1,92 @@
 import fs from 'fs'
-import path from 'path'
 
-// 📂 ARCHIVO JSON
-const dataDir = './database'
-const filePath = path.join(dataDir, 'fantasmas.json')
+const dbDir = './database'
+const dbFile = './database/fantasmas.json'
 
-// 📁 CREAR CARPETA / ARCHIVO SI NO EXISTE
-if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir)
-if (!fs.existsSync(filePath)) {
-  fs.writeFileSync(
-    filePath,
-    JSON.stringify({ joined: {}, talked: {} }, null, 2)
-  )
+if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir)
+if (!fs.existsSync(dbFile)) fs.writeFileSync(dbFile, '{}')
+
+// ───── UTILS ─────
+function cleanJid(jid) {
+  return jid?.split(':')[0]
 }
 
-// 📥 CARGAR DATOS
-function loadData() {
-  return JSON.parse(fs.readFileSync(filePath))
+function isAdmin(participants, jid) {
+  const c = cleanJid(jid)
+  return participants.some(p => p.admin && cleanJid(p.id) === c)
 }
 
-// 💾 GUARDAR DATOS
-function saveData(data) {
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2))
-}
+// ───── REGISTRAR MENSAJES ─────
+export async function fantasmasEvent(m) {
+  if (!m?.key?.remoteJid?.endsWith('@g.us')) return
 
-// 🔧 NORMALIZAR JID
-const norm = jid => jid?.split(':')[0]
-
-export const handler = async (m, { sock, from, sender, isGroup }) => {
-  if (!isGroup) return
-
-  const data = loadData()
-  const group = from
-  const user = norm(sender)
-
-  // 📋 METADATA
-  const metadata = await sock.groupMetadata(from)
-  const admins = metadata.participants
-    .filter(p => p.admin)
-    .map(p => norm(p.id))
-
-  // ❌ SOLO ADMINS
-  if (!admins.includes(user)) return
-
-  const joined = data.joined[group] || []
-  const talked = data.talked[group] || []
-
-  // 👻 FANTASMAS
-  const ghosts = joined.filter(u => !talked.includes(u))
-
-  if (!ghosts.length) {
-    await sock.sendMessage(
-      from,
-      { text: '✨ No hay fantasmas en este grupo' },
-      { quoted: m }
-    )
-    return
-  }
-
-  const mentions = ghosts
-  const list = ghosts
-    .map(u => `• @${u.split('@')[0]}`)
-    .join('\n')
-
-  const text = `
-╭─〔 👻 USUARIOS FANTASMA 〕
-│
-│ 🏷 Grupo:
-│ ${metadata.subject}
-│
-├────────────────────
-│ 👤 No han escrito:
-│
-${list}
-│
-├────────────────────
-│ 📊 Total: ${ghosts.length}
-│
-├────────────────────
-│ ⚠️ Acción disponible:
-│ Usa el comando:
-│ 👉 .kickfantasmas
-│
-│ 🔒 Solo administradores
-│
-╰─〔 🤖 JoshiBot 〕
-`.trim()
-
-  await sock.sendMessage(
-    from,
-    { text, mentions },
-    { quoted: m }
-  )
-}
-
-// 📌 COMANDOS
-handler.command = ['fantasmas', 'ghosts']
-handler.tags = ['group']
-handler.admin = true
-
-/* ───── EVENTOS ───── */
-
-// 👋 CUANDO ENTRAN
-handler.onGroupParticipantsUpdate = async (sock, update) => {
-  if (update.action !== 'add') return
-
-  const data = loadData()
-  const group = update.id
-
-  if (!data.joined[group]) data.joined[group] = []
-  if (!data.talked[group]) data.talked[group] = []
-
-  for (const user of update.participants) {
-    const u = norm(user)
-    if (!data.joined[group].includes(u)) {
-      data.joined[group].push(u)
-    }
-  }
-
-  saveData(data)
-}
-
-// 💬 CUANDO ESCRIBEN
-handler.onMessage = async (m) => {
   const from = m.key.remoteJid
-  if (!from?.endsWith('@g.us')) return
-
-  const sender = norm(m.key.participant)
+  const sender = cleanJid(m.key.participant)
   if (!sender) return
 
-  const data = loadData()
+  const db = JSON.parse(fs.readFileSync(dbFile))
+  if (!db[from]) db[from] = {}
 
-  if (!data.talked[from]) data.talked[from] = []
-  if (!data.talked[from].includes(sender)) {
-    data.talked[from].push(sender)
-    saveData(data)
+  db[from][sender] = Date.now()
+  fs.writeFileSync(dbFile, JSON.stringify(db, null, 2))
+}
+
+// ───── COMANDO ─────
+export const handler = async (m, { sock, from, sender, isGroup, reply }) => {
+  if (!isGroup) return
+
+  const metadata = await sock.groupMetadata(from)
+  const participants = metadata.participants
+
+  if (!isAdmin(participants, sender)) {
+    return reply('🚫 Solo administradores pueden usar este comando')
   }
-    }
+
+  const db = JSON.parse(fs.readFileSync(dbFile))
+  const activity = db[from] || {}
+
+  const now = Date.now()
+  const RECENT = 1000 * 60 * 60 * 24 // 24h
+
+  const fantasmas = participants.filter(p => {
+    const jid = cleanJid(p.id)
+
+    if (p.admin) return false
+    if (global.owner?.jid?.some(o => cleanJid(o) === jid)) return false
+
+    const last = activity[jid]
+    if (!last) return true
+    if (now - last < RECENT) return false
+
+    return true
+  })
+
+  if (!fantasmas.length) {
+    return reply('✨ No hay fantasmas en este grupo')
+  }
+
+  const list = fantasmas
+    .map((p, i) => `${i + 1}. @${cleanJid(p.id).split('@')[0]}`)
+    .join('\n')
+
+  await sock.sendMessage(from, {
+    text: `
+╭─〔 👻 FANTASMAS DETECTADOS 〕
+│ Total: ${fantasmas.length}
+├────────────────
+${list}
+├────────────────
+│ Usa:
+│ .kickfantasmas
+│ para expulsarlos
+╰─〔 🤖 JoshiBot 〕
+`.trim(),
+    mentions: fantasmas.map(p => p.id)
+  })
+}
+
+handler.command = ['fantasmas']
+handler.tags = ['group']
+handler.group = true
+handler.admin = true
+handler.menu = true
