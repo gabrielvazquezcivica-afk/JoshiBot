@@ -7,41 +7,50 @@ export const handler = async (m, {
   reply
 }) => {
 
-  // 1️⃣ Debe ser respuesta
-  if (!m.quoted) {
+  // 1️⃣ Texto obligatorio
+  if (!text || !text.trim()) {
+    return reply('❌ Usa el comando así:\n.wm Gabo')
+  }
+
+  // 2️⃣ Obtener contextInfo (RESPUESTA REAL)
+  const context =
+    m.message?.extendedTextMessage?.contextInfo ||
+    m.message?.imageMessage?.contextInfo ||
+    m.message?.videoMessage?.contextInfo
+
+  if (!context) {
     return reply('❌ Responde a un sticker\nEjemplo:\n.wm Gabo')
   }
 
-  // 2️⃣ Obtener mensaje citado REAL
-  const q = m.quoted.message || m.quoted
-
-  // 3️⃣ Detectar sticker correctamente
-  const stickerMsg =
-    q.stickerMessage ||
-    q.imageMessage?.mimetype === 'image/webp' ||
-    q.mimetype === 'image/webp'
-
-  if (!stickerMsg) {
-    return reply('❌ Eso no es un sticker\nEjemplo:\n.wm Gabo')
+  // 3️⃣ Obtener mensaje citado REAL
+  const quoted = context.quotedMessage
+  if (!quoted) {
+    return reply('❌ Responde a un sticker\nEjemplo:\n.wm Gabo')
   }
 
-  // 4️⃣ Texto obligatorio
-  if (!text || !text.trim()) {
-    return reply('❌ Escribe el texto del WM\nEjemplo:\n.wm Gabo')
+  // 4️⃣ Verificar que sea sticker
+  if (!quoted.stickerMessage) {
+    return reply('❌ Eso no es un sticker')
   }
 
   try {
-    // 5️⃣ Descargar sticker citado
-    const media = await m.quoted.download()
+    // 5️⃣ Descargar sticker citado (FORMA COMPATIBLE)
+    const media = await sock.downloadMediaMessage({
+      key: {
+        remoteJid: from,
+        id: context.stanzaId,
+        participant: context.participant
+      },
+      message: quoted
+    })
 
     if (!media) {
       return reply('❌ No pude descargar el sticker')
     }
 
-    // 6️⃣ Texto WM limpio
     const wm = text.trim()
 
-    // 7️⃣ Crear sticker con WM
+    // 6️⃣ Crear sticker con WM
     const result = await sticker(
       media,
       null,
@@ -49,12 +58,12 @@ export const handler = async (m, {
       wm  // author
     )
 
-    // 8️⃣ Enviar sticker
+    // 7️⃣ Enviar sticker
     await sock.sendMessage(from, {
       sticker: result
     }, { quoted: m })
 
-    // 9️⃣ Reacción
+    // 8️⃣ Reacción
     await sock.sendMessage(from, {
       react: { text: '🧷', key: m.key }
     })
