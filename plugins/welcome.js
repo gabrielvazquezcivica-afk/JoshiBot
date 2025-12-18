@@ -9,19 +9,19 @@ if (!fs.existsSync(dbFile)) fs.writeFileSync(dbFile, '{}')
 
 // ───── FRASES ─────
 const frasesAdd = [
-  '🎄 Oh no… llegó otro humano',
-  '❄️ Bienvenido, no rompas nada',
-  '🎅 Santa te está observando',
-  '✨ Llegó el refuerzo navideño',
-  '☃️ Otro más al caos'
+  'Nuevo usuario detectado',
+  'Ingreso registrado en el sistema',
+  'Acceso concedido al grupo',
+  'Usuario añadido correctamente',
+  'Actividad detectada: entrada'
 ]
 
 const frasesRemove = [
-  '💨 Se fue antes del recalentado',
-  '🎄 Santa se lo llevó',
-  '❄️ Abandonó la misión',
-  '☠️ No sobrevivió al grupo',
-  '🚪 Salida silenciosa'
+  'Usuario removido del grupo',
+  'Salida registrada en el sistema',
+  'Conexión finalizada',
+  'Usuario desconectado',
+  'Actividad detectada: salida'
 ]
 
 // ───── FOTO PERFIL ─────
@@ -55,7 +55,7 @@ function buildMessage(action, user) {
 │ ${frase}
 ├────────────────
 │ 👤 @${user.split('@')[0]}
-│ 🔔 ${action === 'add' ? 'ENTRADA DETECTADA' : 'SALIDA DETECTADA'}
+│ 🔔 ${action === 'add' ? 'ENTRADA REGISTRADA' : 'SALIDA REGISTRADA'}
 ├────────────────
 │ 🗓 ${fecha}
 ╰─〔 🤖 JoshiBot 〕
@@ -95,8 +95,8 @@ export const handler = async (m, { sock, from, sender, isGroup, reply }) => {
 
   if (!admins.includes(sender)) {
     return reply(`
-╭─〔 🚫 ACCESO DENEGADO 〕
-│ Solo admins
+╭─〔 ⛔ ACCESO DENEGADO 〕
+│ Solo administradores
 │ pueden usar
 │ este sistema
 ╰─〔 🤖 JoshiBot 〕
@@ -124,8 +124,8 @@ export const handler = async (m, { sock, from, sender, isGroup, reply }) => {
 ╭─〔 🚀 SISTEMA WELCOME 〕
 │ 🟢 ESTADO: ACTIVADO
 ├────────────────
-│ Bienvenidas
-│ habilitadas
+│ Mensajes de
+│ entrada habilitados
 ╰─〔 🤖 JoshiBot 〕
 `.trim())
   }
@@ -136,7 +136,7 @@ export const handler = async (m, { sock, from, sender, isGroup, reply }) => {
       return reply(`
 ╭─〔 ⚠️ SISTEMA 〕
 │ Welcome ya
-│ estaba apagado
+│ estaba desactivado
 ╰─〔 🤖 JoshiBot 〕
 `.trim())
     }
@@ -148,8 +148,8 @@ export const handler = async (m, { sock, from, sender, isGroup, reply }) => {
 ╭─〔 🚀 SISTEMA WELCOME 〕
 │ 🔴 ESTADO: DESACTIVADO
 ├────────────────
-│ Bienvenidas
-│ desactivadas
+│ Mensajes de
+│ entrada deshabilitados
 ╰─〔 🤖 JoshiBot 〕
 `.trim())
   }
@@ -160,7 +160,7 @@ export const handler = async (m, { sock, from, sender, isGroup, reply }) => {
 │ Estado actual:
 │ ${db[from] ? '🟢 ACTIVADO' : '🔴 DESACTIVADO'}
 ├────────────────
-│ Comandos:
+│ Uso:
 │ • .welcome on
 │ • .welcome off
 ╰─〔 🤖 JoshiBot 〕
@@ -200,4 +200,4 @@ export async function welcomeEvent(sock, update) {
       })
     }
   }
-    }
+                             }
