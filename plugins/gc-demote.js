@@ -6,7 +6,7 @@ export const handler = async (m, {
   reply
 }) => {
   if (!isGroup)
-    return reply('🎄 Este comando solo funciona en grupos 🎅')
+    return reply('🚫 Este comando solo funciona en grupos')
 
   // 🔎 Metadata
   const metadata = await sock.groupMetadata(from)
@@ -17,9 +17,9 @@ export const handler = async (m, {
   // 🚫 Solo admins
   if (!admins.includes(sender)) {
     return reply(
-`╭─〔 🎄 ACCESO RESTRINGIDO 🎄 〕
-│ ❌ Solo administradores
-│ pueden usar este comando
+`╭─〔 ⛔ ACCESO RESTRINGIDO 〕
+│ Permisos insuficientes
+│ Solo administradores
 ╰─〔 🤖 JoshiBot 〕`
     )
   }
@@ -31,8 +31,8 @@ export const handler = async (m, {
 
   if (!target) {
     return reply(
-`╭─〔 🎅 DEMOTE NAVIDEÑO 〕
-│ 🎄 Menciona a un admin
+`╭─〔 ⚙️ DEMOTE DEL SISTEMA 〕
+│ Menciona a un administrador
 │ o responde a su mensaje
 ├────────────────
 │ Ejemplo:
@@ -44,38 +44,37 @@ export const handler = async (m, {
   // ❌ No es admin
   if (!admins.includes(target)) return
 
-  // 🚫 No quitarse solo
+  // 🚫 No auto-demote
   if (target === sender) return
 
   try {
     // 🧹 QUITAR ADMIN
     await sock.groupParticipantsUpdate(from, [target], 'demote')
 
-    // 🎄 REACCIÓN NAVIDEÑA
+    // ⚙️ REACCIÓN
     await sock.sendMessage(from, {
-      react: { text: '❄️', key: m.key }
+      react: { text: '⚙️', key: m.key }
     })
 
-    // 🎁 AVISO NAVIDEÑO FUTURISTA
+    // 📢 AVISO FUTURISTA
     await sock.sendMessage(from, {
       text:
-`╭─〔 🎄 SISTEMA JOSHI NAVIDEÑO 〕
-│ 🧹 PERMISOS RETIRADOS
+`╭─〔 ⚠️ SISTEMA DE PERMISOS 〕
+│ PERMISOS RETIRADOS
 ├────────────────
-│ 🎅 Usuario:
+│ 👤 Usuario:
 │ @${target.split('@')[0]}
 │
-│ 👮 Acción realizada por:
+│ 👮 Acción ejecutada por:
 │ @${sender.split('@')[0]}
 ├────────────────
-│ ❄️ Fin del espíritu admin
-│ 🎄 Ho ho ho…
+│ Estado: ADMIN → USUARIO
 ╰─〔 🤖 JoshiBot 〕`,
       mentions: [target, sender]
     })
 
   } catch (e) {
-    reply('❌ No pude retirar el espíritu admin 🎄')
+    reply('❌ No se pudo modificar el rol del usuario')
   }
 }
 
