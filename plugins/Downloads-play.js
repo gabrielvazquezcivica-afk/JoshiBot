@@ -104,7 +104,7 @@ handler.command = [
   'playaudio'
 ]
 
-handler.tags = ['downloader']
+handler.tags = ['descargas']
 handler.menu = true
 
 export default handler
