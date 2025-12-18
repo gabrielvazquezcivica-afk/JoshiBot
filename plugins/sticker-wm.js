@@ -1,70 +1,81 @@
-import { sticker } from '../lib/sticker.js'
+import { sticker } from '../lib/Sticker.js'
 
 export const handler = async (m, {
-  sock,
-  from,
-  sender,
-  reply
+  conn,
+  text,
+  command
 }) => {
   try {
-    // 📥 Mensaje citado
-    const q = m.quoted || m
-    const mime =
-      q.mimetype ||
-      q.message?.imageMessage?.mimetype ||
-      q.message?.videoMessage?.mimetype ||
-      ''
+    // 📌 Detectar imagen / video
+    const q = m.quoted ? m.quoted : m
+    const mime = (q.msg || q).mimetype || ''
 
     if (!/image|video/.test(mime)) {
-      return reply(
-`╭─〔 🧩 STICKER WM 〕
-│ 🖼️ Responde a una
-│ imagen o video
-├────────────────
-│ Ejemplo:
-│ .swm JoshiBot | SoyGabo
-╰─〔 🤖 JoshiBot 〕`
+      return conn.reply(
+        m.chat,
+`╭─〔 🧬 STICKER WM 〕
+│ 🖼 Responde a una imagen
+│ 🎞 o video corto
+│
+│ ✍️ Escribe:
+│ .wm pack | autor
+╰─〔 🤖 JoshiBot 〕`,
+        m
       )
     }
 
-    // ✍️ Texto WM
-    const text =
-      m.message?.conversation ||
-      m.message?.extendedTextMessage?.text ||
-      ''
+    // ✍️ Texto pack | autor
+    let pack = 'JoshiBot'
+    let author = 'SoyGabo'
 
-    const args = text.split('|').map(v => v.trim())
+    if (text) {
+      const split = text.split('|')
+      pack = split[0]?.trim() || pack
+      author = split[1]?.trim() || author
+    }
 
-    const pack = args[0]?.replace(/\.swm/i, '')?.trim() || 'JoshiBot'
-    const author = args[1] || 'SoyGabo'
-
-    // ⏳ Reacción
-    await sock.sendMessage(from, {
-      react: { text: '⚙️', key: m.key }
-    })
-
-    // 📦 Descargar media
+    // 🎭 Descargar media
     const media = await q.download()
 
-    // 🚀 Crear sticker
-    const stiker = await sticker(media, null, pack, author)
+    // 🎁 Reacción al ejecutar
+    await conn.sendMessage(m.chat, {
+      react: { text: '🧬', key: m.key }
+    })
 
-    // 📤 Enviar
-    await sock.sendMessage(from, {
-      sticker: stiker
-    }, { quoted: m })
+    // 🎴 Crear sticker con WM
+    const stiker = await sticker(
+      media,
+      null,
+      pack,
+      author,
+      ['🎄','⚡','🤖']
+    )
 
-    // ✅ Final
-    await sock.sendMessage(from, {
-      react: { text: '✅', key: m.key }
+    // 📤 Enviar sticker
+    await conn.sendMessage(
+      m.chat,
+      { sticker: stiker },
+      { quoted: m }
+    )
+
+    // ✅ Reacción final
+    await conn.sendMessage(m.chat, {
+      react: { text: '🎁', key: m.key }
     })
 
   } catch (e) {
     console.error(e)
-    reply('❌ Error creando el sticker')
+    m.reply('❌ Error creando el sticker WM')
   }
 }
 
-handler.command = ['wm', 'stickerwm']
+handler.command = ['wm', 'stickerwm', 'swm']
 handler.tags = ['sticker']
+handler.help = [
+  'wm pack|autor',
+  'stickerwm pack|autor'
+]
+
 handler.menu = true
+
+export default handler
