@@ -1,50 +1,45 @@
 export const handler = async (m, { sock, text, reply }) => {
   try {
-    if (!m.quoted)
+    // validar respuesta
+    if (!m.quoted || !m.quoted.message)
       return reply('❌ Responde a un sticker')
 
+    // validar texto
     if (!text)
-      return reply('❌ Escribe el texto\nEjemplo:\n.wm Gabo')
+      return reply('❌ Uso correcto:\n.wm Gabo')
 
-    // Obtener mensaje citado REAL
-    let q = m.quoted
+    // detectar sticker REAL
+    const sticker =
+      m.quoted.message.stickerMessage ||
+      m.quoted.message?.ephemeralMessage?.message?.stickerMessage ||
+      m.quoted.message?.viewOnceMessageV2?.message?.stickerMessage
 
-    // Detectar tipo real (Baileys MD)
-    let mime = q.mimetype || q.msg?.mimetype || ''
-    let isSticker = q.mtype === 'stickerMessage' || mime === 'image/webp'
-
-    if (!isSticker)
+    if (!sticker)
       return reply('❌ Responde a un sticker')
 
-    // Descargar sticker
-    let buffer = await q.download()
-    if (!buffer)
-      return reply('❌ No pude descargar el sticker')
+    // descargar sticker
+    const buffer = await sock.downloadMediaMessage(m.quoted)
 
-    // Reacción
+    if (!buffer)
+      return reply('❌ No se pudo descargar el sticker')
+
+    // reacción
     await sock.sendMessage(m.chat, {
       react: { text: '🪄', key: m.key }
     })
 
-    // Enviar sticker con "WM" (texto)
+    // reenviar sticker (SIN cambiar imagen)
     await sock.sendMessage(m.chat, {
-      sticker: buffer,
-      contextInfo: {
-        externalAdReply: {
-          title: text,
-          mediaType: 1,
-          previewType: 0
-        }
-      }
+      sticker: buffer
     }, { quoted: m })
 
   } catch (e) {
     console.error(e)
-    reply('❌ Error al procesar el sticker')
+    reply('❌ Error interno en wm')
   }
 }
 
 handler.command = ['wm']
-handler.tags = ['sticker']
 handler.help = ['wm <texto>']
+handler.tags = ['sticker']
 handler.menu = true
