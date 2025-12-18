@@ -87,7 +87,7 @@ ${frase}
 }
 
 handler.command = ['formarpareja2', 'pareja18', 'pareja+18']
-handler.tags = ['fun', 'adult']
+handler.tags = ['fun']
 handler.group = true
 handler.menu = true
 
