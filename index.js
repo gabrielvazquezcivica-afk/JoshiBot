@@ -26,6 +26,9 @@ import { autoAdminOwnerEvent } from './plugins/owner-autoadmin.js'
 // 🔔 AUTO-DETECT
 import { initAutoDetect } from './plugins/_autodetec.js'
 
+// 🔇 MUTE WATCHER (persistente)
+import { muteWatcher } from './plugins/gc-mute.js'
+
 /* ───── MANEJO DE ERRORES GLOBALES ───── */
 process.on('uncaughtException', err => {
   if (String(err).includes('Bad MAC')) return
@@ -133,6 +136,13 @@ async function start () {
     const sender = isGroup ? m.key.participant : from
     const pushName = m.pushName || 'Sin nombre'
     const text = getText(m)
+
+    // 🔇 BORRAR MENSAJES DE USUARIOS MUTEADOS (PERSISTENTE)
+    try {
+      await muteWatcher(sock, m)
+    } catch (e) {
+      console.error(chalk.red('❌ Error muteWatcher:'), e)
+    }
 
     if (!text) return
 
