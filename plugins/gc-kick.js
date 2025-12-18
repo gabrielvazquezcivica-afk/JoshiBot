@@ -5,68 +5,71 @@ export const handler = async (m, {
   sender
 }) => {
   if (!isGroup) {
-    return reply('🎄 Este comando solo funciona en grupos 🎅')
+    return reply('🚫 Este comando solo funciona en grupos')
   }
 
-  // 🔒 Obtener metadata del grupo
-  const metadata = await sock.groupMetadata(m.key.remoteJid)
+  // 🔒 Metadata del grupo
+  const from = m.key.remoteJid
+  const metadata = await sock.groupMetadata(from)
   const admins = metadata.participants
     .filter(p => p.admin)
     .map(p => p.id)
 
-  // ❌ No es admin → AVISA
+  // ❌ Verificar admin
   if (!admins.includes(sender)) {
-    return reply('⛔ Solo los administradores pueden usar este comando.')
+    return reply('⛔ Solo los administradores pueden usar este comando')
   }
 
-  // 🎯 Usuario a expulsar (reply o mención)
-  let user =
+  // 🎯 Usuario objetivo (reply o mención)
+  const user =
     m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0] ||
     m.message?.extendedTextMessage?.contextInfo?.participant
 
   if (!user) {
     return reply(
-      '🎄 *KICK NAVIDEÑO* 🎅\n\n' +
-      '❄️ Menciona al usuario o responde a su mensaje\n' +
+      '⚠️ *USO INCORRECTO*\n\n' +
+      'Menciona al usuario o responde a su mensaje\n' +
       'Ejemplo:\n' +
       '.kick @usuario'
     )
   }
 
   try {
-    // ❄️ Expulsar
+    // 🚪 Expulsar usuario
     await sock.groupParticipantsUpdate(
-      m.key.remoteJid,
+      from,
       [user],
       'remove'
     )
 
-    // 🎅 Reacción
-    await sock.sendMessage(m.key.remoteJid, {
-      react: { text: '🎅', key: m.key }
+    // ⚡ Reacción
+    await sock.sendMessage(from, {
+      react: { text: '🚪', key: m.key }
     })
 
     // 📢 Mensaje estilo sistema
     await sock.sendMessage(
-      m.key.remoteJid,
+      from,
       {
-        text:
-`╭━━━━━━━━━━━━━━━━━━━━━━╮
-│ 🎄 EXPULSIÓN NAVIDEÑA 🎄 │
-╰━━━━━━━━━━━━━━━━━━━━━━╯
-
-🎅 Usuario expulsado
-👤 Usuario: @${user.split('@')[0]}
-👮 Moderador: @${sender.split('@')[0]}
-
-🎁 Ho ho ho… fuera del grupo ❄️`,
+        text: `
+╭─〔 🚨 ACCIÓN DE MODERACIÓN 〕
+│
+│ 👤 Usuario expulsado:
+│ @${user.split('@')[0]}
+│
+│ 👮 Moderador:
+│ @${sender.split('@')[0]}
+│
+│ 🛡 Estado: Ejecutado
+╰─〔 🤖 JoshiBot 〕
+`.trim(),
         mentions: [user, sender]
       },
       { quoted: m }
     )
 
   } catch (e) {
-    reply('❌ No pude expulsar al usuario 🎄')
+    reply('❌ No pude expulsar al usuario')
   }
 }
 
