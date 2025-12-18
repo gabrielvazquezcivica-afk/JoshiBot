@@ -11,15 +11,32 @@ export const handler = async (m, {
     return reply('❌ No hay plugins cargados.')
   }
 
-  // 🎄 Reacción
+  // ⚡ Reacción futurista
   await sock.sendMessage(from, {
-    react: { text: '🎄', key: m.key }
+    react: { text: '⚡', key: m.key }
   })
 
   const uptime = clockString(process.uptime() * 1000)
   const botName = 'JoshiBot'
   const dev = 'SoyGabo'
   const saludo = getGreeting()
+
+  // 🤖 EMOJIS FIJOS POR CATEGORÍA
+  const tagEmoji = {
+    main: '📌',
+    group: '🛠️',
+    admin: '👑',
+    fun: '🎮',
+    game: '🎮',
+    downloader: '🎵',
+    search: '🔍',
+    tools: '🧰',
+    owner: '👤',
+    nsfw: '🔞',
+    info: 'ℹ️'
+  }
+
+  const defaultEmoji = '🔹'
 
   // 📂 Agrupar comandos
   const categories = {}
@@ -36,34 +53,37 @@ export const handler = async (m, {
     }
   }
 
+  // 🧠 MENÚ FUTURISTA
   let menu = `
-╭━━━━━━━━━━━━━━━━━━━━━━╮
-│ 🎄 MENÚ NAVIDEÑO 🎄 │
-╰━━━━━━━━━━━━━━━━━━━━━━╯
+╔══════════════════════╗
+║ 🤖 JOSHI BOT SYSTEM ║
+╚══════════════════════╝
 
-🤖 BOT: ${botName}
-👑 CREADOR: ${dev}
+🧠 IA: ${botName}
+👨‍💻 DEV: ${dev}
 ${saludo}
-⏱️ ACTIVO: ${uptime}
+⏱️ UPTIME: ${uptime}
 
-───────────────
-🎁 COMANDOS 🎁
-───────────────
+━━━━━━━━━━━━━━━━━━━━━━
+⚡ MÓDULOS DISPONIBLES
+━━━━━━━━━━━━━━━━━━━━━━
 `
 
   for (const tag in categories) {
+    const emoji = tagEmoji[tag] || defaultEmoji
+
     menu += `
-╭─〔 ${tag.toUpperCase()} 〕
+▸▸ ${emoji} ${tag.toUpperCase()} MODULE
 `
 
     for (const cmd of categories[tag]) {
-      menu += `• .${cmd}\n`
+      menu += `▸ ${emoji} .${cmd}\n`
     }
   }
 
   menu += `
-───────────────
-🎄 JoshiBot activo
+━━━━━━━━━━━━━━━━━━━━━━
+⚙️ Sistema activo • IA ONLINE
 `
 
   await sock.sendMessage(
