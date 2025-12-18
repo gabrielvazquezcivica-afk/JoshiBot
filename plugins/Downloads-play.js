@@ -1,13 +1,22 @@
-import fetch from "node-fetch"
-import yts from "yt-search"
-import axios from "axios"
+import fetch from 'node-fetch'
+import yts from 'yt-search'
+import axios from 'axios'
+
+async function getText(m) {
+  return (
+    m.message?.conversation ||
+    m.message?.extendedTextMessage?.text ||
+    m.message?.imageMessage?.caption ||
+    m.message?.videoMessage?.caption ||
+    ''
+  )
+}
 
 const ddownr = {
   download: async (url) => {
     const res = await axios.get(
       `https://p.savenow.to/ajax/download.php?format=mp3&url=${encodeURIComponent(url)}&api=dfcb6d76f2f6a9894gjkege8a4ab232222`
     )
-
     if (!res.data?.success) throw new Error('Error')
 
     const { id } = res.data
@@ -16,7 +25,9 @@ const ddownr = {
 
   wait: async (id) => {
     while (true) {
-      const r = await axios.get(`https://p.savenow.to/ajax/progress?id=${id}`)
+      const r = await axios.get(
+        `https://p.savenow.to/ajax/progress?id=${id}`
+      )
       if (r.data?.success && r.data.progress === 1000) {
         return r.data.download_url
       }
@@ -25,60 +36,54 @@ const ddownr = {
   }
 }
 
-const handler = async (m, { conn, text, command }) => {
+export const handler = async (m, {
+  sock,
+  from,
+  command,
+  reply
+}) => {
   try {
+    const text = (await getText(m))
+      .replace(/^\.\w+\s?/, '')
+      .trim()
+
     if (!text) {
-      return conn.reply(
-        m.chat,
-        '🎧 Escribe el nombre de la canción',
-        m
-      )
+      return reply('🎧 Escribe el nombre de la canción')
     }
 
-    // 🔍 Buscar en YouTube
+    // 🔎 Buscar
     const search = await yts(text)
     if (!search.all.length) {
-      return conn.reply(m.chat, '❌ No se encontraron resultados', m)
+      return reply('❌ No se encontraron resultados')
     }
 
     const v = search.all.find(x => x.seconds) || search.all[0]
     const { title, thumbnail, timestamp, views, ago, url } = v
 
-    const thumb = (await conn.getFile(thumbnail)).data
+    // 🎧 Reacción
+    await sock.sendMessage(from, {
+      react: { text: '🎧', key: m.key }
+    })
 
-    // 🧠 MENSAJE FUTURISTA
-    const info = `
-╭─〔 🎧 REPRODUCTOR DE AUDIO 〕
-│ 🎶 ${title}
+    // 🧠 Mensaje futurista
+    const msg = `
+╭─〔 🎧 AUDIO PLAYER 〕
+│ 🎵 ${title}
 ├────────────────
 │ ⏱ Duración: ${timestamp}
 │ 👁 Vistas: ${views.toLocaleString()}
 │ 📅 Publicado: ${ago}
 ├────────────────
-│ 🔊 Preparando audio…
+│ 🔊 Procesando audio…
 ╰─〔 🤖 JoshiBot 〕
 `.trim()
 
-    await conn.reply(m.chat, info, m, {
-      contextInfo: {
-        externalAdReply: {
-          title: title,
-          body: 'Audio MP3',
-          mediaType: 1,
-          mediaUrl: url,
-          sourceUrl: url,
-          thumbnail: thumb,
-          renderLargerThumbnail: true
-        }
-      }
-    })
+    await sock.sendMessage(from, {
+      image: { url: thumbnail },
+      caption: msg
+    }, { quoted: m })
 
-    // 🔁 REACCIÓN AL COMANDO
-    await conn.sendMessage(m.chat, {
-      react: { text: '🎧', key: m.key }
-    })
-
-    // ⬇️ DESCARGAR
+    // ⬇️ Descargar
     let dl
     try {
       dl = await ddownr.download(url)
@@ -89,29 +94,26 @@ const handler = async (m, { conn, text, command }) => {
       dl = api.data.dl
     }
 
-    // 🔊 ENVIAR AUDIO NORMAL
-    await conn.sendMessage(
-      m.chat,
-      {
-        audio: { url: dl },
-        mimetype: 'audio/mpeg',
-        ptt: false
-      },
-      { quoted: m }
-    )
+    // 🔊 Enviar audio normal
+    await sock.sendMessage(from, {
+      audio: { url: dl },
+      mimetype: 'audio/mpeg',
+      ptt: false
+    }, { quoted: m })
 
-    await conn.sendMessage(m.chat, {
+    await sock.sendMessage(from, {
       react: { text: '✅', key: m.key }
     })
 
   } catch (e) {
     console.error(e)
-    m.reply('❌ Error al reproducir el audio')
+    reply('❌ Error al reproducir el audio')
   }
 }
 
-handler.command = ['play', 'yta', 'mp3', 'ytmp3', 'playaudio']
-handler.tags = ['descargas']
+handler.command = ['play', 'mp3', 'yta', 'ytmp3', 'playaudio']
+handler.tags = ['downloader']
 handler.menu = true
+handler.group = false
 
 export default handler
