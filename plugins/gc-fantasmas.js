@@ -1,32 +1,32 @@
 import fs from 'fs'
 
-/* ───── CONFIG ───── */
 const DB_DIR = './database'
 const DB_FILE = './database/fantasmas.json'
-const RECENT_TIME = 1000 * 60 * 60 * 24 // 24h
-const NEW_USER_TIME = 1000 * 60 * 10   // 10 min (evita falsos positivos)
 
-/* ───── INIT DB ───── */
 if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR)
-if (!fs.existsSync(DB_FILE)) fs.writeFileSync(DB_FILE, JSON.stringify({}, null, 2))
+if (!fs.existsSync(DB_FILE)) fs.writeFileSync(DB_FILE, '{}')
 
-/* ───── UTILS ───── */
-const cleanJid = (jid = '') => jid.split(':')[0]
+const cleanJid = jid => jid?.split(':')[0]
 
-const loadDB = () => JSON.parse(fs.readFileSync(DB_FILE))
-const saveDB = (db) => fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2))
+function loadDB () {
+  return JSON.parse(fs.readFileSync(DB_FILE))
+}
 
-const isAdmin = (participants, jid) => {
+function saveDB (db) {
+  fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2))
+}
+
+function isAdmin (participants, jid) {
   const c = cleanJid(jid)
   return participants.some(p => p.admin && cleanJid(p.id) === c)
 }
 
-const isOwner = (jid) => {
+function isOwner (jid) {
   const c = cleanJid(jid)
   return global.owner?.jid?.some(o => cleanJid(o) === c)
 }
 
-/* ───── EVENTO: registrar actividad ───── */
+/* ───── EVENTO ───── */
 export async function fantasmasEvent (m) {
   if (!m?.key?.remoteJid?.endsWith('@g.us')) return
   if (!m.key.participant) return
@@ -41,37 +41,33 @@ export async function fantasmasEvent (m) {
   saveDB(db)
 }
 
-/* ───── COMANDO: .fantasmas ───── */
-export const handler = async (m, { sock, from, sender, isGroup, reply }) => {
+/* ───── COMANDO ───── */
+export const handler = async function (m, { sock, from, sender, isGroup, reply }) {
   if (!isGroup) return
 
   const metadata = await sock.groupMetadata(from)
   const participants = metadata.participants
 
-  // 🔐 solo admins
   if (!isAdmin(participants, sender)) return
 
   const db = loadDB()
   const activity = db[from] || {}
   const now = Date.now()
 
+  const RECENT = 1000 * 60 * 60 * 24
+  const NEW_USER = 1000 * 60 * 10
+
   const fantasmas = participants.filter(p => {
     const jid = cleanJid(p.id)
 
-    // excluir admins y owner
     if (p.admin) return false
     if (isOwner(jid)) return false
 
     const last = activity[jid]
-
-    // nunca ha hablado
     if (!last) return true
+    if (now - last < NEW_USER) return false
 
-    // muy reciente (nuevo en el grupo)
-    if (now - last < NEW_USER_TIME) return false
-
-    // inactivo
-    return now - last > RECENT_TIME
+    return now - last > RECENT
   })
 
   if (!fantasmas.length) {
@@ -85,21 +81,19 @@ export const handler = async (m, { sock, from, sender, isGroup, reply }) => {
   await sock.sendMessage(from, {
     text: `
 ╭─〔 👻 FANTASMAS DETECTADOS 〕
-│ 🧮 Total: ${fantasmas.length}
+│ Total: ${fantasmas.length}
 ├────────────────
 ${list}
 ├────────────────
-│ ⚠ Acción disponible:
+│ Usa:
 │ .kickfantasmas
-│
-│ (Admins y owner excluidos)
+│ para expulsarlos
 ╰─〔 🤖 JoshiBot 〕
 `.trim(),
     mentions: fantasmas.map(p => p.id)
   })
 }
 
-/* ───── METADATA ───── */
 handler.command = ['fantasmas']
 handler.tags = ['group']
 handler.group = true
