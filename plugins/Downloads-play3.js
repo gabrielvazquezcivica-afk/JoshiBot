@@ -113,7 +113,7 @@ const handler = async (m, { conn, text, command }) => {
 }
 
 handler.command = ['play3', 'ytadoc', 'playdoc', 'mp3doc']
-handler.tags = ['downloader']
+handler.tags = ['descargas']
 handler.menu = true
 
 export default handler
