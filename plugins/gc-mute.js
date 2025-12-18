@@ -22,8 +22,7 @@ export async function muteWatcher (sock, m) {
   const groupId = m.key.remoteJid
   const sender = m.key.participant
 
-  if (!db[groupId]) return
-  if (!db[groupId].includes(sender)) return
+  if (!db[groupId]?.includes(sender)) return
 
   try {
     await sock.sendMessage(groupId, { delete: m.key })
@@ -34,7 +33,7 @@ export async function muteWatcher (sock, m) {
 const handler = async (m, { sock, from, sender, isGroup, reply }) => {
 
   if (!isGroup)
-    return reply('❌ Este comando solo funciona en grupos')
+    return reply('❌ Solo en grupos')
 
   const metadata = await sock.groupMetadata(from)
   const admins = metadata.participants
@@ -44,25 +43,24 @@ const handler = async (m, { sock, from, sender, isGroup, reply }) => {
   const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net'
 
   if (!admins.includes(sender))
-    return reply('❌ Solo admins pueden usar este comando')
+    return reply('❌ Solo admins')
 
   if (!admins.includes(botId))
     return reply('❌ Necesito ser admin')
 
-  /* ───── OBTENER USUARIO ───── */
+  /* ───── CONTEXT INFO UNIVERSAL ───── */
+  const msg =
+    m.message?.extendedTextMessage ||
+    m.message?.imageMessage ||
+    m.message?.videoMessage ||
+    m.message?.stickerMessage ||
+    m.message?.audioMessage
+
+  const ctx = msg?.contextInfo
   let target = null
-  const ctx =
-    m.message?.extendedTextMessage?.contextInfo
 
-  // responder
-  if (ctx?.participant) {
-    target = ctx.participant
-  }
-
-  // mencionar
-  if (!target && ctx?.mentionedJid?.length) {
-    target = ctx.mentionedJid[0]
-  }
+  if (ctx?.participant) target = ctx.participant
+  else if (ctx?.mentionedJid?.length) target = ctx.mentionedJid[0]
 
   if (!target)
     return reply('⚠️ Responde o menciona a un usuario')
@@ -74,7 +72,7 @@ const handler = async (m, { sock, from, sender, isGroup, reply }) => {
   if (!db[from]) db[from] = []
 
   if (db[from].includes(target))
-    return reply('⚠️ Ese usuario ya está muteado')
+    return reply('⚠️ Ya está muteado')
 
   db[from].push(target)
   saveDB(db)
@@ -82,8 +80,7 @@ const handler = async (m, { sock, from, sender, isGroup, reply }) => {
   await sock.sendMessage(from, {
     text:
 `╭─〔 🔇 MUTE 〕
-│ 👤 Usuario:
-│ @${target.split('@')[0]}
+│ 👤 @${target.split('@')[0]}
 │ 💾 Persistente
 ╰────────────`,
     mentions: [target]
@@ -91,7 +88,7 @@ const handler = async (m, { sock, from, sender, isGroup, reply }) => {
 }
 
 handler.command = ['mute']
-handler.tags = ['group']
+handler.tags = ['group', 'admin']
 handler.group = true
 handler.admin = true
 
