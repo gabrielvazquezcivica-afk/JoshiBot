@@ -12,65 +12,61 @@ export const handler = async (m, {
   const metadata = await sock.groupMetadata(from)
   const participants = metadata.participants
 
-  // 👑 Admins reales
+  // 👑 Admins humanos
   const admins = participants
-    .filter(p => p.admin === 'admin' || p.admin === 'superadmin')
+    .filter(p => p.admin)
     .map(p => p.id)
 
-  // 👤 Usuario admin
-  if (!admins.includes(sender)) {
+  if (!admins.includes(sender))
     return reply('❌ Solo admins pueden usar este comando')
-  }
 
-  // 🤖 JID REAL DEL BOT (FIX)
-  const botId =
-    sock.user.id.includes(':')
-      ? sock.user.id.split(':')[0] + '@s.whatsapp.net'
-      : sock.user.id
+  // 🤖 JID REAL DEL BOT
+  const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net'
 
-  // 🤖 Verificar admin bot (FIX DEFINITIVO)
-  const botIsAdmin = participants.some(
-    p =>
-      p.id === botId &&
-      (p.admin === 'admin' || p.admin === 'superadmin')
-  )
-
-  if (!botIsAdmin) {
-    return reply('❌ Necesito ser admin para usar la ruleta')
-  }
-
-  // 🎯 Usuarios válidos
+  // 🎯 Usuarios no admin
   const candidates = participants
     .filter(p =>
-      !admins.includes(p.id) &&
-      p.id !== botId
+      p.id !== botId &&
+      !admins.includes(p.id)
     )
     .map(p => p.id)
 
   if (!candidates.length)
     return reply('⚠️ No hay usuarios para banear')
 
-  const target = candidates[
-    Math.floor(Math.random() * candidates.length)
-  ]
+  const target =
+    candidates[Math.floor(Math.random() * candidates.length)]
 
+  // 🎰 REACCIÓN
   await sock.sendMessage(from, {
     react: { text: '🎰', key: m.key }
   })
 
-  await sock.sendMessage(from, {
-    text:
+  // 🧪 TEST REAL DE ADMIN (ESTO ES LA CLAVE)
+  try {
+    // ⛔ Si no es admin, WhatsApp lanza error
+    await sock.groupParticipantsUpdate(from, [target], 'remove')
+
+    await sock.sendMessage(from, {
+      text:
 `╭─〔 🎯 RULETABAN 〕
-│ 🎰 Girando...
-│ 💀 Elegido:
+│ 🎰 Ruleta activada
+│ 💀 Eliminado:
 │ @${target.split('@')[0]}
 ╰─〔 🤖 JoshiBot 〕`,
-    mentions: [target]
-  })
+      mentions: [target]
+    })
 
-  await new Promise(r => setTimeout(r, 1200))
-
-  await sock.groupParticipantsUpdate(from, [target], 'remove')
+  } catch (e) {
+    console.error(e)
+    return reply(
+`❌ No pude expulsar usuarios.
+📌 Solución:
+• Quita al bot de admin
+• Vuélvelo a poner admin
+• Reinicia el bot`
+    )
+  }
 }
 
 handler.command = ['ruletaban', 'rb']
