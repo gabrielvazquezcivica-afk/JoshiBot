@@ -96,7 +96,7 @@ ${emoji} ${tag.toUpperCase()}
 }
 
 handler.command = ['menu', 'help', 'comandos']
-handler.tags = ['main']
+handler.tags = ['info']
 handler.group = false
 
 /* ⏱️ */
