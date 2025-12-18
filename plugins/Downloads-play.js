@@ -1,129 +1,107 @@
-import fetch from 'node-fetch'
 import yts from 'yt-search'
 import axios from 'axios'
 
-const formatAudio = ['mp3', 'm4a', 'webm', 'aac', 'flac', 'opus', 'ogg', 'wav']
-
 // ───── DOWNLOADER ─────
-const ddownr = {
-  download: async (url, format) => {
-    const res = await axios.get(
-      `https://p.savenow.to/ajax/download.php?format=${format}&url=${encodeURIComponent(url)}&api=dfcb6d76f2f6a9894gjkege8a4ab232222`
-    )
+async function downloadAudio(url) {
+  const res = await axios.get(
+    `https://p.savenow.to/ajax/download.php?format=mp3&url=${encodeURIComponent(url)}&api=dfcb6d76f2f6a9894gjkege8a4ab232222`
+  )
 
-    if (!res.data?.success) throw new Error('Error al procesar')
+  if (!res.data?.success) throw 'Error API'
 
-    const { id } = res.data
-    return { downloadUrl: await ddownr.wait(id) }
-  },
+  const id = res.data.id
 
-  wait: async (id) => {
-    while (true) {
-      const r = await axios.get(`https://p.savenow.to/ajax/progress?id=${id}`)
-      if (r.data?.success && r.data.progress === 1000)
-        return r.data.download_url
-      await new Promise(res => setTimeout(res, 2500))
-    }
+  while (true) {
+    const r = await axios.get(`https://p.savenow.to/ajax/progress?id=${id}`)
+    if (r.data?.success && r.data.progress === 1000)
+      return r.data.download_url
+    await new Promise(res => setTimeout(res, 2500))
   }
 }
 
 // ───── HANDLER ─────
-const handler = async (m, { conn, text, command }) => {
+export const handler = async (m, {
+  sock,
+  text,
+  command,
+  reply
+}) => {
   try {
-    if (!text) return conn.reply(m.chat,
+    if (!text)
+      return reply(
 `╭─〔 🎧 JOSHI PLAYER 〕
 │ Escribe el nombre
 │ de una canción
-│ o URL de YouTube
-╰─〔 🤖 JoshiBot 〕`, m)
+│ o link de YouTube
+╰─〔 🤖 JoshiBot 〕`
+      )
 
-    // 🔍 Buscar
-    const search = await yts(text)
-    if (!search.all.length) return m.reply('❌ No encontré resultados')
-
-    const v = search.all.find(v => v.ago) || search.all[0]
-    const { title, thumbnail, timestamp, views, ago, url } = v
-
-    const thumb = (await conn.getFile(thumbnail)).data
-
-    // ⚡ REACCIÓN INICIAL
-    await conn.sendMessage(m.chat, {
+    // 🎧 Reacción inicial
+    await sock.sendMessage(m.chat, {
       react: { text: '🎧', key: m.key }
     })
 
-    // 📡 INFO
-    await conn.reply(m.chat,
+    // 🔍 Buscar
+    const search = await yts(text)
+    if (!search.all.length) return reply('❌ Sin resultados')
+
+    const v = search.all[0]
+    const { title, timestamp, views, ago, url, thumbnail } = v
+
+    // 📡 Info futurista
+    await reply(
 `╭─〔 🎶 AUDIO DETECTADO 〕
 │ 🎵 ${title}
 │ ⏱ ${timestamp}
 │ 👁 ${views.toLocaleString()}
 │ 🗓 ${ago}
 ├────────────────
-│ 🔄 Procesando…
-╰─〔 🤖 JoshiBot 〕`, m, {
-      contextInfo: {
-        externalAdReply: {
-          title: 'Joshi Player',
-          body: 'Audio Engine',
-          thumbnail: thumb,
-          mediaType: 1,
-          sourceUrl: url,
-          renderLargerThumbnail: true
-        }
-      }
-    })
+│ ⚡ Procesando…
+╰─〔 🤖 JoshiBot 〕`
+    )
+
+    const audioUrl = await downloadAudio(url)
 
     // ───── AUDIO NORMAL ─────
     if (['play','mp3','yta','playaudio'].includes(command)) {
-      const api = await ddownr.download(url, 'mp3')
-
-      await conn.sendMessage(m.chat, {
-        audio: { url: api.downloadUrl },
-        mimetype: 'audio/mpeg',
-        ptt: false
+      await sock.sendMessage(m.chat, {
+        audio: { url: audioUrl },
+        mimetype: 'audio/mpeg'
       }, { quoted: m })
     }
 
     // ───── AUDIO DOCUMENTO ─────
     if (['playdoc','mp3doc','ytmp3doc','play3'].includes(command)) {
-      const api = await ddownr.download(url, 'mp3')
-
-      await conn.sendMessage(m.chat, {
-        document: { url: api.downloadUrl },
+      await sock.sendMessage(m.chat, {
+        document: { url: audioUrl },
         mimetype: 'audio/mpeg',
         fileName: `${title}.mp3`
       }, { quoted: m })
     }
 
-    // ✅ REACCIÓN FINAL
-    await conn.sendMessage(m.chat, {
+    // ✅ Reacción final
+    await sock.sendMessage(m.chat, {
       react: { text: '✅', key: m.key }
     })
 
   } catch (e) {
     console.error(e)
-    m.reply('❌ Error al procesar el audio')
+    reply('❌ Error al procesar el audio')
   }
 }
 
-// ───── COMANDOS ─────
+// ───── COMANDOS (MENÚ + EJECUCIÓN) ─────
 handler.command = [
-  'play','mp3','yta','playaudio',
-  'playdoc','mp3doc','ytmp3doc','play3'
+  'play',
+  'mp3',
+  'yta',
+  'playaudio',
+  'playdoc',
+  'mp3doc',
+  'ytmp3doc',
+  'play3'
 ]
 
-// 👇 ESTO ES LO QUE VE EL MENÚ
-handler.help = [
-  'play <texto>',
-  'mp3 <texto>',
-  'yta <texto>',
-  'playaudio <texto>',
-  'playdoc <texto>',
-  'mp3doc <texto>',
-  'ytmp3doc <texto>'
-]
-
-handler.tags = ['downloader']
+// 👇 ESTO ES LO QUE LEE EL MENÚ
+handler.tags = ['descargas']
 handler.menu = true
-
-export default handler
