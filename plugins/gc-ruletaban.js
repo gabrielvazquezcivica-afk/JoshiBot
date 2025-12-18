@@ -17,15 +17,18 @@ export const handler = async (m, {
     .filter(p => p.admin === 'admin' || p.admin === 'superadmin')
     .map(p => p.id)
 
-  // 👤 Verificar admin usuario
+  // 👤 Usuario admin
   if (!admins.includes(sender)) {
     return reply('❌ Solo admins pueden usar este comando')
   }
 
-  // 🤖 JID REAL DEL BOT
-  const botId = sock.user.id
+  // 🤖 JID REAL DEL BOT (FIX)
+  const botId =
+    sock.user.id.includes(':')
+      ? sock.user.id.split(':')[0] + '@s.whatsapp.net'
+      : sock.user.id
 
-  // 🤖 Verificar admin bot (FIX REAL)
+  // 🤖 Verificar admin bot (FIX DEFINITIVO)
   const botIsAdmin = participants.some(
     p =>
       p.id === botId &&
@@ -33,10 +36,10 @@ export const handler = async (m, {
   )
 
   if (!botIsAdmin) {
-    return reply('❌ Necesito ser admin para ejecutar la ruleta')
+    return reply('❌ Necesito ser admin para usar la ruleta')
   }
 
-  // 🎯 Usuarios válidos (no admins, no bot)
+  // 🎯 Usuarios válidos
   const candidates = participants
     .filter(p =>
       !admins.includes(p.id) &&
@@ -45,10 +48,11 @@ export const handler = async (m, {
     .map(p => p.id)
 
   if (!candidates.length)
-    return reply('⚠️ No hay usuarios válidos')
+    return reply('⚠️ No hay usuarios para banear')
 
-  // 🎰 Elegir víctima
-  const target = candidates[Math.floor(Math.random() * candidates.length)]
+  const target = candidates[
+    Math.floor(Math.random() * candidates.length)
+  ]
 
   await sock.sendMessage(from, {
     react: { text: '🎰', key: m.key }
@@ -56,9 +60,9 @@ export const handler = async (m, {
 
   await sock.sendMessage(from, {
     text:
-`╭─〔 🎯 RULETA DEL BAN 〕
+`╭─〔 🎯 RULETABAN 〕
 │ 🎰 Girando...
-│ 💀 Usuario elegido:
+│ 💀 Elegido:
 │ @${target.split('@')[0]}
 ╰─〔 🤖 JoshiBot 〕`,
     mentions: [target]
