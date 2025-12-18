@@ -4,4 +4,4 @@ export const handler = async (m, { sock, from }) => {
 
 handler.command = ['ping', 'p']
 handler.help = ['ping']
-handler.tags = ['main']
+handler.tags = ['info']
