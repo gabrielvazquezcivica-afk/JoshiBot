@@ -6,34 +6,45 @@ export const handler = async (m, {
   text,
   reply
 }) => {
-  // ❌ Debe responder a un sticker
-  if (!m.quoted || !m.quoted.msg || !/sticker/i.test(m.quoted.mtype)) {
+
+  // ❌ Debe responder a algo
+  if (!m.quoted) {
     return reply('❌ Responde a un sticker\nEjemplo:\n.wm Gabo')
   }
 
+  // ✅ Detectar sticker REAL
+  const isSticker =
+    m.quoted.stickerMessage ||
+    m.quoted.mimetype === 'image/webp' ||
+    m.quoted.type === 'sticker'
+
+  if (!isSticker) {
+    return reply('❌ Eso no es un sticker\nEjemplo:\n.wm Gabo')
+  }
+
   // ❌ Texto obligatorio
-  if (!text) {
+  if (!text || !text.trim()) {
     return reply('❌ Escribe el WM\nEjemplo:\n.wm Gabo')
   }
 
   try {
-    // 📥 Obtener sticker original
+    // 📥 Descargar sticker original
     const media = await m.quoted.download()
 
     // 🏷️ WM limpio
-    const wmText = text.trim()
+    const wm = text.trim()
 
-    // 🔁 Crear nuevo sticker
-    const newSticker = await sticker(
+    // 🔁 Crear sticker con WM
+    const result = await sticker(
       media,
       null,
-      wmText, // packname
-      wmText  // author
+      wm, // pack
+      wm  // author
     )
 
     // 📤 Enviar sticker
     await sock.sendMessage(from, {
-      sticker: newSticker
+      sticker: result
     }, { quoted: m })
 
     // 🔥 Reacción
@@ -41,9 +52,9 @@ export const handler = async (m, {
       react: { text: '🧷', key: m.key }
     })
 
-  } catch (e) {
-    console.error(e)
-    reply('❌ Error al crear el sticker')
+  } catch (err) {
+    console.error(err)
+    reply('❌ Error al procesar el sticker')
   }
 }
 
