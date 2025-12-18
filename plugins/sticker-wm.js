@@ -1,57 +1,57 @@
-import { writeFile } from 'fs/promises'
-import { tmpdir } from 'os'
-import path from 'path'
-import { exec } from 'child_process'
+export const handler = async (m, {
+  sock,
+  text,
+  reply
+}) => {
+  try {
+    if (!m.quoted)
+      return reply('❌ Responde a un sticker')
 
-let handler = async (m, { conn, text }) => {
-  if (!m.quoted) {
-    return m.reply('❌ Responde a un *sticker*')
-  }
+    if (!text)
+      return reply('❌ Escribe el texto\nEjemplo:\n.wm Gabo')
 
-  // Obtener mensaje real (incluye viewOnce)
-  let q = m.quoted.msg || m.quoted
+    // Obtener mensaje real
+    let q = m.quoted.msg || m.quoted
 
-  // Detectar cualquier sticker válido
-  let isSticker =
-    q.stickerMessage ||
-    q.imageMessage?.mimetype === 'image/webp' ||
-    q.videoMessage?.mimetype === 'video/webp'
+    // Detectar sticker REAL (todos los casos)
+    let isSticker =
+      q.stickerMessage ||
+      q.imageMessage?.mimetype === 'image/webp' ||
+      q.videoMessage?.mimetype?.includes('webp')
 
-  if (!isSticker) {
-    return m.reply('❌ Responde a un *sticker*')
-  }
+    if (!isSticker)
+      return reply('❌ Responde a un sticker')
 
-  if (!text) {
-    return m.reply('❌ Escribe el texto\nEjemplo:\n.wm Gabo')
-  }
+    // Descargar sticker
+    let buffer = await m.quoted.download()
+    if (!buffer)
+      return reply('❌ No pude descargar el sticker')
 
-  let media = await m.quoted.download()
-  let input = path.join(tmpdir(), `${Date.now()}.webp`)
-  let output = path.join(tmpdir(), `${Date.now()}-wm.webp`)
+    // Reacción al ejecutar
+    await sock.sendMessage(m.chat, {
+      react: { text: '🪄', key: m.key }
+    })
 
-  await writeFile(input, media)
-
-  // Reescribe metadata SIN librerías rotas
-  let cmd = `
-webpmux -set exif <(
-  printf "RIFF$$$$WEBPVP8X\\x0A\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00"
-) ${input} -o ${output}
-`
-
-  exec(cmd, async (err) => {
-    if (err) {
-      console.error(err)
-      return m.reply('❌ Error al procesar el sticker')
-    }
-
-    await conn.sendMessage(m.chat, {
-      sticker: await (await import('fs')).readFileSync(output)
+    // Reenviar sticker con WM
+    await sock.sendMessage(m.chat, {
+      sticker: buffer,
+      contextInfo: {
+        externalAdReply: {
+          title: text,        // ← AQUÍ VA EL WM
+          body: '',
+          mediaType: 1,
+          previewType: 0
+        }
+      }
     }, { quoted: m })
-  })
+
+  } catch (e) {
+    console.error(e)
+    reply('❌ Error al procesar el sticker')
+  }
 }
 
-handler.help = ['wm <texto>']
+handler.command = ['wm']
 handler.tags = ['sticker']
-handler.command = /^wm$/i
-
-export default handler
+handler.help = ['wm <texto>']
+handler.menu = true
