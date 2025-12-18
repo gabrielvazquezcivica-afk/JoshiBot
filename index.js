@@ -1,9 +1,15 @@
+import util from 'util'
 import { connectBot } from './lib/connection.js'
 import chalk from 'chalk'
 import figlet from 'figlet'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath, pathToFileURL } from 'url'
+
+// 🔇 FIX DEFINITIVO: evitar spam "Closing session"
+util.inspect.defaultOptions.depth = 0
+util.inspect.defaultOptions.colors = false
+process.env.NODE_NO_WARNINGS = '1'
 
 // ⚙️ CONFIG
 import config from './config.js'
