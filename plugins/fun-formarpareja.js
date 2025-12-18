@@ -75,7 +75,7 @@ ${resultado}
 }
 
 handler.command = ['formarpareja', 'pareja']
-handler.tags = ['fun']
+handler.tags = ['juegos']
 handler.group = true
 handler.menu = true
 
