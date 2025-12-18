@@ -1,157 +1,141 @@
-import fetch from "node-fetch";
-import yts from "yt-search";
-import axios from "axios";
+import fetch from "node-fetch"
+import yts from "yt-search"
+import axios from "axios"
 
-const formatAudio = ['mp3', 'm4a', 'webm', 'acc', 'flac', 'opus', 'ogg', 'wav'];
-const formatVideo = ['360', '480', '720', '1080', '1440', '4k'];
+/* ───── FORMATOS ───── */
+const formatosAudio = ['mp3', 'm4a', 'webm', 'acc', 'flac', 'opus', 'ogg', 'wav']
 
 const ddownr = {
   download: async (url, format) => {
-    if (!formatAudio.includes(format) && !formatVideo.includes(format)) {
-      throw new Error("Formato no soportado.");
-    }
+    if (!formatosAudio.includes(format)) throw 'Formato inválido'
 
     const res = await axios.get(
       `https://p.savenow.to/ajax/download.php?format=${format}&url=${encodeURIComponent(url)}&api=dfcb6d76f2f6a9894gjkege8a4ab232222`
-    );
+    )
 
-    if (!res.data?.success) throw new Error("Error al procesar.");
+    if (!res.data?.success) throw 'API error'
 
-    const { id } = res.data;
-    const downloadUrl = await ddownr.cekProgress(id);
-
-    return { downloadUrl };
+    const { id } = res.data
+    return { downloadUrl: await ddownr.wait(id) }
   },
 
-  cekProgress: async (id) => {
+  wait: async (id) => {
     while (true) {
-      const r = await axios.get(`https://p.savenow.to/ajax/progress?id=${id}`);
+      const r = await axios.get(`https://p.savenow.to/ajax/progress?id=${id}`)
       if (r.data?.success && r.data.progress === 1000) {
-        return r.data.download_url;
+        return r.data.download_url
       }
-      await new Promise(r => setTimeout(r, 2500));
+      await new Promise(res => setTimeout(res, 2000))
     }
   }
-};
+}
 
-const handler = async (m, { conn, text, command }) => {
+/* ───── HANDLER ───── */
+export const handler = async (m, { conn, text, command }) => {
   try {
-    if (!text)
-      return conn.reply(m.chat, '⚠️ Escribe el nombre de una canción', m);
+    if (!text) {
+      return conn.reply(m.chat,
+`╭─〔 🎧 JOSHI PLAYER 〕
+│ Uso:
+│ .play <canción>
+│ .playdoc <canción>
+╰─〔 🤖 JoshiBot 〕`, m)
+    }
 
-    const search = await yts(text);
-    if (!search.all.length)
-      return m.reply('❌ No se encontraron resultados');
+    const search = await yts(text)
+    if (!search.all.length) return m.reply('❌ Sin resultados')
 
-    const v = search.all.find(x => x.ago) || search.all[0];
-    const { title, thumbnail, timestamp, views, ago, url } = v;
+    const v = search.all.find(x => x.seconds) || search.all[0]
+    const { title, thumbnail, timestamp, views, ago, url } = v
 
-    const thumb = (await conn.getFile(thumbnail)).data;
-    const vistaTexto = formatViews(views);
+    const thumb = (await conn.getFile(thumbnail)).data
 
-    const mensaje = `
-╭─〔 🤖 SISTEMA MULTIMEDIA 〕
+    const info = `
+╭─〔 🎧 JOSHI PLAYER 〕
+│ 🎵 ${title}
 ├────────────────
-│ 🎵 TÍTULO:
-│ ${title}
-│
-│ ⏱ DURACIÓN:
-│ ${timestamp}
-│
-│ 👁 VISTAS:
-│ ${vistaTexto}
-│
-│ 📡 CANAL:
-│ ${v.author.name || 'Desconocido'}
-│
-│ 🕒 PUBLICADO:
-│ ${ago}
-│
-│ 🔗 URL:
-│ ${url}
+│ ⏱ ${timestamp}
+│ 👁 ${formatViews(views)}
+│ 🕒 ${ago}
 ├────────────────
-│ ⏳ PROCESANDO AUDIO…
-╰─〔 ⚡ ${global.botname || conn.user?.name || 'JoshiBot'} 〕
-`.trim();
+│ 📥 Procesando audio…
+╰─〔 🤖 JoshiBot 〕`.trim()
 
-    await conn.reply(m.chat, mensaje, m, {
+    await conn.reply(m.chat, info, m, {
       contextInfo: {
         externalAdReply: {
-          title: global.botname || 'JOSHI PLAYER',
-          body: 'Sistema de Audio Digital',
+          title: 'Joshi Audio System',
+          body: 'Audio en proceso',
+          thumbnail: thumb,
           mediaType: 1,
           mediaUrl: url,
           sourceUrl: url,
-          thumbnail: thumb,
           renderLargerThumbnail: true
         }
       }
-    });
+    })
 
-    // ▶ AUDIO NORMAL
-    if (['play', 'yta', 'mp3', 'ytmp3', 'playaudio'].includes(command)) {
+    await conn.sendMessage(m.chat, {
+      react: { text: '🎧', key: m.key }
+    })
 
-      await conn.sendMessage(m.chat, {
-        react: { text: '⚡', key: m.key }
-      });
-
-      try {
-        const api = await ddownr.download(url, 'mp3');
-
-        await conn.sendMessage(m.chat, {
-          audio: { url: api.downloadUrl },
-          mimetype: 'audio/mpeg',
-          ptt: false
-        }, { quoted: m });
-
-        await conn.sendMessage(m.chat, {
-          react: { text: '✅', key: m.key }
-        });
-
-      } catch {
-        const api = await fetch(
-          `https://api.stellarwa.xyz/dl/ytmp3?url=${url}&key=proyectsV2`
-        ).then(r => r.json());
-
-        await conn.sendMessage(m.chat, {
-          audio: { url: api.data.dl },
-          mimetype: 'audio/mpeg',
-          ptt: false
-        }, { quoted: m });
-
-        await conn.sendMessage(m.chat, {
-          react: { text: '✅', key: m.key }
-        });
-      }
+    let audioUrl
+    try {
+      audioUrl = (await ddownr.download(url, 'mp3')).downloadUrl
+    } catch {
+      const api = await fetch(
+        `https://api.stellarwa.xyz/dl/ytmp3?url=${url}&key=proyectsV2`
+      ).then(r => r.json())
+      audioUrl = api?.data?.dl
     }
 
-    // 🎧 AUDIO DOCUMENTO
-    else if (['play3', 'ytadoc', 'playdoc', 'ytmp3doc'].includes(command)) {
-      const api = await ddownr.download(url, 'mp3');
+    if (!audioUrl) throw 'Audio no disponible'
 
+    /* ───── AUDIO DOCUMENTO ───── */
+    if (['playdoc', 'mp3doc', 'ytmp3doc'].includes(command)) {
       await conn.sendMessage(m.chat, {
-        document: { url: api.downloadUrl },
+        document: { url: audioUrl },
         mimetype: 'audio/mpeg',
-        fileName: `${title}.mp3`
-      }, { quoted: m });
+        fileName: `🎧 ${title}.mp3`
+      }, { quoted: m })
+
+    } 
+    /* ───── AUDIO NORMAL ───── */
+    else {
+      await conn.sendMessage(m.chat, {
+        audio: { url: audioUrl },
+        mimetype: 'audio/mpeg',
+        ptt: false
+      }, { quoted: m })
     }
+
+    await conn.sendMessage(m.chat, {
+      react: { text: '✨', key: m.key }
+    })
 
   } catch (e) {
-    console.error(e);
-    m.reply('❌ Error al procesar la solicitud');
+    console.error(e)
+    m.reply('❌ Error al obtener el audio')
   }
-};
+}
 
-handler.command = handler.help = [
-  'play', 'mp3', 'yta', 'ytmp3', 'playaudio',
-  'play3', 'ytadoc', 'playdoc', 'ytmp3doc'
-];
+/* ───── CONFIG MENU ───── */
+handler.command = [
+  'play',
+  'mp3',
+  'yta',
+  'playaudio',
+  'playdoc',
+  'mp3doc',
+  'ytmp3doc'
+]
 
-handler.tags = ['descargas'];
-export default handler;
+handler.tags = ['downloader']
+handler.menu = true
 
-function formatViews(v) {
+/* ───── UTILS ───── */
+function formatViews(v = 0) {
   return v >= 1000
     ? `${(v / 1000).toFixed(1)}k (${v.toLocaleString()})`
-    : v.toString();
-      }
+    : v.toString()
+}
