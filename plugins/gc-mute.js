@@ -1,11 +1,22 @@
 import fs from 'fs'
 
-const DB = './data/mutes.json'
-const getDB = () => JSON.parse(fs.readFileSync(DB))
-const saveDB = (db) => fs.writeFileSync(DB, JSON.stringify(db, null, 2))
+const DB = './database/mutes.json'
+
+function getDB () {
+  if (!fs.existsSync('./database')) fs.mkdirSync('./database')
+  if (!fs.existsSync(DB)) fs.writeFileSync(DB, JSON.stringify({}))
+  return JSON.parse(fs.readFileSync(DB))
+}
+
+function saveDB (db) {
+  fs.writeFileSync(DB, JSON.stringify(db, null, 2))
+}
 
 export const handler = async (m, {
-  sock, isGroup, sender, reply
+  sock,
+  isGroup,
+  sender,
+  reply
 }) => {
   if (!isGroup) return reply('🚫 Solo en grupos')
 
@@ -17,14 +28,14 @@ export const handler = async (m, {
     .map(p => p.id)
 
   if (!admins.includes(sender))
-    return reply('⛔ Solo admins')
+    return reply('⛔ Solo administradores')
 
   const user =
     m.message?.extendedTextMessage?.contextInfo?.participant ||
     m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0]
 
   if (!user)
-    return reply('⚠️ Responde o menciona a alguien')
+    return reply('⚠️ Responde a un mensaje o menciona a alguien')
 
   const db = getDB()
   if (!db[from]) db[from] = []
@@ -36,9 +47,9 @@ export const handler = async (m, {
 
   await sock.sendMessage(from, {
     text:
-`╭─〔 🔇 MUTEADO 〕
+`╭─〔 🔇 USUARIO MUTEADO 〕
 │ 👤 @${user.split('@')[0]}
-│ 👮 @${sender.split('@')[0]}
+│ 👮 Admin: @${sender.split('@')[0]}
 ╰─〔 🤖 JoshiBot 〕`,
     mentions: [user, sender]
   })
@@ -49,3 +60,4 @@ handler.tags = ['group']
 handler.group = true
 handler.admin = true
 handler.botAdmin = true
+handler.menu = true
