@@ -1,9 +1,6 @@
 export const handler = async (m, { sock, from, isGroup, reply }) => {
-  if (!isGroup) {
-    return reply('⚠️ Este comando solo funciona en grupos')
-  }
+  if (!isGroup) return reply('⚠️ Solo funciona en grupos')
 
-  // 🔐 Verificar admin
   const metadata = await sock.groupMetadata(from)
   const participants = metadata.participants
 
@@ -11,15 +8,13 @@ export const handler = async (m, { sock, from, isGroup, reply }) => {
   const isAdmin = participants.some(
     p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
   )
+  if (!isAdmin) return reply('❌ Solo admins')
 
-  if (!isAdmin) {
-    return reply('❌ Solo los administradores pueden usar este comando')
-  }
+  const cleanNumber = (jid = '') =>
+    jid.split('@')[0].split(':')[0]
 
-  // 🌍 Banderas por prefijo
   const getFlag = (jid) => {
-    const num = jid.split('@')[0]
-
+    const num = cleanNumber(jid)
     if (num.startsWith('52')) return '🇲🇽'
     if (num.startsWith('54')) return '🇦🇷'
     if (num.startsWith('55')) return '🇧🇷'
@@ -27,23 +22,13 @@ export const handler = async (m, { sock, from, isGroup, reply }) => {
     if (num.startsWith('51')) return '🇵🇪'
     if (num.startsWith('56')) return '🇨🇱'
     if (num.startsWith('58')) return '🇻🇪'
-    if (num.startsWith('593')) return '🇪🇨'
-    if (num.startsWith('591')) return '🇧🇴'
-    if (num.startsWith('502')) return '🇬🇹'
-    if (num.startsWith('503')) return '🇸🇻'
-    if (num.startsWith('504')) return '🇭🇳'
-    if (num.startsWith('505')) return '🇳🇮'
-    if (num.startsWith('506')) return '🇨🇷'
-    if (num.startsWith('507')) return '🇵🇦'
     if (num.startsWith('1')) return '🇺🇸'
     if (num.startsWith('34')) return '🇪🇸'
-
-    return '🌐'
+    return '🏳️‍🌈'
   }
 
-  // ⚡ Emojis futuristas
-  const deco = ['▣', '▢', '⬢', '⬡', '◆', '◇']
-  const randDeco = () => deco[Math.floor(Math.random() * deco.length)]
+  const deco = ['▣', '⬢', '◆', '◇']
+  const rand = () => deco[Math.floor(Math.random() * deco.length)]
 
   let text = `
 ╭─〔 🤖 MENCIÓN GLOBAL 〕
@@ -56,8 +41,9 @@ export const handler = async (m, { sock, from, isGroup, reply }) => {
   const mentions = []
 
   for (const p of participants) {
+    const num = cleanNumber(p.id)
     const flag = getFlag(p.id)
-    text += `${randDeco()} ${flag} @${p.id.split('@')[0]}\n`
+    text += `${rand()} ${flag} @${num}\n`
     mentions.push(p.id)
   }
 
@@ -66,14 +52,7 @@ export const handler = async (m, { sock, from, isGroup, reply }) => {
 ⚙️ Ejecutado por JoshiBot
 `.trim()
 
-  await sock.sendMessage(
-    from,
-    {
-      text,
-      mentions
-    },
-    { quoted: m }
-  )
+  await sock.sendMessage(from, { text, mentions }, { quoted: m })
 }
 
 handler.command = ['tagall', 'todos']
