@@ -7,7 +7,7 @@ export const handler = async (m, {
 }) => {
   // ❌ Solo grupos
   if (!isGroup)
-    return reply('🎄 Este comando solo funciona en grupos 🎅')
+    return reply('🚫 Este comando solo funciona en grupos')
 
   // 📌 Obtener metadata
   const metadata = await sock.groupMetadata(from)
@@ -18,9 +18,9 @@ export const handler = async (m, {
   // 🚫 Solo admins
   if (!admins.includes(sender)) {
     return reply(
-`╭─〔 🎄 ACCESO RESTRINGIDO 🎄 〕
-│ ❌ Solo administradores
-│ pueden usar este comando
+`╭─〔 ⛔ ACCESO RESTRINGIDO 〕
+│ Permisos insuficientes
+│ Solo administradores
 ╰─〔 🤖 JoshiBot 〕`
     )
   }
@@ -37,8 +37,8 @@ export const handler = async (m, {
   // ❌ Uso incorrecto
   if (!['abrir', 'cerrar'].includes(option)) {
     return reply(
-`╭─〔 🔒 CONFIGURACIÓN DEL GRUPO 🎄 〕
-│ ⚙️ Uso correcto:
+`╭─〔 ⚙️ CONFIGURACIÓN DEL GRUPO 〕
+│ Uso correcto:
 ├────────────────
 │ 🔓 grupo abrir
 │ 🔒 grupo cerrar
@@ -53,11 +53,11 @@ export const handler = async (m, {
 
       await sock.sendMessage(from, {
         text:
-`╭─〔 🔒 GRUPO CERRADO 🎄 〕
-│ ❄️ Solo administradores
-│ pueden enviar mensajes
+`╭─〔 🔒 GRUPO CERRADO 〕
+│ Modo administrador activo
+│ Solo admins pueden escribir
 ├────────────────
-│ 👮 Acción realizada por:
+│ 👮 Acción ejecutada por:
 │ @${sender.split('@')[0]}
 ╰─〔 🤖 JoshiBot 〕`,
         mentions: [sender]
@@ -74,23 +74,23 @@ export const handler = async (m, {
 
       await sock.sendMessage(from, {
         text:
-`╭─〔 🔓 GRUPO ABIERTO 🎄 〕
-│ 🎁 Todos pueden
-│ enviar mensajes
+`╭─〔 🔓 GRUPO ABIERTO 〕
+│ Modo libre activado
+│ Todos pueden escribir
 ├────────────────
-│ 👮 Acción realizada por:
+│ 👮 Acción ejecutada por:
 │ @${sender.split('@')[0]}
 ╰─〔 🤖 JoshiBot 〕`,
         mentions: [sender]
       })
 
       await sock.sendMessage(from, {
-        react: { text: '🎁', key: m.key }
+        react: { text: '🔓', key: m.key }
       })
     }
 
   } catch (e) {
-    reply('❌ No pude cambiar la configuración del grupo 🎄')
+    reply('❌ No se pudo modificar la configuración del grupo')
   }
 }
 
