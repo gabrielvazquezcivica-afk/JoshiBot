@@ -1,17 +1,35 @@
-import fs from 'fs'
+// ───── BASE EN MEMORIA ─────
+const ffMatches = {}
 
-const DB_FILE = './database/ff-4vs4.json'
-if (!fs.existsSync('./database')) fs.mkdirSync('./database')
-if (!fs.existsSync(DB_FILE)) fs.writeFileSync(DB_FILE, '{}')
-
-function getDB () {
-  return JSON.parse(fs.readFileSync(DB_FILE))
+// ───── HELPERS ─────
+function jid(u) {
+  return typeof u === 'string' ? u : u?.id
 }
 
-function saveDB (db) {
-  fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2))
+function num(j) {
+  return jid(j)?.replace(/[^0-9]/g, '')
 }
 
+function renderList(players) {
+  let txt = '╭─〔 🔥 FREE FIRE 4VS4 〕\n'
+  txt += '├────────────────\n'
+
+  for (let i = 0; i < 8; i++) {
+    if (players[i]) {
+      txt += `│ ${i + 1}. @${num(players[i])}\n`
+    } else {
+      txt += `│ ${i + 1}. ———\n`
+    }
+  }
+
+  txt += '├────────────────\n'
+  txt += '│ Para anotarte:\n'
+  txt += '│ .ff\n'
+  txt += '╰─〔 🤖 JoshiBot 〕'
+  return txt
+}
+
+// ───── COMANDO ─────
 export const handler = async (m, {
   sock,
   from,
@@ -19,156 +37,73 @@ export const handler = async (m, {
   isGroup,
   reply
 }) => {
-  if (!isGroup) {
-    return reply('🚫 Este comando solo funciona en grupos')
-  }
+  if (!isGroup) return reply('🚫 Solo funciona en grupos')
 
-  // 📌 metadata y admins
-  let metadata
-  try {
-    metadata = await sock.groupMetadata(from)
-  } catch {
-    return reply('❌ No pude obtener info del grupo')
-  }
-
+  // ── METADATA ──
+  const metadata = await sock.groupMetadata(from)
   const admins = metadata.participants
     .filter(p => p.admin)
     .map(p => p.id)
 
   const isAdmin = admins.includes(sender)
 
+  // ───── SUBCOMANDOS ─────
   const text =
     m.message?.conversation ||
     m.message?.extendedTextMessage?.text ||
     ''
 
-  const args = text.trim().split(/\s+/)
-  const sub = args[1]?.toLowerCase()
+  const args = text.split(' ')
+  const sub = args[1]
 
-  const db = getDB()
-  if (!db[from]) {
-    db[from] = {
-      active: false,
-      players: []
-    }
-  }
-
-  /* ───── INICIAR (ADMIN) ───── */
+  // ───── INICIAR (ADMIN) ─────
   if (sub === 'start') {
     if (!isAdmin) {
-      return reply('⛔ Solo administradores pueden iniciar la sala')
+      return reply('⛔ Solo administradores pueden iniciar el 4vs4')
     }
 
-    db[from] = { active: true, players: [] }
-    saveDB(db)
+    ffMatches[from] = []
 
-    return reply(
-`╭─〔 🔥 FREE FIRE 4vs4 〕
-│ 🟢 SALA ABIERTA
-├────────────────
-│ Usa:
-│ • .ff entrar
-│ • .ff lista
-╰─〔 🤖 JoshiBot 〕`
-    )
+    return sock.sendMessage(from, {
+      text: renderList(ffMatches[from]),
+      mentions: []
+    })
   }
 
-  /* ───── RESET (ADMIN) ───── */
+  // ───── REINICIAR (ADMIN) ─────
   if (sub === 'reset') {
     if (!isAdmin) {
-      return reply('⛔ Solo administradores pueden resetear')
+      return reply('⛔ Solo administradores pueden reiniciar')
     }
 
-    db[from] = { active: false, players: [] }
-    saveDB(db)
-
-    return reply(
-`╭─〔 🔥 FREE FIRE 4vs4 〕
-│ 🔴 SALA REINICIADA
-╰─〔 🤖 JoshiBot 〕`
-    )
+    delete ffMatches[from]
+    return reply('♻️ Lista 4vs4 reiniciada')
   }
 
-  /* ───── ENTRAR ───── */
-  if (sub === 'entrar') {
-    if (!db[from].active) {
-      return reply('⚠️ No hay sala activa\nUsa: .ff start')
-    }
-
-    if (db[from].players.includes(sender)) {
-      return reply('⚠️ Ya estás anotado')
-    }
-
-    if (db[from].players.length >= 8) {
-      return reply('❌ La sala ya está llena (8/8)')
-    }
-
-    db[from].players.push(sender)
-    saveDB(db)
-
-    return sock.sendMessage(
-      from,
-      {
-        text:
-`╭─〔 🎮 FF 4vs4 〕
-│ ✅ Jugador añadido
-│ 👤 @${sender.split('@')[0]}
-│ 📊 Cupos: ${db[from].players.length}/8
-╰─〔 🤖 JoshiBot 〕`,
-        mentions: [sender]
-      },
-      { quoted: m }
-    )
+  // ───── ANOTARSE ─────
+  if (!ffMatches[from]) {
+    return reply('⚠️ No hay ningún 4vs4 activo\nUsa: .ff start')
   }
 
-  /* ───── LISTA ───── */
-  if (sub === 'lista') {
-    if (!db[from].active) {
-      return reply('⚠️ No hay sala activa')
-    }
+  const list = ffMatches[from]
 
-    if (db[from].players.length === 0) {
-      return reply('📭 Aún no hay jugadores anotados')
-    }
-
-    const teamA = db[from].players.slice(0, 4)
-    const teamB = db[from].players.slice(4, 8)
-
-    const textList =
-`╭─〔 🔥 FREE FIRE 4vs4 〕
-│
-│ 🅰️ EQUIPO A
-${teamA.map((u, i) => `│ ${i + 1}. @${u.split('@')[0]}`).join('\n')}
-│
-│ 🅱️ EQUIPO B
-${teamB.map((u, i) => `│ ${i + 1}. @${u.split('@')[0]}`).join('\n')}
-│
-│ 📊 Total: ${db[from].players.length}/8
-╰─〔 🤖 JoshiBot 〕`
-
-    return sock.sendMessage(
-      from,
-      {
-        text: textList,
-        mentions: db[from].players
-      },
-      { quoted: m }
-    )
+  if (list.includes(sender)) {
+    return // silencio total
   }
 
-  /* ───── AYUDA ───── */
-  reply(
-`╭─〔 🎮 FF 4vs4 〕
-│ Comandos:
-│ • .ff start  (admin)
-│ • .ff reset  (admin)
-│ • .ff entrar
-│ • .ff lista
-╰─〔 🤖 JoshiBot 〕`
-  )
+  if (list.length >= 8) {
+    return reply('🚫 La sala ya está llena (4vs4)')
+  }
+
+  list.push(sender)
+
+  await sock.sendMessage(from, {
+    text: renderList(list),
+    mentions: list
+  })
 }
 
-handler.command = ['ff', 'freefire']
-handler.tags = ['games']
+handler.command = ['ff4vs4']
+handler.tags = ['ff']
 handler.group = true
 handler.menu = true
