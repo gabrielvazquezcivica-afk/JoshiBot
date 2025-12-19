@@ -1,62 +1,56 @@
 export const handler = async (m, { sock, from, isGroup, args, reply }) => {
-  if (!isGroup) {
-    return reply('🚫 Este comando solo funciona en grupos')
-  }
+  if (!isGroup) return reply('🚫 Solo funciona en grupos')
 
   if (!args.length) {
-    return reply(
-      '❌ Uso correcto:\n.top <cantidad> <texto>\n\nEjemplo:\n.top 5 mejores jugadores'
-    )
+    return reply('❌ Uso:\n.top <texto>\nEjemplo:\n.top gay')
   }
 
-  let cantidad = parseInt(args[0])
-  if (isNaN(cantidad) || cantidad < 1) cantidad = 10
-  if (cantidad > 10) cantidad = 10
+  const texto = args.join(' ').toLowerCase()
 
-  const texto = args.slice(1).join(' ')
-  if (!texto) {
-    return reply('❌ Escribe un texto para el top')
+  // 🧠 Emojis según palabra
+  const emojiMap = [
+    { keys: ['gay', 'gei', 'lgbt'], emojis: ['🏳️‍🌈', '💅', '✨', '😌'] },
+    { keys: ['feo', 'feos', 'horrible'], emojis: ['🤡', '💀', '👹'] },
+    { keys: ['toxico', 'tóxico'], emojis: ['☠️', '🧪', '😡'] },
+    { keys: ['pro', 'god', 'tryhard'], emojis: ['🔥', '👑', '🐐'] },
+    { keys: ['noob', 'malo'], emojis: ['🥴', '🐢', '🤕'] },
+    { keys: ['bot', 'npc'], emojis: ['🤖', '🧠❌', '📦'] },
+    { keys: ['caliente', 'hot'], emojis: ['🥵', '🔥', '🍑'] },
+    { keys: ['raro', 'extraño'], emojis: ['👽', '🫣', '🌀'] }
+  ]
+
+  const defaultEmojis = ['😂', '🔥', '💀', '😈', '👑', '🤡', '⚡', '🍀']
+
+  function getEmoji () {
+    for (const item of emojiMap) {
+      if (item.keys.some(k => texto.includes(k))) {
+        return item.emojis[Math.floor(Math.random() * item.emojis.length)]
+      }
+    }
+    return defaultEmojis[Math.floor(Math.random() * defaultEmojis.length)]
   }
 
-  // 📥 Metadata del grupo
+  // 📥 Metadata
   const metadata = await sock.groupMetadata(from)
   const members = metadata.participants
     .map(p => p.id)
     .filter(jid => jid !== m.key.participant)
 
-  if (!members.length) {
-    return reply('❌ No hay usuarios para mencionar')
-  }
+  if (!members.length) return reply('❌ No hay usuarios')
 
-  // 🔀 Mezclar y tomar X usuarios
-  const shuffled = members.sort(() => 0.5 - Math.random())
-  const selected = shuffled.slice(0, cantidad)
+  // 🔀 Aleatorio
+  const shuffled = members.sort(() => Math.random() - 0.5)
+  const top = shuffled.slice(0, Math.min(10, shuffled.length))
 
-  // 🎭 Emojis según texto
-  const getEmoji = (text) => {
-    text = text.toLowerCase()
-    if (text.includes('jugador') || text.includes('pro')) return '🎮🔥'
-    if (text.includes('clan')) return '👑'
-    if (text.includes('noob') || text.includes('malos')) return '😂'
-    if (text.includes('guapos')) return '😍'
-    if (text.includes('feos')) return '🤢'
-    if (text.includes('toxicos')) return '☠️'
-    if (text.includes('admins')) return '🛡️'
-    if (text.includes('ricos')) return '💸'
-    return '⭐'
-  }
+  let msg = `🏆 *TOP 10 ${texto.toUpperCase()}*\n\n`
 
-  const emoji = getEmoji(texto)
-
-  let msg = `🏆 *TOP ${selected.length} ${texto.toUpperCase()}*\n\n`
-
-  selected.forEach((jid, i) => {
-    msg += `${i + 1}. ${emoji} @${jid.split('@')[0]}\n`
+  top.forEach((jid, i) => {
+    msg += `${i + 1}. ${getEmoji()} @${jid.split('@')[0]}\n`
   })
 
   await sock.sendMessage(from, {
     text: msg.trim(),
-    mentions: selected
+    mentions: top
   })
 }
 
