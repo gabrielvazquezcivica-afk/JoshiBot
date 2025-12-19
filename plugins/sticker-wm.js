@@ -3,13 +3,12 @@ import path from 'path'
 import os from 'os'
 import webp from 'node-webpmux'
 
-export const handler = async (m, { sock, text }) => {
+export const handler = async (m, { sock, from, text }) => {
 
-  const conn = sock
   const q = m.quoted
-
-  // ❌ Validación
-  if (!q) return conn.sendMessage(m.chat, { text: '❌ Responde a un *sticker*' }, { quoted: m })
+  if (!q) {
+    return sock.sendMessage(from, { text: '❌ Responde a un *sticker*' }, { quoted: m })
+  }
 
   const isSticker =
     q.mtype === 'stickerMessage' ||
@@ -17,24 +16,26 @@ export const handler = async (m, { sock, text }) => {
     q.message?.stickerMessage
 
   if (!isSticker) {
-    return conn.sendMessage(m.chat, { text: '❌ Eso no es un sticker' }, { quoted: m })
+    return sock.sendMessage(from, { text: '❌ Eso no es un sticker' }, { quoted: m })
   }
 
-  // 📝 Pack y autor
+  // 📝 Pack / Autor
   let pack = 'JoshiBot'
   let author = 'WM'
 
   if (text) {
-    let [p, a] = text.split('|')
+    const [p, a] = text.split('|')
     if (p?.trim()) pack = p.trim()
     if (a?.trim()) author = a.trim()
   }
 
   await m.react('🛠️')
 
-  // 📥 Descargar
+  // 📥 Descargar sticker
   const media = await q.download()
-  if (!media) return conn.sendMessage(m.chat, { text: '❌ No pude descargar el sticker' }, { quoted: m })
+  if (!media) {
+    return sock.sendMessage(from, { text: '❌ No pude descargar el sticker' }, { quoted: m })
+  }
 
   // 📂 Temporales
   const tmp = os.tmpdir()
@@ -42,19 +43,19 @@ export const handler = async (m, { sock, text }) => {
   const output = path.join(tmp, `wm_out_${Date.now()}.webp`)
   fs.writeFileSync(input, media)
 
-  // 🧷 WebP
+  // 🧷 Cargar WebP
   const img = new webp.Image()
   await img.load(input)
 
   // 🧾 EXIF
-  const exifData = {
+  const json = {
     'sticker-pack-id': 'joshibot-wm',
     'sticker-pack-name': pack,
     'sticker-pack-publisher': author,
     emojis: []
   }
 
-  const exif = Buffer.from(JSON.stringify(exifData), 'utf-8')
+  const exif = Buffer.from(JSON.stringify(json), 'utf-8')
   const exifAttr = Buffer.concat([
     Buffer.from([
       0x49,0x49,0x2A,0x00,
@@ -75,9 +76,9 @@ export const handler = async (m, { sock, text }) => {
   img.exif = exifAttr
   await img.save(output)
 
-  // 📤 Enviar sticker
-  await conn.sendMessage(
-    m.chat,
+  // 📤 ENVIAR (AQUÍ ESTABA EL ERROR)
+  await sock.sendMessage(
+    from,
     { sticker: fs.readFileSync(output) },
     { quoted: m }
   )
@@ -89,7 +90,7 @@ export const handler = async (m, { sock, text }) => {
   fs.unlinkSync(output)
 }
 
-// 🔹 PARA QUE SALGA EN EL MENÚ
-handler.help = ['wm']
+// 🔹 PARA MENÚ
+handler.help = ['wm <pack>|<autor>']
 handler.tags = ['sticker']
 handler.command = ['wm']
