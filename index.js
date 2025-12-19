@@ -1,4 +1,3 @@
-
 import util from 'util'
 import { connectBot } from './lib/connection.js'
 import chalk from 'chalk'
@@ -121,11 +120,6 @@ async function start () {
 
   const sock = await connectBot()
 
-  /* ✅ FIX REAL: cuando Baileys reconecta */
-  process.on('sock-reconnect', () => {
-    console.log(chalk.yellow('\n🔄 Socket reconectado — listeners activos\n'))
-  })
-
   // 🔔 AUTO-DETECT
   initAutoDetect(sock)
 
@@ -232,11 +226,6 @@ async function start () {
   })
 
   console.log(chalk.greenBright('🤖 JoshiBot listo y operativo\n'))
-
-  // 🟢 Mantener stdout vivo (NO afecta rendimiento)
-  setInterval(() => {
-    process.stdout.write('')
-  }, 1000)
 }
 
 start()
