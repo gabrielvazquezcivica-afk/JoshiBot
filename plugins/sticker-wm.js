@@ -74,5 +74,6 @@ let handler = async (m, { conn, text }) => {
 handler.help = ['wm <pack>|<autor>']
 handler.tags = ['sticker']
 handler.command = ['wm', 'stickerwm']
-
+handler.group = true
+handler.menu = true 
 export default handler
