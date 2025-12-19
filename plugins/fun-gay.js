@@ -76,5 +76,5 @@ export const handler = async (m, { sock, from, isGroup, sender, reply }) => {
 
 handler.command = ['gay']
 handler.group = true
-handler.tags = ['fun', 'toxic']
+handler.tags = ['juegos']
 handler.menu = true
