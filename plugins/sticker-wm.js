@@ -1,32 +1,31 @@
 import { downloadContentFromMessage } from '@whiskeysockets/baileys'
 
-export const handler = async (m, { sock, from }) => {
+let handler = async (m, { conn, args, usedPrefix, command }) => {
 
-  // 📌 Obtener texto REAL después del comando
-  const body = m.text || ''
-  const texto = body.replace(/^\.wm\s*/i, '').trim()
+  // 🧠 TEXTO REAL (usar args, no text)
+  let texto = args.join(' ').trim()
 
   if (!texto) {
-    return sock.sendMessage(
-      from,
-      { text: '❌ Escribe texto después de `.wm`' },
+    return conn.sendMessage(
+      m.chat,
+      { text: `❌ Usa:\n${usedPrefix + command} texto` },
       { quoted: m }
     )
   }
 
-  // 🔎 Verificar respuesta a sticker
-  const ctx = m.message?.extendedTextMessage?.contextInfo
-  if (!ctx?.quotedMessage?.stickerMessage) {
-    return sock.sendMessage(
-      from,
+  // 🔎 Verificar que responda a sticker
+  let q = m.quoted
+  if (!q || !q.message?.stickerMessage) {
+    return conn.sendMessage(
+      m.chat,
       { text: '❌ Responde a un *sticker*' },
       { quoted: m }
     )
   }
 
-  // 📥 Descargar sticker
-  const stream = await downloadContentFromMessage(
-    ctx.quotedMessage.stickerMessage,
+  // 📥 Descargar sticker (FORMA CORRECTA)
+  let stream = await downloadContentFromMessage(
+    q.message.stickerMessage,
     'sticker'
   )
 
@@ -36,15 +35,15 @@ export const handler = async (m, { sock, from }) => {
   }
 
   // 🖼️ Reenviar sticker
-  await sock.sendMessage(
-    from,
+  await conn.sendMessage(
+    m.chat,
     { sticker: buffer },
     { quoted: m }
   )
 
-  // 📝 Mandar SOLO el texto
-  await sock.sendMessage(
-    from,
+  // 📝 Mandar SOLO el texto escrito
+  await conn.sendMessage(
+    m.chat,
     { text: texto },
     { quoted: m }
   )
@@ -52,4 +51,6 @@ export const handler = async (m, { sock, from }) => {
 
 handler.help = ['wm <texto>']
 handler.tags = ['stickers']
-handler.command = ['wm']
+handler.command = /^wm$/i
+
+export default handler
