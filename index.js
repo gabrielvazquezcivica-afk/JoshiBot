@@ -145,7 +145,7 @@ async function start () {
     const pushName = m.pushName || 'Sin nombre'
     const text = getText(m)
 
-    // 🔇 WATCHER DE MUTE (NO PLUGIN)
+    // 🔇 WATCHER DE MUTE
     try {
       if (isGroup) {
         const db = getMutes()
@@ -174,11 +174,22 @@ async function start () {
     const args = text.slice(PREFIX.length).trim().split(/\s+/)
     const command = args.shift().toLowerCase()
 
-    // 🧾 LOG LIMPIO
+    // 🏷️ NOMBRE DEL CHAT (SIN ID)
+    let chatName = 'Privado'
+    if (isGroup) {
+      try {
+        const meta = await sock.groupMetadata(from)
+        chatName = meta.subject
+      } catch {}
+    }
+
+    // 🧾 LOG CON GRUPO
     console.log(
       chalk.magentaBright('\n══════════ 📩 COMANDO ══════════'),
       '\n',
       chalk.green('👤 Usuario:'), pushName,
+      '\n',
+      chalk.blue('🏷 Grupo:'), chalk.white(chatName),
       '\n',
       chalk.cyan('💬 Texto:'), text,
       '\n',
