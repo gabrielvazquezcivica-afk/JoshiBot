@@ -1,4 +1,4 @@
-// ───── FF 4VS4 INTERNO ─────
+// ───── FF INTERNA 4VS4 ─────
 const games = {}
 
 function normalizeJid (u) {
@@ -26,10 +26,10 @@ export const handler = async (m, { sock, from, isGroup, sender, reply }) => {
 
   const cmd = text.split(' ')[0].toLowerCase()
 
-  // ───── CREAR LISTA (ADMIN) ─────
-  if (cmd === '.ff4vs4') {
+  // ───── INICIAR SALA (ADMIN) ─────
+  if (cmd === '.ffinterna4vs4') {
     if (!(await isAdmin(sock, from, sender))) {
-      return reply('⛔ Solo admins pueden crear la lista')
+      return reply('⛔ Solo admins pueden iniciar la sala')
     }
 
     games[from] = {
@@ -44,7 +44,7 @@ export const handler = async (m, { sock, from, isGroup, sender, reply }) => {
   // ───── UNIRSE EQUIPO A ─────
   if (cmd === '.ffa') {
     const game = games[from]
-    if (!game || !game.open) return reply('❌ No hay lista activa')
+    if (!game || !game.open) return reply('❌ No hay sala activa')
 
     if (game.teamA.includes(sender) || game.teamB.includes(sender)) {
       return reply('⚠️ Ya estás anotado')
@@ -61,7 +61,7 @@ export const handler = async (m, { sock, from, isGroup, sender, reply }) => {
   // ───── UNIRSE EQUIPO B ─────
   if (cmd === '.ffb') {
     const game = games[from]
-    if (!game || !game.open) return reply('❌ No hay lista activa')
+    if (!game || !game.open) return reply('❌ No hay sala activa')
 
     if (game.teamA.includes(sender) || game.teamB.includes(sender)) {
       return reply('⚠️ Ya estás anotado')
@@ -78,7 +78,7 @@ export const handler = async (m, { sock, from, isGroup, sender, reply }) => {
   // ───── SALIR ─────
   if (cmd === '.ffleave') {
     const game = games[from]
-    if (!game) return reply('❌ No hay lista')
+    if (!game) return reply('❌ No hay sala')
 
     game.teamA = game.teamA.filter(u => u !== sender)
     game.teamB = game.teamB.filter(u => u !== sender)
@@ -86,14 +86,14 @@ export const handler = async (m, { sock, from, isGroup, sender, reply }) => {
     return sendList(sock, from)
   }
 
-  // ───── RESET (ADMIN) ─────
+  // ───── BORRAR SALA (ADMIN) ─────
   if (cmd === '.ffreset') {
     if (!(await isAdmin(sock, from, sender))) {
-      return reply('⛔ Solo admins pueden borrar la lista')
+      return reply('⛔ Solo admins pueden borrar la sala')
     }
 
     delete games[from]
-    return reply('♻️ Lista FF 4VS4 eliminada')
+    return reply('♻️ Sala interna 4VS4 eliminada')
   }
 }
 
@@ -103,7 +103,7 @@ async function sendList (sock, from) {
 
   await sock.sendMessage(from, {
     text:
-`╭─〔 🎮 FREE FIRE 4VS4 〕
+`╭─〔 🎮 FF INTERNA 4VS4 〕
 │
 │ 🟥 Equipo A (${game.teamA.length}/4)
 │ ${game.teamA.map(tag).join('\n│ ') || '—'}
