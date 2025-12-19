@@ -5,18 +5,27 @@ import webp from 'node-webpmux'
 
 export const handler = async (m, { sock, from, text }) => {
 
-  const q = m.quoted
-  if (!q) {
+  // 🧠 CONTEXT INFO (FORMA CORRECTA EN TU BOT)
+  const ctx = m.message?.extendedTextMessage?.contextInfo
+  if (!ctx?.quotedMessage) {
     return sock.sendMessage(from, { text: '❌ Responde a un *sticker*' }, { quoted: m })
   }
 
-  const isSticker =
-    q.mtype === 'stickerMessage' ||
-    q.mimetype === 'image/webp' ||
-    q.message?.stickerMessage
+  const quotedMsg = ctx.quotedMessage
+  const isSticker = !!quotedMsg.stickerMessage
 
   if (!isSticker) {
     return sock.sendMessage(from, { text: '❌ Eso no es un sticker' }, { quoted: m })
+  }
+
+  // 🆔 Mensaje citado
+  const q = {
+    key: {
+      remoteJid: from,
+      id: ctx.stanzaId,
+      participant: ctx.participant
+    },
+    message: quotedMsg
   }
 
   // 📝 Pack / Autor
@@ -32,7 +41,7 @@ export const handler = async (m, { sock, from, text }) => {
   await m.react('🛠️')
 
   // 📥 Descargar sticker
-  const media = await q.download()
+  const media = await sock.downloadMediaMessage(q)
   if (!media) {
     return sock.sendMessage(from, { text: '❌ No pude descargar el sticker' }, { quoted: m })
   }
@@ -43,7 +52,7 @@ export const handler = async (m, { sock, from, text }) => {
   const output = path.join(tmp, `wm_out_${Date.now()}.webp`)
   fs.writeFileSync(input, media)
 
-  // 🧷 Cargar WebP
+  // 🧷 WebP
   const img = new webp.Image()
   await img.load(input)
 
@@ -76,7 +85,7 @@ export const handler = async (m, { sock, from, text }) => {
   img.exif = exifAttr
   await img.save(output)
 
-  // 📤 ENVIAR (AQUÍ ESTABA EL ERROR)
+  // 📤 ENVIAR
   await sock.sendMessage(
     from,
     { sticker: fs.readFileSync(output) },
@@ -90,7 +99,6 @@ export const handler = async (m, { sock, from, text }) => {
   fs.unlinkSync(output)
 }
 
-// 🔹 PARA MENÚ
 handler.help = ['wm <pack>|<autor>']
 handler.tags = ['sticker']
 handler.command = ['wm']
