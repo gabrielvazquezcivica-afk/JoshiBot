@@ -1,29 +1,30 @@
 import { downloadContentFromMessage } from '@whiskeysockets/baileys'
-import fs from 'fs'
-import path from 'path'
-import os from 'os'
 
-export const handler = async (m, { sock, from, text }) => {
+export const handler = async (m, { sock, from }) => {
 
-  // 🔎 Verificar que responda a sticker
+  // 📌 Obtener texto REAL después del comando
+  const body = m.text || ''
+  const texto = body.replace(/^\.wm\s*/i, '').trim()
+
+  if (!texto) {
+    return sock.sendMessage(
+      from,
+      { text: '❌ Escribe texto después de `.wm`' },
+      { quoted: m }
+    )
+  }
+
+  // 🔎 Verificar respuesta a sticker
   const ctx = m.message?.extendedTextMessage?.contextInfo
   if (!ctx?.quotedMessage?.stickerMessage) {
     return sock.sendMessage(
       from,
-      { text: '❌ Responde a un *sticker* y escribe el texto' },
+      { text: '❌ Responde a un *sticker*' },
       { quoted: m }
     )
   }
 
-  if (!text) {
-    return sock.sendMessage(
-      from,
-      { text: '❌ Escribe el texto junto con `.wm`' },
-      { quoted: m }
-    )
-  }
-
-  // 📥 Descargar sticker correctamente
+  // 📥 Descargar sticker
   const stream = await downloadContentFromMessage(
     ctx.quotedMessage.stickerMessage,
     'sticker'
@@ -34,17 +35,17 @@ export const handler = async (m, { sock, from, text }) => {
     buffer = Buffer.concat([buffer, chunk])
   }
 
-  // 📤 Enviar sticker
+  // 🖼️ Reenviar sticker
   await sock.sendMessage(
     from,
     { sticker: buffer },
     { quoted: m }
   )
 
-  // 📝 Enviar texto EXACTO
+  // 📝 Mandar SOLO el texto
   await sock.sendMessage(
     from,
-    { text: text },
+    { text: texto },
     { quoted: m }
   )
 }
