@@ -1,109 +1,164 @@
-// ───── BASE EN MEMORIA ─────
-const ffMatches = {}
+// ───── FF 4VS4 ─────
+const games = {}
 
-// ───── HELPERS ─────
-function jid(u) {
+function normalizeJid (u) {
   return typeof u === 'string' ? u : u?.id
 }
 
-function num(j) {
-  return jid(j)?.replace(/[^0-9]/g, '')
+function tag (jid) {
+  return '@' + normalizeJid(jid).split('@')[0]
 }
 
-function renderList(players) {
-  let txt = '╭─〔 🔥 FREE FIRE 4VS4 〕\n'
-  txt += '├────────────────\n'
-
-  for (let i = 0; i < 8; i++) {
-    if (players[i]) {
-      txt += `│ ${i + 1}. @${num(players[i])}\n`
-    } else {
-      txt += `│ ${i + 1}. ———\n`
-    }
-  }
-
-  txt += '├────────────────\n'
-  txt += '│ Para anotarte:\n'
-  txt += '│ .ff\n'
-  txt += '╰─〔 🤖 JoshiBot 〕'
-  return txt
+async function isAdmin (sock, from, sender) {
+  const metadata = await sock.groupMetadata(from)
+  return metadata.participants.some(
+    p => p.admin && p.id === sender
+  )
 }
 
-// ───── COMANDO ─────
-export const handler = async (m, {
-  sock,
-  from,
-  sender,
-  isGroup,
-  reply
-}) => {
+export const handler = async (m, { sock, from, isGroup, sender, reply }) => {
   if (!isGroup) return reply('🚫 Solo funciona en grupos')
 
-  // ── METADATA ──
-  const metadata = await sock.groupMetadata(from)
-  const admins = metadata.participants
-    .filter(p => p.admin)
-    .map(p => p.id)
-
-  const isAdmin = admins.includes(sender)
-
-  // ───── SUBCOMANDOS ─────
   const text =
     m.message?.conversation ||
     m.message?.extendedTextMessage?.text ||
     ''
 
-  const args = text.split(' ')
-  const sub = args[1]
+  const cmd = text.split(' ')[0].toLowerCase()
 
-  // ───── INICIAR (ADMIN) ─────
-  if (sub === 'start') {
-    if (!isAdmin) {
-      return reply('⛔ Solo administradores pueden iniciar el 4vs4')
+  // ───── CREAR LISTA (ADMIN) ─────
+  if (cmd === '.ff4vs4') {
+    if (!(await isAdmin(sock, from, sender))) {
+      return reply('⛔ Solo admins pueden crear la lista')
     }
 
-    ffMatches[from] = []
+    games[from] = {
+      teamA: [],
+      teamB: [],
+      open: true
+    }
 
     return sock.sendMessage(from, {
-      text: renderList(ffMatches[from]),
-      mentions: []
+      text:
+`╭─〔 🎮 FREE FIRE 4VS4 〕
+│
+│ 🟥 Equipo A: 0/4
+│ 🟦 Equipo B: 0/4
+│
+│ ✍️ Para anotarte:
+│ • .ffjoin
+│
+│ ❌ Salir:
+│ • .ffleave
+│
+│ ▶️ Iniciar (admin):
+│ • .ffstart
+╰────────────────────`,
     })
   }
 
-  // ───── REINICIAR (ADMIN) ─────
-  if (sub === 'reset') {
-    if (!isAdmin) {
-      return reply('⛔ Solo administradores pueden reiniciar')
+  // ───── UNIRSE ─────
+  if (cmd === '.ffjoin') {
+    const game = games[from]
+    if (!game || !game.open) return reply('❌ No hay partida activa')
+
+    if (game.teamA.includes(sender) || game.teamB.includes(sender)) {
+      return reply('⚠️ Ya estás anotado')
     }
 
-    delete ffMatches[from]
-    return reply('♻️ Lista 4vs4 reiniciada')
+    if (game.teamA.length < 4) {
+      game.teamA.push(sender)
+    } else if (game.teamB.length < 4) {
+      game.teamB.push(sender)
+    } else {
+      return reply('❌ Equipos llenos')
+    }
+
+    return sendList(sock, from)
   }
 
-  // ───── ANOTARSE ─────
-  if (!ffMatches[from]) {
-    return reply('⚠️ No hay ningún 4vs4 activo\nUsa: .ff start')
+  // ───── SALIR ─────
+  if (cmd === '.ffleave') {
+    const game = games[from]
+    if (!game) return reply('❌ No hay partida')
+
+    game.teamA = game.teamA.filter(u => u !== sender)
+    game.teamB = game.teamB.filter(u => u !== sender)
+
+    return sendList(sock, from)
   }
 
-  const list = ffMatches[from]
+  // ───── INICIAR (ADMIN) ─────
+  if (cmd === '.ffstart') {
+    if (!(await isAdmin(sock, from, sender))) {
+      return reply('⛔ Solo admins pueden iniciar la partida')
+    }
 
-  if (list.includes(sender)) {
-    return // silencio total
+    const game = games[from]
+    if (!game) return reply('❌ No hay partida')
+
+    if (game.teamA.length < 4 || game.teamB.length < 4) {
+      return reply('⚠️ Faltan jugadores')
+    }
+
+    game.open = false
+
+    return sock.sendMessage(from, {
+      text:
+`╭─〔 🔥 PARTIDA INICIADA 〕
+│
+│ 🟥 Equipo A:
+│ ${game.teamA.map(tag).join('\n│ ')}
+│
+│ 🟦 Equipo B:
+│ ${game.teamB.map(tag).join('\n│ ')}
+│
+│ 💥 ¡Buena suerte!
+╰────────────────────`,
+      mentions: [...game.teamA, ...game.teamB]
+    })
   }
 
-  if (list.length >= 8) {
-    return reply('🚫 La sala ya está llena (4vs4)')
-  }
+  // ───── RESET (ADMIN) ─────
+  if (cmd === '.ffreset') {
+    if (!(await isAdmin(sock, from, sender))) {
+      return reply('⛔ Solo admins pueden cerrar la lista')
+    }
 
-  list.push(sender)
+    delete games[from]
+    return reply('♻️ Lista FF eliminada')
+  }
+}
+
+// ───── MOSTRAR LISTA ─────
+async function sendList (sock, from) {
+  const game = games[from]
 
   await sock.sendMessage(from, {
-    text: renderList(list),
-    mentions: list
+    text:
+`╭─〔 🎮 FF 4VS4 LISTA 〕
+│
+│ 🟥 Equipo A (${game.teamA.length}/4):
+│ ${game.teamA.map(tag).join('\n│ ') || '—'}
+│
+│ 🟦 Equipo B (${game.teamB.length}/4):
+│ ${game.teamB.map(tag).join('\n│ ') || '—'}
+│
+│ ✍️ .ffjoin  |  ❌ .ffleave
+╰────────────────────`,
+    mentions: [...game.teamA, ...game.teamB]
   })
 }
 
-handler.command = ['ff4vs4']
-handler.tags = ['ff']
+handler.command = [
+  'ff4vs4',
+  'ffjoin',
+  'ffleave',
+  'ffstart',
+  'ffreset'
+]
+
+handler.tags = ['game']
 handler.group = true
 handler.menu = true
+handler.admin = false
