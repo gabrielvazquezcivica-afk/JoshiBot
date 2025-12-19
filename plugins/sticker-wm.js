@@ -1,56 +1,54 @@
 import { downloadContentFromMessage } from '@whiskeysockets/baileys'
 
-let handler = async (m, { conn, args, usedPrefix, command }) => {
+export const handler = async (m, { sock, args, command, reply }) => {
 
-  // 🧠 TEXTO REAL (usar args, no text)
-  let texto = args.join(' ').trim()
+  // 📝 TEXTO ESCRITO DESPUÉS DE .wm
+  const texto = args.join(' ').trim()
 
+  // ❌ Si no escribió texto
   if (!texto) {
-    return conn.sendMessage(
-      m.chat,
-      { text: `❌ Usa:\n${usedPrefix + command} texto` },
-      { quoted: m }
-    )
+    return reply(`❌ Uso correcto:\n.wm <texto>`)
   }
 
-  // 🔎 Verificar que responda a sticker
-  let q = m.quoted
+  // 🔎 Debe responder a un sticker
+  const q = m.quoted
   if (!q || !q.message?.stickerMessage) {
-    return conn.sendMessage(
-      m.chat,
-      { text: '❌ Responde a un *sticker*' },
+    return reply('❌ Responde a un *sticker*')
+  }
+
+  try {
+    // 📥 Descargar sticker (FORMA CORRECTA BAILEYS)
+    const stream = await downloadContentFromMessage(
+      q.message.stickerMessage,
+      'sticker'
+    )
+
+    let buffer = Buffer.from([])
+    for await (const chunk of stream) {
+      buffer = Buffer.concat([buffer, chunk])
+    }
+
+    // 📤 Reenviar sticker
+    await sock.sendMessage(
+      m.key.remoteJid,
+      { sticker: buffer },
       { quoted: m }
     )
+
+    // 📝 Mandar SOLO el texto escrito con .wm
+    await sock.sendMessage(
+      m.key.remoteJid,
+      { text: texto },
+      { quoted: m }
+    )
+
+  } catch (e) {
+    console.error(e)
+    reply('❌ Error procesando el sticker')
   }
-
-  // 📥 Descargar sticker (FORMA CORRECTA)
-  let stream = await downloadContentFromMessage(
-    q.message.stickerMessage,
-    'sticker'
-  )
-
-  let buffer = Buffer.from([])
-  for await (const chunk of stream) {
-    buffer = Buffer.concat([buffer, chunk])
-  }
-
-  // 🖼️ Reenviar sticker
-  await conn.sendMessage(
-    m.chat,
-    { sticker: buffer },
-    { quoted: m }
-  )
-
-  // 📝 Mandar SOLO el texto escrito
-  await conn.sendMessage(
-    m.chat,
-    { text: texto },
-    { quoted: m }
-  )
 }
 
-handler.help = ['wm <texto>']
+handler.command = ['wm']
 handler.tags = ['stickers']
-handler.command = /^wm$/i
-
-export default handler
+handler.menu = true
+handler.group = false
