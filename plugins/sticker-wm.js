@@ -3,19 +3,21 @@ import path from 'path'
 import os from 'os'
 import webp from 'node-webpmux'
 
-let handler = async (m, { conn, text }) => {
+export const handler = async (m, { sock, text }) => {
 
-  // 📌 Debe responder a un sticker
-  let q = m.quoted
-  if (!q) return conn.reply(m.chat, '❌ Responde a un *sticker*', m)
+  const conn = sock
+  const q = m.quoted
 
-  let isSticker =
+  // ❌ Validación
+  if (!q) return conn.sendMessage(m.chat, { text: '❌ Responde a un *sticker*' }, { quoted: m })
+
+  const isSticker =
     q.mtype === 'stickerMessage' ||
     q.mimetype === 'image/webp' ||
     q.message?.stickerMessage
 
   if (!isSticker) {
-    return conn.reply(m.chat, '❌ El mensaje no es un sticker', m)
+    return conn.sendMessage(m.chat, { text: '❌ Eso no es un sticker' }, { quoted: m })
   }
 
   // 📝 Pack y autor
@@ -30,30 +32,30 @@ let handler = async (m, { conn, text }) => {
 
   await m.react('🛠️')
 
-  // 📥 Descargar sticker
-  let media = await q.download()
-  if (!media) return conn.reply(m.chat, '❌ No pude descargar el sticker', m)
+  // 📥 Descargar
+  const media = await q.download()
+  if (!media) return conn.sendMessage(m.chat, { text: '❌ No pude descargar el sticker' }, { quoted: m })
 
-  // 📂 Archivos temporales
-  let tmp = os.tmpdir()
-  let input = path.join(tmp, `wm_${Date.now()}.webp`)
-  let output = path.join(tmp, `wm_out_${Date.now()}.webp`)
+  // 📂 Temporales
+  const tmp = os.tmpdir()
+  const input = path.join(tmp, `wm_${Date.now()}.webp`)
+  const output = path.join(tmp, `wm_out_${Date.now()}.webp`)
   fs.writeFileSync(input, media)
 
-  // 🧷 Cargar imagen
-  let img = new webp.Image()
+  // 🧷 WebP
+  const img = new webp.Image()
   await img.load(input)
 
-  // 🧾 EXIF correcto
-  let exifData = {
+  // 🧾 EXIF
+  const exifData = {
     'sticker-pack-id': 'joshibot-wm',
     'sticker-pack-name': pack,
     'sticker-pack-publisher': author,
     emojis: []
   }
 
-  let exif = Buffer.from(JSON.stringify(exifData), 'utf-8')
-  let exifAttr = Buffer.concat([
+  const exif = Buffer.from(JSON.stringify(exifData), 'utf-8')
+  const exifAttr = Buffer.concat([
     Buffer.from([
       0x49,0x49,0x2A,0x00,
       0x08,0x00,0x00,0x00,
@@ -73,7 +75,7 @@ let handler = async (m, { conn, text }) => {
   img.exif = exifAttr
   await img.save(output)
 
-  // 📤 Enviar sticker con WM
+  // 📤 Enviar sticker
   await conn.sendMessage(
     m.chat,
     { sticker: fs.readFileSync(output) },
@@ -82,15 +84,12 @@ let handler = async (m, { conn, text }) => {
 
   await m.react('✅')
 
-  // 🧹 Limpiar
+  // 🧹 Limpieza
   fs.unlinkSync(input)
   fs.unlinkSync(output)
 }
 
-// ✅ PARA QUE SALGA EN EL MENÚ
+// 🔹 PARA QUE SALGA EN EL MENÚ
 handler.help = ['wm']
 handler.tags = ['sticker']
-handler.command = /^wm$/i
-handler.prefix = true
-
-export default handler
+handler.command = ['wm']
