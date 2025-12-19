@@ -219,7 +219,7 @@ for (const plugin of plugins) {
         sock.sendMessage(from, { text }, { quoted: m })  
     })  
   } catch (e) {  
-    console.error(chalk.red('❌ Error en plugin:'), e)  
+    console.error(chalk.red(`❌ Error cargando plugin: ${file}`), e)  
   }  
   break  
 }
