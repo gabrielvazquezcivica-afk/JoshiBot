@@ -23,7 +23,7 @@ export const handler = async (m, {
 
   // 🎯 Emoji fijo por categoría
   const tagEmoji = {
-    main: '📌',
+    main: '🧩',
     group: '🛠️',
     admin: '👑',
     juegos: '🎮',
@@ -36,7 +36,7 @@ export const handler = async (m, {
     info: 'ℹ️'
   }
 
-  const defaultEmoji = '🔹'
+  const defaultEmoji = '⬢'
 
   // 📂 Agrupar comandos
   const categories = {}
@@ -54,33 +54,38 @@ export const handler = async (m, {
 
   // 🧠 MENÚ FUTURISTA
   let menu = `
-╔══════════════════════╗
-║ 🤖 JOSHI BOT SYSTEM ║
-╚══════════════════════╝
+╔═══〔 🤖 JOSHI BOT • AI SYSTEM 〕═══╗
+║ ⚡ Estado: ONLINE
+║ 🧠 Núcleo: ESTABLE
+╚══════════════════════════════════╝
 
-🧠 BOT: ${botName}
-👨‍💻 DEV: ${dev}
-${saludo}
-⏱️ UPTIME: ${uptime}
+👋 ${saludo}
+👤 Usuario: ${pushName}
+🤖 Bot: ${botName}
+👨‍💻 Dev: ${dev}
+⏱️ Uptime: ${uptime}
+
+⧉⧉⧉⧉⧉⧉⧉⧉⧉⧉⧉⧉⧉⧉⧉
 `
 
   for (const tag in categories) {
     const emoji = tagEmoji[tag] || defaultEmoji
 
     menu += `
-══════════════════════
-${emoji} ${tag.toUpperCase()}
-══════════════════════
+╭──〔 ${emoji} ${tag.toUpperCase()} MODULE 〕──╮
 `
 
     for (const cmd of categories[tag]) {
-      menu += `▸ ${emoji} .${cmd}\n`
+      menu += `│ ▸ ${emoji}  .${cmd}\n`
     }
+
+    menu += `╰──────────────────────────╯\n`
   }
 
   menu += `
-══════════════════════
-⚙️ Sistema activo
+⧉⧉⧉⧉⧉⧉⧉⧉⧉⧉⧉⧉⧉⧉⧉
+⚙️ Sistema activo • Seguridad OK
+🔋 Energía estable • Sin errores
 `
 
   await sock.sendMessage(
