@@ -10,13 +10,12 @@ export const handler = async (m, { sock, from, isGroup, args, reply }) => {
   // 🧠 Emojis según palabra
   const emojiMap = [
     { keys: ['gay', 'gei', 'lgbt'], emojis: ['🏳️‍🌈', '💅', '✨', '😌'] },
-    { keys: ['feo', 'feos', 'horrible'], emojis: ['🤡', '💀', '👹'] },
+    { keys: ['feo', 'feos'], emojis: ['🤡', '💀', '👹'] },
     { keys: ['toxico', 'tóxico'], emojis: ['☠️', '🧪', '😡'] },
-    { keys: ['pro', 'god', 'tryhard'], emojis: ['🔥', '👑', '🐐'] },
+    { keys: ['pro', 'god'], emojis: ['🔥', '👑', '🐐'] },
     { keys: ['noob', 'malo'], emojis: ['🥴', '🐢', '🤕'] },
-    { keys: ['bot', 'npc'], emojis: ['🤖', '🧠❌', '📦'] },
-    { keys: ['caliente', 'hot'], emojis: ['🥵', '🔥', '🍑'] },
-    { keys: ['raro', 'extraño'], emojis: ['👽', '🫣', '🌀'] }
+    { keys: ['npc', 'bot'], emojis: ['🤖', '📦', '🧠❌'] },
+    { keys: ['hot', 'caliente'], emojis: ['🥵', '🔥', '🍑'] }
   ]
 
   const defaultEmojis = ['😂', '🔥', '💀', '😈', '👑', '🤡', '⚡', '🍀']
@@ -32,15 +31,17 @@ export const handler = async (m, { sock, from, isGroup, args, reply }) => {
 
   // 📥 Metadata
   const metadata = await sock.groupMetadata(from)
-  const members = metadata.participants
-    .map(p => p.id)
-    .filter(jid => jid !== m.key.participant)
+
+  // 👥 INCLUIR A TODOS (incluido el que ejecuta)
+  let members = metadata.participants.map(p => p.id)
 
   if (!members.length) return reply('❌ No hay usuarios')
 
-  // 🔀 Aleatorio
-  const shuffled = members.sort(() => Math.random() - 0.5)
-  const top = shuffled.slice(0, Math.min(10, shuffled.length))
+  // 🔀 Mezclar
+  members = members.sort(() => Math.random() - 0.5)
+
+  // 🔟 Top 10
+  const top = members.slice(0, Math.min(10, members.length))
 
   let msg = `🏆 *TOP 10 ${texto.toUpperCase()}*\n\n`
 
@@ -56,5 +57,5 @@ export const handler = async (m, { sock, from, isGroup, args, reply }) => {
 
 handler.command = ['top']
 handler.group = true
-handler.tags = ['juegos']
+handler.tags = ['fun']
 handler.menu = true
