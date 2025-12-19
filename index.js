@@ -6,7 +6,7 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath, pathToFileURL } from 'url'
 
-// 🔇 FIX DEFINITIVO: evitar spam "Closing session"
+// 🔇 Silenciar basura interna
 util.inspect.defaultOptions.depth = 0
 util.inspect.defaultOptions.colors = false
 process.env.NODE_NO_WARNINGS = '1'
@@ -54,7 +54,7 @@ global.limits = config.limits
 const PREFIX = global.prefix
 const plugins = []
 
-// ⏱️ Ignorar mensajes antiguos
+// ⏱️ Ignorar mensajes viejos
 const botStartTime = Math.floor(Date.now() / 1000)
 
 // 📁 DB MUTES (PERSISTENTE)
@@ -145,7 +145,7 @@ async function start () {
     const pushName = m.pushName || 'Sin nombre'
     const text = getText(m)
 
-    // 🔇 WATCHER DE MUTE
+    // 🔇 WATCHER DE MUTE (NO PLUGIN)
     try {
       if (isGroup) {
         const db = getMutes()
@@ -174,7 +174,7 @@ async function start () {
     const args = text.slice(PREFIX.length).trim().split(/\s+/)
     const command = args.shift().toLowerCase()
 
-    // 🧾 LOG
+    // 🧾 LOG LIMPIO
     console.log(
       chalk.magentaBright('\n══════════ 📩 COMANDO ══════════'),
       '\n',
