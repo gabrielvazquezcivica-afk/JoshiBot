@@ -5,27 +5,33 @@ import webp from 'node-webpmux'
 
 export const handler = async (m, { sock, from, text }) => {
 
-  // 🧠 CONTEXT INFO (FORMA CORRECTA EN TU BOT)
+  // 📌 CONTEXT INFO
   const ctx = m.message?.extendedTextMessage?.contextInfo
   if (!ctx?.quotedMessage) {
-    return sock.sendMessage(from, { text: '❌ Responde a un *sticker*' }, { quoted: m })
+    return sock.sendMessage(
+      from,
+      { text: '❌ Responde a un *sticker*' },
+      { quoted: m }
+    )
   }
 
-  const quotedMsg = ctx.quotedMessage
-  const isSticker = !!quotedMsg.stickerMessage
-
-  if (!isSticker) {
-    return sock.sendMessage(from, { text: '❌ Eso no es un sticker' }, { quoted: m })
+  // 🎯 Verificar sticker
+  if (!ctx.quotedMessage.stickerMessage) {
+    return sock.sendMessage(
+      from,
+      { text: '❌ Eso no es un sticker' },
+      { quoted: m }
+    )
   }
 
-  // 🆔 Mensaje citado
+  // 🧩 Mensaje citado compatible
   const q = {
     key: {
       remoteJid: from,
       id: ctx.stanzaId,
       participant: ctx.participant
     },
-    message: quotedMsg
+    message: ctx.quotedMessage
   }
 
   // 📝 Pack / Autor
@@ -38,12 +44,14 @@ export const handler = async (m, { sock, from, text }) => {
     if (a?.trim()) author = a.trim()
   }
 
-  await m.react('🛠️')
-
   // 📥 Descargar sticker
   const media = await sock.downloadMediaMessage(q)
   if (!media) {
-    return sock.sendMessage(from, { text: '❌ No pude descargar el sticker' }, { quoted: m })
+    return sock.sendMessage(
+      from,
+      { text: '❌ No pude descargar el sticker' },
+      { quoted: m }
+    )
   }
 
   // 📂 Temporales
@@ -85,20 +93,18 @@ export const handler = async (m, { sock, from, text }) => {
   img.exif = exifAttr
   await img.save(output)
 
-  // 📤 ENVIAR
+  // 📤 Enviar sticker
   await sock.sendMessage(
     from,
     { sticker: fs.readFileSync(output) },
     { quoted: m }
   )
 
-  await m.react('✅')
-
   // 🧹 Limpieza
   fs.unlinkSync(input)
   fs.unlinkSync(output)
 }
 
-handler.help = ['wm <pack>|<autor>']
+handler.help = ['wm']
 handler.tags = ['sticker']
 handler.command = ['wm']
