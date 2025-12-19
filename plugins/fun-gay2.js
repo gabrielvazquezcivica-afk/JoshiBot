@@ -1,19 +1,17 @@
-import fetch from 'node-fetch'
-
 export const handler = async (m, { sock, from, isGroup, sender, reply }) => {
   if (!isGroup) return reply('🚫 Solo funciona en grupos')
 
   let target
 
-  // 📌 Respuesta
+  // 📌 Si responde mensaje
   if (m.message?.extendedTextMessage?.contextInfo?.participant) {
     target = m.message.extendedTextMessage.contextInfo.participant
   }
-  // 📌 Mención
+  // 📌 Si menciona
   else if (m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.length) {
     target = m.message.extendedTextMessage.contextInfo.mentionedJid[0]
   }
-  // 📌 Autor
+  // 📌 Si no, él mismo
   else {
     target = sender
   }
@@ -22,15 +20,15 @@ export const handler = async (m, { sock, from, isGroup, sender, reply }) => {
   const frases = [
     '🏳️‍🌈 Orgullo activado',
     '✨ Brilla como arcoíris',
-    '💅 Confirmado por el bot',
+    '💅 Confirmado por la ciencia',
     '🔥 Closet destruido',
-    '👑 Rey/Reina del Pride',
+    '👑 Ícono del Pride',
     '🌈 Nivel máximo desbloqueado',
-    '💖 Libre y fabuloso'
+    '💖 Fabuloso sin miedo'
   ]
   const frase = frases[Math.floor(Math.random() * frases.length)]
 
-  // 📸 Foto de perfil
+  // 📸 FOTO DE PERFIL
   let pp
   try {
     pp = await sock.profilePictureUrl(target, 'image')
@@ -38,10 +36,8 @@ export const handler = async (m, { sock, from, isGroup, sender, reply }) => {
     pp = 'https://i.imgur.com/8B7QF5B.png'
   }
 
-  // 🌈 API LGBT FILTER
-  const api = `https://api.popcat.xyz/rainbow?image=${encodeURIComponent(pp)}`
-
-  const img = await fetch(api).then(r => r.buffer())
+  // 🌈 FILTRO LGBT (URL DIRECTA)
+  const imageUrl = `https://api.popcat.xyz/rainbow?image=${encodeURIComponent(pp)}`
 
   const text = `🌈✨ *GAY2 DETECTED* ✨🌈
 
@@ -50,7 +46,7 @@ export const handler = async (m, { sock, from, isGroup, sender, reply }) => {
 `
 
   await sock.sendMessage(from, {
-    image: img,
+    image: { url: imageUrl },
     caption: text,
     mentions: [target]
   }, { quoted: m })
