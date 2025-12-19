@@ -27,7 +27,7 @@ export const handler = async (m, {
     group: '🛠️',
     admin: '👑',
     juegos: '🎮',
-    game: '🎮',
+    ff: '🔫',
     descargas: '🎵',
     search: '🔍',
     tools: '🧰',
