@@ -5,10 +5,18 @@ import webp from 'node-webpmux'
 
 let handler = async (m, { conn, text }) => {
 
-  // 🧠 Validar sticker
+  // 📌 Debe responder a un sticker
   let q = m.quoted
-  if (!q || !q.message?.stickerMessage)
-    return conn.reply(m.chat, '❌ Responde a un *sticker*', m)
+  if (!q) return conn.reply(m.chat, '❌ Responde a un *sticker*', m)
+
+  let isSticker =
+    q.mtype === 'stickerMessage' ||
+    q.mimetype === 'image/webp' ||
+    q.message?.stickerMessage
+
+  if (!isSticker) {
+    return conn.reply(m.chat, '❌ El mensaje no es un sticker', m)
+  }
 
   // 📝 Pack y autor
   let pack = 'JoshiBot'
@@ -16,53 +24,61 @@ let handler = async (m, { conn, text }) => {
 
   if (text) {
     let [p, a] = text.split('|')
-    if (p) pack = p.trim()
-    if (a) author = a.trim()
+    if (p?.trim()) pack = p.trim()
+    if (a?.trim()) author = a.trim()
   }
 
   await m.react('🛠️')
 
   // 📥 Descargar sticker
   let media = await q.download()
-  if (!media) return conn.reply(m.chat, '❌ Error al descargar sticker', m)
+  if (!media) return conn.reply(m.chat, '❌ No pude descargar el sticker', m)
 
-  // 📂 Temporales
+  // 📂 Archivos temporales
   let tmp = os.tmpdir()
   let input = path.join(tmp, `wm_${Date.now()}.webp`)
   let output = path.join(tmp, `wm_out_${Date.now()}.webp`)
   fs.writeFileSync(input, media)
 
-  // 🧷 Crear EXIF correcto
+  // 🧷 Cargar imagen
   let img = new webp.Image()
   await img.load(input)
 
-  let json = {
+  // 🧾 EXIF correcto
+  let exifData = {
     'sticker-pack-id': 'joshibot-wm',
     'sticker-pack-name': pack,
     'sticker-pack-publisher': author,
     emojis: []
   }
 
-  let exifPayload = Buffer.from(JSON.stringify(json), 'utf-8')
-  let exif = Buffer.concat([
-    Buffer.from('II*\x00\x08\x00\x00\x00\x01\x00AW\x07\x00', 'binary'),
+  let exif = Buffer.from(JSON.stringify(exifData), 'utf-8')
+  let exifAttr = Buffer.concat([
     Buffer.from([
-      exifPayload.length & 0xff,
-      (exifPayload.length >> 8) & 0xff,
-      (exifPayload.length >> 16) & 0xff,
-      (exifPayload.length >> 24) & 0xff
+      0x49,0x49,0x2A,0x00,
+      0x08,0x00,0x00,0x00,
+      0x01,0x00,
+      0x41,0x57,0x07,0x00
     ]),
-    Buffer.from('\x16\x00\x00\x00', 'binary'),
-    exifPayload
+    Buffer.from([
+      exif.length & 0xff,
+      (exif.length >> 8) & 0xff,
+      (exif.length >> 16) & 0xff,
+      (exif.length >> 24) & 0xff
+    ]),
+    Buffer.from([0x16,0x00,0x00,0x00]),
+    exif
   ])
 
-  img.exif = exif
+  img.exif = exifAttr
   await img.save(output)
 
-  // 📤 Enviar sticker
-  await conn.sendMessage(m.chat, {
-    sticker: fs.readFileSync(output)
-  }, { quoted: m })
+  // 📤 Enviar sticker con WM
+  await conn.sendMessage(
+    m.chat,
+    { sticker: fs.readFileSync(output) },
+    { quoted: m }
+  )
 
   await m.react('✅')
 
@@ -71,9 +87,10 @@ let handler = async (m, { conn, text }) => {
   fs.unlinkSync(output)
 }
 
-handler.help = ['wm <pack>|<autor>']
+// ✅ PARA QUE SALGA EN EL MENÚ
+handler.help = ['wm']
 handler.tags = ['sticker']
-handler.command = ['wm', 'stickerwm']
-handler.group = true
-handler.menu = true 
+handler.command = /^wm$/i
+handler.prefix = true
+
 export default handler
