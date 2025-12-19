@@ -226,6 +226,11 @@ async function start () {
   })
 
   console.log(chalk.greenBright('🤖 JoshiBot listo y operativo\n'))
+
+  // 🔁 MANTENER CONSOLA ACTIVA (NO AFECTA RENDIMIENTO)
+  setInterval(() => {
+    process.stdout.write('')
+  }, 1000)
 }
 
 start()
