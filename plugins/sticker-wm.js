@@ -2,36 +2,18 @@ import fs from 'fs'
 import path from 'path'
 import os from 'os'
 import webp from 'node-webpmux'
+import { downloadContentFromMessage } from '@whiskeysockets/baileys'
 
 export const handler = async (m, { sock, from, text }) => {
 
-  // 📌 CONTEXT INFO
+  // 📌 Verificar respuesta
   const ctx = m.message?.extendedTextMessage?.contextInfo
-  if (!ctx?.quotedMessage) {
+  if (!ctx?.quotedMessage?.stickerMessage) {
     return sock.sendMessage(
       from,
       { text: '❌ Responde a un *sticker*' },
       { quoted: m }
     )
-  }
-
-  // 🎯 Verificar sticker
-  if (!ctx.quotedMessage.stickerMessage) {
-    return sock.sendMessage(
-      from,
-      { text: '❌ Eso no es un sticker' },
-      { quoted: m }
-    )
-  }
-
-  // 🧩 Mensaje citado compatible
-  const q = {
-    key: {
-      remoteJid: from,
-      id: ctx.stanzaId,
-      participant: ctx.participant
-    },
-    message: ctx.quotedMessage
   }
 
   // 📝 Pack / Autor
@@ -44,9 +26,18 @@ export const handler = async (m, { sock, from, text }) => {
     if (a?.trim()) author = a.trim()
   }
 
-  // 📥 Descargar sticker
-  const media = await sock.downloadMediaMessage(q)
-  if (!media) {
+  // 📥 Descargar sticker (FORMA CORRECTA)
+  const stream = await downloadContentFromMessage(
+    ctx.quotedMessage.stickerMessage,
+    'sticker'
+  )
+
+  let buffer = Buffer.from([])
+  for await (const chunk of stream) {
+    buffer = Buffer.concat([buffer, chunk])
+  }
+
+  if (!buffer.length) {
     return sock.sendMessage(
       from,
       { text: '❌ No pude descargar el sticker' },
@@ -58,7 +49,7 @@ export const handler = async (m, { sock, from, text }) => {
   const tmp = os.tmpdir()
   const input = path.join(tmp, `wm_${Date.now()}.webp`)
   const output = path.join(tmp, `wm_out_${Date.now()}.webp`)
-  fs.writeFileSync(input, media)
+  fs.writeFileSync(input, buffer)
 
   // 🧷 WebP
   const img = new webp.Image()
@@ -93,7 +84,7 @@ export const handler = async (m, { sock, from, text }) => {
   img.exif = exifAttr
   await img.save(output)
 
-  // 📤 Enviar sticker
+  // 📤 Enviar sticker con WM
   await sock.sendMessage(
     from,
     { sticker: fs.readFileSync(output) },
@@ -105,6 +96,6 @@ export const handler = async (m, { sock, from, text }) => {
   fs.unlinkSync(output)
 }
 
-handler.help = ['wm']
-handler.tags = ['sticker']
+handler.help = ['wm <pack>|<autor>']
+handler.tags = ['stickers']
 handler.command = ['wm']
