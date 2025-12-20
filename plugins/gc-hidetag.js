@@ -1,6 +1,6 @@
 import { downloadContentFromMessage } from '@whiskeysockets/baileys'
 
-/* 🗓️ FOOTER CON EMOJIS SEGÚN MES */
+/* 🗓️ FOOTER */
 function footer(botName) {
   const meses = [
     { name: 'enero', emojis: ['❄️','☃️','✨'] },
@@ -30,13 +30,13 @@ const handler = async (m, {
   from,
   args,
   isGroup,
-  reply,
-  command
+  reply
 }) => {
+
   if (!isGroup) return reply('❌ Solo funciona en grupos')
 
-  // 📋 METADATA
   const metadata = await sock.groupMetadata(from)
+
   const admins = metadata.participants
     .filter(p => p.admin)
     .map(p => p.id)
@@ -49,16 +49,8 @@ const handler = async (m, {
   const participants = metadata.participants.map(p => p.id)
   const botName = sock.user?.name || 'JoshiBot'
 
-  // 🧹 TEXTO LIMPIO (quita .n)
-  const rawText =
-    m.message?.conversation ||
-    m.message?.extendedTextMessage?.text ||
-    ''
-
-  const prefix = global.prefix || '.'
-
-  const cleanText = rawText
-    .replace(new RegExp(`^\\${prefix}${command}\\s*`, 'i'), '')
+  // ✅ TEXTO LIMPIO (YA SIN .n)
+  const text = args.join(' ')
 
   // 📌 MENSAJE RESPONDIDO
   const ctx = m.message?.extendedTextMessage?.contextInfo
@@ -91,7 +83,7 @@ const handler = async (m, {
 
       msg[mediaType] = buffer
       msg.caption =
-        (quoted[type]?.caption || cleanText || '') +
+        (quoted[type]?.caption || text || '') +
         footer(botName)
     }
 
@@ -101,11 +93,11 @@ const handler = async (m, {
   }
 
   // 📝 SOLO TEXTO
-  if (cleanText) {
+  if (text) {
     await sock.sendMessage(
       from,
       {
-        text: cleanText + footer(botName),
+        text: text + footer(botName),
         mentions: participants
       },
       { quoted: m }
