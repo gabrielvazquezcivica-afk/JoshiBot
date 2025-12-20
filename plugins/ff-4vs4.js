@@ -81,7 +81,7 @@ async function sendList (sock, from) {
     text:
 `╭─〔 🎮 FF 4VS4 〕
 │
-│ 👥 Jugadores (${game.players.length}/8):
+│ 👥 Jugadores (${game.players.length}/4):
 │
 │ ${game.players.map((u, i) =>
   `${i + 1}. ${tag(u)}`
