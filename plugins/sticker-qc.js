@@ -1,52 +1,51 @@
-import sharp from 'sharp'
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
-import fetch from 'node-fetch'
+import { exec } from 'child_process'
 
 export const handler = async (m, { sock, args, reply }) => {
   const text = args.join(' ')
   if (!text) return reply('❌ Ejemplo:\n.qc hola mundo')
 
-  const jid = m.key.participant || m.key.remoteJid
-  const name = m.pushName || 'Usuario'
+  const tmp = os.tmpdir()
+  const img = path.join(tmp, `qc_${Date.now()}.png`)
+  const webp = path.join(tmp, `qc_${Date.now()}.webp`)
 
-  let avatar
-  try {
-    avatar = await sock.profilePictureUrl(jid, 'image')
-  } catch {
-    avatar = 'https://i.imgur.com/JP52fdP.png'
-  }
+  // Crear imagen con texto
+  const cmdImg = `
+  convert -size 512x512 xc:#111 \
+  -gravity center \
+  -fill white \
+  -font DejaVu-Sans \
+  -pointsize 32 \
+  -annotate +0+0 "${text.replace(/"/g, '\\"')}" \
+  ${img}
+  `
 
-  const imgBuffer = await (await fetch(avatar)).buffer()
+  exec(cmdImg, (e) => {
+    if (e) return reply('❌ Error creando imagen')
 
-  const svg = `
-  <svg width="512" height="512">
-    <rect width="100%" height="100%" fill="#111"/>
-    <circle cx="256" cy="120" r="60" fill="white"/>
-    <image href="data:image/jpeg;base64,${imgBuffer.toString('base64')}"
-      x="196" y="60" height="120" width="120" clip-path="circle(60px at 256px 120px)"/>
-    <text x="256" y="220" fill="white" font-size="26" text-anchor="middle" font-weight="bold">
-      ${name}
-    </text>
-    <text x="256" y="270" fill="#ddd" font-size="22" text-anchor="middle">
-      ${text}
-    </text>
-  </svg>`
+    // Convertir a sticker
+    const cmdWebp = `
+    ffmpeg -y -i ${img} \
+    -vf "scale=512:512:force_original_aspect_ratio=decrease,fps=15" \
+    -lossless 1 -compression_level 6 -qscale 80 \
+    ${webp}
+    `
 
-  const out = path.join(os.tmpdir(), `qc_${Date.now()}.png`)
+    exec(cmdWebp, async (e2) => {
+      if (e2) return reply('❌ Error creando sticker')
 
-  await sharp(Buffer.from(svg))
-    .png()
-    .toFile(out)
+      await sock.sendMessage(
+        m.key.remoteJid,
+        { sticker: fs.readFileSync(webp) },
+        { quoted: m }
+      )
 
-  await sock.sendMessage(
-    m.key.remoteJid,
-    { sticker: fs.readFileSync(out) },
-    { quoted: m }
-  )
-
-  fs.unlinkSync(out)
+      fs.unlinkSync(img)
+      fs.unlinkSync(webp)
+    })
+  })
 }
 
 handler.command = ['qc']
