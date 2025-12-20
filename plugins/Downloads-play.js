@@ -1,5 +1,5 @@
-import fetch from 'node-fetch'
 import yts from 'yt-search'
+import axios from 'axios'
 
 export const handler = async (m, {
   sock,
@@ -9,23 +9,19 @@ export const handler = async (m, {
 }) => {
   try {
     const text = args.join(' ').trim()
-    if (!text) {
-      return reply('🎧 Escribe el nombre de la canción\n\nEjemplo:\n.play ozuna')
-    }
+    if (!text) return reply('🎧 Escribe una canción\nEjemplo:\n.play ozuna')
 
-    // 🔎 Buscar en YouTube
+    // 🔎 Buscar
     const search = await yts(text)
     if (!search.all.length) return reply('❌ No encontré resultados')
 
-    const video = search.all.find(v => v.seconds) || search.all[0]
-    const { title, url, timestamp, views, thumbnail } = video
+    const v = search.all.find(x => x.seconds) || search.all[0]
+    const { title, url, timestamp, views, thumbnail } = v
 
-    // 🎶 Reacción inicial
     await sock.sendMessage(from, {
       react: { text: '🎶', key: m.key }
     })
 
-    // 🧾 Diseño
     const caption = `
 ╭─〔 🎧 JOSHI AUDIO 〕
 │
@@ -33,7 +29,7 @@ export const handler = async (m, {
 │ ⏱ ${timestamp}
 │ 👁 ${views.toLocaleString()} vistas
 │
-╰─⏳ Procesando audio...
+╰─⏳ Descargando audio...
 `.trim()
 
     await sock.sendMessage(from, {
@@ -41,38 +37,37 @@ export const handler = async (m, {
       caption
     }, { quoted: m })
 
-    let audioUrl = null
+    // ⚡ DESCARGA REAL (SIN DDNS)
+    const res = await axios.get(
+      `https://p.savenow.to/ajax/download.php?format=mp3&url=${encodeURIComponent(url)}`
+    )
 
-    // ⚡ API 1 — STELLAR (MUY RÁPIDA)
-    try {
-      const api1 = await fetch(
-        `https://api.stellarwa.xyz/dl/ytmp3?url=${encodeURIComponent(url)}&key=proyectsV2`
-      ).then(res => res.json())
-
-      audioUrl = api1?.data?.dl
-    } catch {}
-
-    // 🔁 API 2 — FGMODS (RESPALDO)
-    if (!audioUrl) {
-      const api2 = await fetch(
-        `https://api-fgmods.ddns.net/api/downloader/ytmp3?url=${encodeURIComponent(url)}&apikey=fg-dylux`
-      ).then(res => res.json())
-
-      audioUrl = api2?.result?.download
+    if (!res.data?.success) {
+      return reply('❌ No se pudo descargar el audio')
     }
 
-    if (!audioUrl) {
-      return reply('❌ No se pudo obtener el audio (APIs caídas)')
+    const id = res.data.id
+    let dl
+
+    // ⏳ Esperar a que termine
+    while (true) {
+      const p = await axios.get(
+        `https://p.savenow.to/ajax/progress?id=${id}`
+      )
+      if (p.data?.success && p.data.progress === 1000) {
+        dl = p.data.download_url
+        break
+      }
+      await new Promise(r => setTimeout(r, 2000))
     }
 
     // 📤 Enviar audio
     await sock.sendMessage(from, {
-      audio: { url: audioUrl },
+      audio: { url: dl },
       mimetype: 'audio/mpeg',
       fileName: `${title}.mp3`
     }, { quoted: m })
 
-    // ✅ Reacción final
     await sock.sendMessage(from, {
       react: { text: '✅', key: m.key }
     })
