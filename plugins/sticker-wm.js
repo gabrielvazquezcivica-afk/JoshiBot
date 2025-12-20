@@ -1,25 +1,25 @@
 import { downloadContentFromMessage } from '@whiskeysockets/baileys'
 
-export const handler = async (m, { sock, args, command, reply }) => {
+export const handler = async (m, { sock, args, reply }) => {
 
-  // 📝 TEXTO ESCRITO DESPUÉS DE .wm
+  // 📝 Texto después de .wm
   const texto = args.join(' ').trim()
-
-  // ❌ Si no escribió texto
   if (!texto) {
-    return reply(`❌ Uso correcto:\n.wm <texto>`)
+    return reply('❌ Escribe un texto después de .wm')
   }
 
-  // 🔎 Debe responder a un sticker
-  const q = m.quoted
-  if (!q || !q.message?.stickerMessage) {
+  // 🔎 CONTEXT INFO (FORMA CORRECTA PARA TU CORE)
+  const ctx = m.message?.extendedTextMessage?.contextInfo
+  const quoted = ctx?.quotedMessage
+
+  if (!quoted || !quoted.stickerMessage) {
     return reply('❌ Responde a un *sticker*')
   }
 
   try {
-    // 📥 Descargar sticker (FORMA CORRECTA BAILEYS)
+    // 📥 Descargar sticker correctamente
     const stream = await downloadContentFromMessage(
-      q.message.stickerMessage,
+      quoted.stickerMessage,
       'sticker'
     )
 
@@ -28,14 +28,14 @@ export const handler = async (m, { sock, args, command, reply }) => {
       buffer = Buffer.concat([buffer, chunk])
     }
 
-    // 📤 Reenviar sticker
+    // 🔁 Reenviar sticker
     await sock.sendMessage(
       m.key.remoteJid,
       { sticker: buffer },
       { quoted: m }
     )
 
-    // 📝 Mandar SOLO el texto escrito con .wm
+    // 📝 Enviar SOLO el texto del wm
     await sock.sendMessage(
       m.key.remoteJid,
       { text: texto },
@@ -43,7 +43,7 @@ export const handler = async (m, { sock, args, command, reply }) => {
     )
 
   } catch (e) {
-    console.error(e)
+    console.error('WM ERROR:', e)
     reply('❌ Error procesando el sticker')
   }
 }
@@ -51,4 +51,3 @@ export const handler = async (m, { sock, args, command, reply }) => {
 handler.command = ['wm']
 handler.tags = ['stickers']
 handler.menu = true
-handler.group = false
