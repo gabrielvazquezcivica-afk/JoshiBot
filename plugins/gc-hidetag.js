@@ -1,6 +1,6 @@
 import { downloadContentFromMessage } from '@whiskeysockets/baileys'
 
-function footer(botName) {
+function footer (botName) {
   const meses = [
     { name: 'enero', emojis: ['❄️','☃️','✨'] },
     { name: 'febrero', emojis: ['❤️','💘','🌹'] },
@@ -32,6 +32,7 @@ export const handler = async (m, {
 }) => {
   if (!isGroup) return reply('❌ Solo funciona en grupos')
 
+  // 📌 Metadata
   const metadata = await sock.groupMetadata(from)
   const admins = metadata.participants
     .filter(p => p.admin)
@@ -44,26 +45,36 @@ export const handler = async (m, {
 
   const participants = metadata.participants.map(p => p.id)
 
-  // 🔴 CAMBIO CLAVE: respeta saltos de línea
-  const text = m.text
-    .slice((m.prefix || '').length + handler.command[0].length)
-    .trim()
+  // 📌 TEXTO SEGURO (FIX DEFINITIVO)
+  const fullText =
+    m.message?.conversation ||
+    m.message?.extendedTextMessage?.text ||
+    ''
 
-  const botName = sock.user?.name || 'Bot'
+  const text = args.join(' ')
 
+  // 📛 Nombre real del bot
+  const botName = sock.user?.name || 'JoshiBot'
+
+  // 📌 MENSAJE RESPONDIDO
   const ctx = m.message?.extendedTextMessage?.contextInfo
   const quoted = ctx?.quotedMessage
 
+  // ───── RESPONDIENDO A ALGO ─────
   if (quoted) {
     const type = Object.keys(quoted)[0]
     let msg = {}
 
+    // 📝 TEXTO
     if (type === 'conversation' || type === 'extendedTextMessage') {
       msg.text =
         (quoted.conversation ||
-        quoted.extendedTextMessage?.text || '') +
-        footer(botName)
-    } else {
+        quoted.extendedTextMessage?.text ||
+        '') + footer(botName)
+    }
+
+    // 📥 MEDIA (IMG / VID / AUDIO / STICKER)
+    else {
       const mediaType = type.replace('Message', '')
       const stream = await downloadContentFromMessage(
         quoted[type],
@@ -77,8 +88,7 @@ export const handler = async (m, {
 
       msg[mediaType] = buffer
       msg.caption =
-        (quoted[type]?.caption || text || '') +
-        footer(botName)
+        (quoted[type]?.caption || text || '') + footer(botName)
     }
 
     msg.mentions = participants
@@ -87,6 +97,7 @@ export const handler = async (m, {
     return
   }
 
+  // ───── SOLO TEXTO ─────
   if (text) {
     await sock.sendMessage(
       from,
@@ -99,7 +110,12 @@ export const handler = async (m, {
     return
   }
 
-  reply('⚠️ Usa:\n.n <texto>\nO responde a un mensaje')
+  // ───── USO INCORRECTO ─────
+  reply(
+`⚠️ Uso correcto:
+.n <texto>
+O responde a un mensaje`
+  )
 }
 
 handler.command = ['n']
@@ -107,3 +123,4 @@ handler.tags = ['group']
 handler.help = ['n <texto>']
 handler.group = true
 handler.admin = true
+handler.menu = true
