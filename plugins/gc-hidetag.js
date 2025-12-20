@@ -23,33 +23,26 @@ function footer(botName) {
   return `\n\n> ${botName} • ${now.getDate()} ${m.name} ${now.getFullYear()} ${emoji}`
 }
 
-/* ================= HANDLER ================= */
-export const handler = async (m, {
-  sock,
-  from,
-  args,
-  isGroup,
-  reply
-}) => {
+export const handler = async (m, { sock, from, isGroup, reply }) => {
 
-  if (!isGroup) return reply('❌ Solo funciona en grupos')
+  if (!isGroup) return reply('❌ Solo grupos')
 
   const metadata = await sock.groupMetadata(from)
-
-  const admins = metadata.participants
-    .filter(p => p.admin)
-    .map(p => p.id)
-
-  const sender = m.key.participant
-  if (!admins.includes(sender)) {
-    return reply('❌ Solo administradores pueden usar este comando')
+  const admins = metadata.participants.filter(p => p.admin).map(p => p.id)
+  if (!admins.includes(m.key.participant)) {
+    return reply('❌ Solo admins')
   }
 
   const participants = metadata.participants.map(p => p.id)
   const botName = sock.user?.name || 'JoshiBot'
 
-  // ✅ TEXTO LIMPIO (SIN .n)
-  const text = args.join(' ')
+  // ✅ TEXTO ORIGINAL (CON SALTOS)
+  const rawText =
+    m.message?.conversation ||
+    m.message?.extendedTextMessage?.text ||
+    ''
+
+  const cleanText = rawText.slice(2).trim() // quita ".n"
 
   const ctx = m.message?.extendedTextMessage?.contextInfo
   const quoted = ctx?.quotedMessage
@@ -59,14 +52,12 @@ export const handler = async (m, {
     const type = Object.keys(quoted)[0]
     let msg = {}
 
-    // 📝 TEXTO
     if (type === 'conversation' || type === 'extendedTextMessage') {
       msg.text =
         (quoted.conversation ||
-        quoted.extendedTextMessage?.text ||
-        '') + footer(botName)
+         quoted.extendedTextMessage?.text ||
+         '') + footer(botName)
     } else {
-      // 📥 MEDIA
       const mediaType = type.replace('Message', '')
       const stream = await downloadContentFromMessage(
         quoted[type],
@@ -80,7 +71,7 @@ export const handler = async (m, {
 
       msg[mediaType] = buffer
       msg.caption =
-        (quoted[type]?.caption || text || '') +
+        (quoted[type]?.caption || cleanText || '') +
         footer(botName)
     }
 
@@ -90,11 +81,11 @@ export const handler = async (m, {
   }
 
   // 📝 SOLO TEXTO
-  if (text) {
+  if (cleanText) {
     await sock.sendMessage(
       from,
       {
-        text: text + footer(botName),
+        text: cleanText + footer(botName),
         mentions: participants
       },
       { quoted: m }
@@ -102,10 +93,9 @@ export const handler = async (m, {
     return
   }
 
-  reply('⚠️ Usa:\n.n <texto>\nO responde a un mensaje')
+  reply('⚠️ Usa .n <texto> o responde a un mensaje')
 }
 
-/* ====== METADATA ====== */
 handler.command = ['n']
 handler.tags = ['group']
 handler.help = ['n <texto>']
