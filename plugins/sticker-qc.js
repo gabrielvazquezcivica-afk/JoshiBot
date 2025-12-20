@@ -1,22 +1,21 @@
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
-import { spawn } from 'child_process'
 import axios from 'axios'
+import { spawn } from 'child_process'
 
-export const handler = async (m, { sock, text, reply }) => {
+export const handler = async (m, { sock, args, reply }) => {
 
+  const text = args.join(' ')
   if (!text) {
     return reply('❌ Escribe un texto\n\nEjemplo:\n.qc Hola JoshiBot')
   }
 
   try {
     const jid = m.key.participant || m.key.remoteJid
-
-    // 🧑 Nombre
     const name = m.pushName || 'Usuario'
 
-    // 🖼️ Foto de perfil
+    // 📸 Foto de perfil
     let avatar
     try {
       avatar = await sock.profilePictureUrl(jid, 'image')
@@ -24,8 +23,8 @@ export const handler = async (m, { sock, text, reply }) => {
       avatar = 'https://i.ibb.co/2kR7Zq0/default.png'
     }
 
-    // 🌐 API QUOTE
-    const json = {
+    // 🧾 Payload QC
+    const payload = {
       type: 'quote',
       format: 'png',
       backgroundColor: '#0f172a',
@@ -33,35 +32,31 @@ export const handler = async (m, { sock, text, reply }) => {
       height: 512,
       scale: 2,
       messages: [{
-        entities: [],
         avatar: true,
         from: {
           id: 1,
           name: name,
-          photo: {
-            url: avatar
-          }
+          photo: { url: avatar }
         },
         text: text,
         replyMessage: {}
       }]
     }
 
-    // 📥 Crear imagen
+    // 🌐 Generar imagen
     const res = await axios.post(
       'https://bot.lyo.su/quote/generate',
-      json,
+      payload,
       { responseType: 'arraybuffer' }
     )
 
-    // 📂 Temporales
     const tmp = os.tmpdir()
     const img = path.join(tmp, `qc_${Date.now()}.png`)
     const webp = path.join(tmp, `qc_${Date.now()}.webp`)
 
     fs.writeFileSync(img, res.data)
 
-    // 🔄 Convertir a sticker
+    // 🔄 PNG → WEBP
     await new Promise((resolve, reject) => {
       const ff = spawn('ffmpeg', [
         '-i', img,
@@ -89,5 +84,5 @@ export const handler = async (m, { sock, text, reply }) => {
 }
 
 handler.command = ['qc']
-handler.tags = ['sticker']
+handler.tags = ['stickers']
 handler.menu = true
