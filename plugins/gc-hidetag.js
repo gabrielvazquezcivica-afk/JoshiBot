@@ -1,19 +1,41 @@
 import { downloadContentFromMessage } from '@whiskeysockets/baileys'
 
+/* 🗓️ FOOTER CON EMOJIS SEGÚN MES */
 function footer(botName) {
-  return ``
+  const meses = [
+    { name: 'enero', emojis: ['❄️','☃️','✨'] },
+    { name: 'febrero', emojis: ['❤️','💘','🌹'] },
+    { name: 'marzo', emojis: ['🍀','🌱','🌸'] },
+    { name: 'abril', emojis: ['🌷','☔','🌼'] },
+    { name: 'mayo', emojis: ['🌺','🌼','☀️'] },
+    { name: 'junio', emojis: ['🌞','🏖️','😎'] },
+    { name: 'julio', emojis: ['🔥','🌴','☀️'] },
+    { name: 'agosto', emojis: ['🌻','☀️','🏖️'] },
+    { name: 'septiembre', emojis: ['🍁','🍂','🌾'] },
+    { name: 'octubre', emojis: ['🎃','👻','🕸️'] },
+    { name: 'noviembre', emojis: ['🍂','🦃','🤎'] },
+    { name: 'diciembre', emojis: ['🎄','✨','🎅'] }
+  ]
+
+  const now = new Date()
+  const m = meses[now.getMonth()]
+  const emoji = m.emojis[Math.floor(Math.random() * m.emojis.length)]
+
+  return `\n\n> ${botName} • ${now.getDate()} ${m.name} ${now.getFullYear()} ${emoji}`
 }
 
-export const handler = async (m, {
+/* ================= HANDLER ================= */
+const handler = async (m, {
   sock,
   from,
+  args,
   isGroup,
   reply,
-  usedPrefix,
   command
 }) => {
   if (!isGroup) return reply('❌ Solo funciona en grupos')
 
+  // 📋 METADATA
   const metadata = await sock.groupMetadata(from)
   const admins = metadata.participants
     .filter(p => p.admin)
@@ -25,28 +47,28 @@ export const handler = async (m, {
   }
 
   const participants = metadata.participants.map(p => p.id)
+  const botName = sock.user?.name || 'JoshiBot'
 
-  // 🔴 TEXTO ORIGINAL (CON ENTERS)
+  // 🧹 TEXTO LIMPIO (quita .n)
   const rawText =
     m.message?.conversation ||
     m.message?.extendedTextMessage?.text ||
     ''
 
-  // 🔴 QUITAR SOLO EL COMANDO (SIN ROMPER FORMATO)
-  const text = rawText
-    .replace(new RegExp(`^\\${usedPrefix}${command}\\s*`, 'i'), '')
+  const prefix = global.prefix || '.'
 
-  const botName = sock.user?.name || 'JoshiBot'
+  const cleanText = rawText
+    .replace(new RegExp(`^\\${prefix}${command}\\s*`, 'i'), '')
 
+  // 📌 MENSAJE RESPONDIDO
   const ctx = m.message?.extendedTextMessage?.contextInfo
   const quoted = ctx?.quotedMessage
 
-  // ───── RESPONDIENDO A MENSAJE ─────
   if (quoted) {
     const type = Object.keys(quoted)[0]
     let msg = {}
 
-    // TEXTO
+    // 📝 TEXTO
     if (type === 'conversation' || type === 'extendedTextMessage') {
       msg.text =
         (quoted.conversation ||
@@ -54,7 +76,7 @@ export const handler = async (m, {
         '') + footer(botName)
     }
 
-    // MEDIA
+    // 📥 MEDIA
     else {
       const mediaType = type.replace('Message', '')
       const stream = await downloadContentFromMessage(
@@ -69,7 +91,8 @@ export const handler = async (m, {
 
       msg[mediaType] = buffer
       msg.caption =
-        (quoted[type]?.caption || text || '') + footer(botName)
+        (quoted[type]?.caption || cleanText || '') +
+        footer(botName)
     }
 
     msg.mentions = participants
@@ -77,12 +100,12 @@ export const handler = async (m, {
     return
   }
 
-  // ───── SOLO TEXTO ─────
-  if (text.trim()) {
+  // 📝 SOLO TEXTO
+  if (cleanText) {
     await sock.sendMessage(
       from,
       {
-        text,
+        text: cleanText + footer(botName),
         mentions: participants
       },
       { quoted: m }
@@ -98,3 +121,5 @@ handler.tags = ['group']
 handler.help = ['n <texto>']
 handler.group = true
 handler.admin = true
+
+export default handler
