@@ -1,4 +1,3 @@
-// ───── COMANDO JOIN (FIX REAL) ─────
 export const handler = async (m, {
   sock,
   args,
@@ -6,7 +5,6 @@ export const handler = async (m, {
   owner,
   reply
 }) => {
-  // 🔐 SOLO OWNER
   const owners = owner?.numbers || []
   const senderNum = sender.replace(/[^0-9]/g, '')
 
@@ -14,42 +12,44 @@ export const handler = async (m, {
     return reply('🚫 Solo el OWNER puede usar este comando')
   }
 
-  // 🔗 LINK
   const link = args[0]
-  if (!link) {
-    return reply('❌ Usa:\n.join https://chat.whatsapp.com/XXXX')
-  }
+  if (!link) return reply('❌ Usa:\n.join <link>')
 
-  // 🧠 EXTRAER CÓDIGO REAL
   const match = link.match(/chat\.whatsapp\.com\/([A-Za-z0-9]+)/i)
-  if (!match) {
-    return reply('❌ Link de grupo inválido')
-  }
+  if (!match) return reply('❌ Link inválido')
 
-  const inviteCode = match[1]
+  const code = match[1]
 
   try {
-    // ⏳ INTENTO REAL
-    const res = await sock.groupAcceptInvite(inviteCode)
+    await sock.groupAcceptInvite(code)
 
-    // 🧪 VERIFICACIÓN REAL
-    if (!res) {
-      return reply('❌ WhatsApp rechazó la invitación')
+    // ⏳ esperar a WhatsApp
+    await new Promise(r => setTimeout(r, 4000))
+
+    // 🔍 verificar si REALMENTE entró
+    const groups = await sock.groupFetchAllParticipating()
+    const joined = Object.values(groups).some(
+      g => g.inviteCode === code
+    )
+
+    if (!joined) {
+      return reply(
+`❌ WhatsApp BLOQUEÓ la unión
+
+⚠️ Esto NO es error del bot
+📛 WhatsApp restringe joins automáticos
+
+Solución:
+• Invita al bot manualmente 1 vez
+• Usa cuenta más antigua`
+      )
     }
 
-    return reply('✅ El bot **SÍ se unió** al grupo correctamente')
-  } catch (err) {
-    console.error('❌ JOIN ERROR:', err)
+    reply('✅ El bot SÍ se unió correctamente')
 
-    return reply(
-`❌ No pude unirme al grupo
-
-Posibles razones:
-• El bot ya está dentro
-• El link está vencido
-• El grupo es restringido
-• WhatsApp bloqueó la invitación`
-    )
+  } catch (e) {
+    console.error('JOIN ERROR:', e)
+    reply('❌ No se pudo unir al grupo')
   }
 }
 
@@ -57,4 +57,3 @@ handler.command = ['join']
 handler.tags = ['owner']
 handler.owner = true
 handler.menu = true
-handler.help = ['join <link>']
