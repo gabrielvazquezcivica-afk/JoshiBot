@@ -32,7 +32,6 @@ const handler = async (m, {
 ╚═══════════════════════════════════╝
 `
 
-    // 🖼️ Thumbnail
     const thumb = await (await fetch(v.thumbnail)).buffer()
 
     await sock.sendMessage(from, {
@@ -40,16 +39,13 @@ const handler = async (m, {
       caption
     }, { quoted: m })
 
-    // 🎶 AUDIO
     const r = await fetch(
       `https://api.sylphy.xyz/download/ytmp3?url=${encodeURIComponent(v.url)}&apikey=sylphy-e321`
     )
     const j = await r.json()
     const dl = j?.dl_url || j?.res?.url
 
-    if (!dl) {
-      return reply('❌ *JOSHI AUDIO*\nNo se pudo obtener el audio')
-    }
+    if (!dl) return reply('❌ *JOSHI AUDIO*\nNo se pudo obtener el audio')
 
     await sock.sendMessage(from, {
       audio: { url: dl },
@@ -66,7 +62,7 @@ const handler = async (m, {
 }
 
 handler.command = ['play']
-handler.tags = ['descargas']
+handler.tags = ['youtube']
 handler.help = ['play <texto>']
 handler.menu = true
 handler.prefix = true
