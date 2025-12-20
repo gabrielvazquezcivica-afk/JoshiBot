@@ -1,38 +1,19 @@
 import { downloadContentFromMessage } from '@whiskeysockets/baileys'
 
-function footer (botName) {
-  const meses = [
-    { name: 'enero', emojis: ['❄️','☃️','✨'] },
-    { name: 'febrero', emojis: ['❤️','💘','🌹'] },
-    { name: 'marzo', emojis: ['🍀','🌱','🌸'] },
-    { name: 'abril', emojis: ['🌷','☔','🌼'] },
-    { name: 'mayo', emojis: ['🌺','🌼','☀️'] },
-    { name: 'junio', emojis: ['🌞','🏖️','😎'] },
-    { name: 'julio', emojis: ['🔥','🌴','☀️'] },
-    { name: 'agosto', emojis: ['🌻','☀️','🏖️'] },
-    { name: 'septiembre', emojis: ['🍁','🍂','🌾'] },
-    { name: 'octubre', emojis: ['🎃','👻','🕸️'] },
-    { name: 'noviembre', emojis: ['🍂','🦃','🤎'] },
-    { name: 'diciembre', emojis: ['🎄','✨','🎅'] }
-  ]
-
-  const now = new Date()
-  const m = meses[now.getMonth()]
-  const emoji = m.emojis[Math.floor(Math.random() * m.emojis.length)]
-
-  return `\n\n> ${botName} • ${now.getDate()} ${m.name} ${now.getFullYear()} ${emoji}`
+function footer(botName) {
+  return ``
 }
 
 export const handler = async (m, {
   sock,
   from,
-  args,
   isGroup,
-  reply
+  reply,
+  usedPrefix,
+  command
 }) => {
   if (!isGroup) return reply('❌ Solo funciona en grupos')
 
-  // 📌 Metadata
   const metadata = await sock.groupMetadata(from)
   const admins = metadata.participants
     .filter(p => p.admin)
@@ -45,27 +26,27 @@ export const handler = async (m, {
 
   const participants = metadata.participants.map(p => p.id)
 
-  // 📌 TEXTO SEGURO (FIX DEFINITIVO)
-  const fullText =
+  // 🔴 TEXTO ORIGINAL (CON ENTERS)
+  const rawText =
     m.message?.conversation ||
     m.message?.extendedTextMessage?.text ||
     ''
 
-  const text = args.join(' ')
+  // 🔴 QUITAR SOLO EL COMANDO (SIN ROMPER FORMATO)
+  const text = rawText
+    .replace(new RegExp(`^\\${usedPrefix}${command}\\s*`, 'i'), '')
 
-  // 📛 Nombre real del bot
   const botName = sock.user?.name || 'JoshiBot'
 
-  // 📌 MENSAJE RESPONDIDO
   const ctx = m.message?.extendedTextMessage?.contextInfo
   const quoted = ctx?.quotedMessage
 
-  // ───── RESPONDIENDO A ALGO ─────
+  // ───── RESPONDIENDO A MENSAJE ─────
   if (quoted) {
     const type = Object.keys(quoted)[0]
     let msg = {}
 
-    // 📝 TEXTO
+    // TEXTO
     if (type === 'conversation' || type === 'extendedTextMessage') {
       msg.text =
         (quoted.conversation ||
@@ -73,7 +54,7 @@ export const handler = async (m, {
         '') + footer(botName)
     }
 
-    // 📥 MEDIA (IMG / VID / AUDIO / STICKER)
+    // MEDIA
     else {
       const mediaType = type.replace('Message', '')
       const stream = await downloadContentFromMessage(
@@ -92,17 +73,16 @@ export const handler = async (m, {
     }
 
     msg.mentions = participants
-
     await sock.sendMessage(from, msg, { quoted: m })
     return
   }
 
   // ───── SOLO TEXTO ─────
-  if (text) {
+  if (text.trim()) {
     await sock.sendMessage(
       from,
       {
-        text: text + footer(botName),
+        text,
         mentions: participants
       },
       { quoted: m }
@@ -110,12 +90,7 @@ export const handler = async (m, {
     return
   }
 
-  // ───── USO INCORRECTO ─────
-  reply(
-`⚠️ Uso correcto:
-.n <texto>
-O responde a un mensaje`
-  )
+  reply('⚠️ Usa:\n.n <texto>\nO responde a un mensaje')
 }
 
 handler.command = ['n']
@@ -123,4 +98,3 @@ handler.tags = ['group']
 handler.help = ['n <texto>']
 handler.group = true
 handler.admin = true
-handler.menu = true
