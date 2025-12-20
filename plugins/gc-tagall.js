@@ -29,7 +29,7 @@ export const handler = async (m, { sock, from, isGroup, reply }) => {
     '61': 'AU','64': 'NZ'
   }
 
-  // 🏳️ ISO → bandera (automático)
+  // 🏳️ ISO → bandera
   function isoToFlag(iso) {
     return iso
       .toUpperCase()
@@ -38,7 +38,7 @@ export const handler = async (m, { sock, from, isGroup, reply }) => {
       )
   }
 
-  // 🎲 Bandera aleatoria si no detecta
+  // 🎲 Bandera aleatoria
   const randomFlags = [
     '🇮🇸','🇮🇪','🇸🇪','🇳🇴','🇫🇮','🇩🇰','🇵🇱','🇨🇿','🇸🇰','🇭🇺',
     '🇬🇷','🇷🇴','🇧🇬','🇺🇦','🇭🇷','🇸🇮','🇱🇹','🇱🇻','🇪🇪',
@@ -58,25 +58,31 @@ export const handler = async (m, { sock, from, isGroup, reply }) => {
     return randomFlags[Math.floor(Math.random() * randomFlags.length)]
   }
 
-  // 🧠 Texto futurista (SIN países)
+  // 🧠 TEXTO FUTURISTA (MEJORADO)
   let text = `
-╭─〔 ⚡ MENCIÓN GLOBAL ⚡ 〕
-│ 🤖 JoshiBot System
-╰───────────────────
+╔══════════════════════════╗
+║ 🌐 MENCIÓN GLOBAL SYSTEM ║
+╠══════════════════════════╣
+║ 🤖 Bot: JOSHI-BOT        ║
+║ ⚡ Modo: Hidetag Total   ║
+║ 👥 Usuarios: ${participants.length}       ║
+╚══════════════════════════╝
 `.trim()
 
   const mentions = []
 
   for (const p of participants) {
     const flag = getFlag(p.id)
-    text += `\n${flag} @${p.id.split('@')[0]}`
+    text += `\n${flag} ┊ @${p.id.split('@')[0]}`
     mentions.push(p.id)
   }
 
   text += `
-\n───────────────────
-▢ Protocolo completado
-╰─〔 🚀 JoshiBot 〕
+\n══════════════════════════
+✔ Protocolo finalizado
+🚀 Transmisión completa
+🤖 Powered by JOSHI-BOT
+══════════════════════════
 `
 
   await sock.sendMessage(
