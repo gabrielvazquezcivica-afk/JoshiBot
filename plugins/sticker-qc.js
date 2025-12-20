@@ -1,32 +1,23 @@
-import fs from 'fs'
-import path from 'path'
-import os from 'os'
 import axios from 'axios'
-import { spawn } from 'child_process'
 
 export const handler = async (m, { sock, args, reply }) => {
-
   const text = args.join(' ')
-  if (!text) {
-    return reply('❌ Escribe un texto\n\nEjemplo:\n.qc Hola JoshiBot')
-  }
+  if (!text) return reply('❌ Escribe un texto\nEjemplo: .qc Hola')
 
   try {
     const jid = m.key.participant || m.key.remoteJid
     const name = m.pushName || 'Usuario'
 
-    // 📸 Foto de perfil
     let avatar
     try {
       avatar = await sock.profilePictureUrl(jid, 'image')
     } catch {
-      avatar = 'https://i.ibb.co/2kR7Zq0/default.png'
+      avatar = 'https://i.imgur.com/JP52fdP.png'
     }
 
-    // 🧾 Payload QC
     const payload = {
       type: 'quote',
-      format: 'png',
+      format: 'webp',
       backgroundColor: '#0f172a',
       width: 512,
       height: 512,
@@ -35,47 +26,24 @@ export const handler = async (m, { sock, args, reply }) => {
         avatar: true,
         from: {
           id: 1,
-          name: name,
+          name,
           photo: { url: avatar }
         },
-        text: text,
-        replyMessage: {}
+        text
       }]
     }
 
-    // 🌐 Generar imagen
     const res = await axios.post(
       'https://bot.lyo.su/quote/generate',
       payload,
       { responseType: 'arraybuffer' }
     )
 
-    const tmp = os.tmpdir()
-    const img = path.join(tmp, `qc_${Date.now()}.png`)
-    const webp = path.join(tmp, `qc_${Date.now()}.webp`)
-
-    fs.writeFileSync(img, res.data)
-
-    // 🔄 PNG → WEBP
-    await new Promise((resolve, reject) => {
-      const ff = spawn('ffmpeg', [
-        '-i', img,
-        '-vf', 'scale=512:512:force_original_aspect_ratio=decrease',
-        '-preset', 'default',
-        webp
-      ])
-      ff.on('close', code => code === 0 ? resolve() : reject())
-    })
-
-    // 📤 Enviar sticker
     await sock.sendMessage(
       m.key.remoteJid,
-      { sticker: fs.readFileSync(webp) },
+      { sticker: res.data },
       { quoted: m }
     )
-
-    fs.unlinkSync(img)
-    fs.unlinkSync(webp)
 
   } catch (e) {
     console.error('QC ERROR:', e)
