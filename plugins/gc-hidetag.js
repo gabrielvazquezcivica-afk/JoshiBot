@@ -43,12 +43,14 @@ export const handler = async (m, {
   }
 
   const participants = metadata.participants.map(p => p.id)
-  const text = args.join(' ')
 
-  // 📛 NOMBRE REAL DEL BOT
+  // 🔴 CAMBIO CLAVE: respeta saltos de línea
+  const text = m.text
+    .slice((m.prefix || '').length + handler.command[0].length)
+    .trim()
+
   const botName = sock.user?.name || 'Bot'
 
-  // 📌 MENSAJE RESPONDIDO
   const ctx = m.message?.extendedTextMessage?.contextInfo
   const quoted = ctx?.quotedMessage
 
@@ -56,16 +58,12 @@ export const handler = async (m, {
     const type = Object.keys(quoted)[0]
     let msg = {}
 
-    // 📝 TEXTO
     if (type === 'conversation' || type === 'extendedTextMessage') {
       msg.text =
         (quoted.conversation ||
         quoted.extendedTextMessage?.text || '') +
         footer(botName)
-    }
-
-    // 📥 MEDIA
-    else {
+    } else {
       const mediaType = type.replace('Message', '')
       const stream = await downloadContentFromMessage(
         quoted[type],
@@ -89,7 +87,6 @@ export const handler = async (m, {
     return
   }
 
-  // 📝 SOLO TEXTO
   if (text) {
     await sock.sendMessage(
       from,
