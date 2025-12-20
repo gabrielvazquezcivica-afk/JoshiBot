@@ -1,60 +1,112 @@
-import yts from 'yt-search'
 import fetch from 'node-fetch'
+import yts from 'yt-search'
+import axios from 'axios'
 
-const handler = async (m, { sock, from, text, reply }) => {
-  if (!text) {
-    return reply('⚡ JOSHI AUDIO\n\nUsa:\n.play <nombre o link>')
-  }
+// 🧠 Obtener texto real
+function getText(m) {
+  return (
+    m.message?.conversation ||
+    m.message?.extendedTextMessage?.text ||
+    m.message?.imageMessage?.caption ||
+    m.message?.videoMessage?.caption ||
+    ''
+  )
+}
 
-  await m.react('🎧')
-
-  try {
-    const res = await yts(text)
-    if (!res.videos.length) {
-      return reply('❌ No encontré resultados')
-    }
-
-    const v = res.videos[0]
-
-    const caption = `
-╔═〔 ⚡ JOSHI AUDIO ⚡ 〕═╗
-║ 🎵 ${v.title}
-║ 👤 ${v.author.name}
-║ ⏱️ ${v.duration.timestamp}
-║ 👁️ ${v.views.toLocaleString()}
-╚══════════════════════╝
-`
-
-    const thumb = await (await fetch(v.thumbnail)).buffer()
-
-    await sock.sendMessage(from, {
-      image: thumb,
-      caption
-    }, { quoted: m })
-
-    const r = await fetch(
-      `https://api.sylphy.xyz/download/ytmp3?url=${encodeURIComponent(v.url)}&apikey=sylphy-e321`
+// ⬇️ Downloader
+const ddownr = {
+  download: async (url) => {
+    const res = await axios.get(
+      `https://p.savenow.to/ajax/download.php?format=mp3&url=${encodeURIComponent(url)}&api=dfcb6d76f2f6a9894gjkege8a4ab232222`
     )
-    const j = await r.json()
-    const dl = j?.dl_url || j?.res?.url
-    if (!dl) return reply('❌ No pude descargar el audio')
+    if (!res.data?.success) throw new Error('Error')
+    return await ddownr.wait(res.data.id)
+  },
 
-    await sock.sendMessage(from, {
-      audio: { url: dl },
-      mimetype: 'audio/mpeg'
-    }, { quoted: m })
-
-    await m.react('⚡')
-
-  } catch (e) {
-    console.error(e)
-    reply('❌ Error en JOSHI AUDIO')
+  wait: async (id) => {
+    while (true) {
+      const r = await axios.get(
+        `https://p.savenow.to/ajax/progress?id=${id}`
+      )
+      if (r.data?.success && r.data.progress === 1000) {
+        return r.data.download_url
+      }
+      await new Promise(r => setTimeout(r, 2500))
+    }
   }
 }
 
-/* 🔥 CLAVE */
-handler.command = 'play'
-handler.tags = 'youtube'
-handler.help = 'play <texto>'
+export const handler = async (m, { sock, from, reply }) => {
+  try {
+    const text = getText(m)
+      .replace(/^\.\w+\s?/, '')
+      .trim()
+
+    if (!text) return reply('🎧 Escribe el nombre de la canción')
+
+    // 🔎 Buscar
+    const search = await yts(text)
+    if (!search.all.length) {
+      return reply('❌ No se encontraron resultados')
+    }
+
+    const v = search.all.find(x => x.seconds) || search.all[0]
+    const { title, thumbnail, timestamp, views, ago, url } = v
+
+    // 🎶 Reacción
+    await sock.sendMessage(from, {
+      react: { text: '🎶', key: m.key }
+    })
+
+    // 🧾 MENSAJE FUTURISTA
+    const caption = `
+╭─〔 🎧 JOSHI AUDIO 〕
+│ 🎵 ${title}
+├────────────────
+│ ⏱ Duración: ${timestamp}
+│ 👁 Vistas: ${views.toLocaleString()}
+│ 📅 Publicado: ${ago}
+├────────────────
+│ 🚀 Procesando audio…
+╰─〔 🤖 JoshiBot 〕
+`.trim()
+
+    await sock.sendMessage(from, {
+      image: { url: thumbnail },
+      caption
+    }, { quoted: m })
+
+    // ⬇️ Descargar
+    let dl
+    try {
+      dl = await ddownr.download(url)
+    } catch {
+      const api = await fetch(
+        `https://api.stellarwa.xyz/dl/ytmp3?url=${url}&key=proyectsV2`
+      ).then(r => r.json())
+      dl = api.data.dl
+    }
+
+    // 🎧 Enviar AUDIO
+    await sock.sendMessage(from, {
+      audio: { url: dl },
+      mimetype: 'audio/mpeg',
+      fileName: `${title}.mp3`
+    }, { quoted: m })
+
+    await sock.sendMessage(from, {
+      react: { text: '✅', key: m.key }
+    })
+
+  } catch (e) {
+    console.error(e)
+    reply('❌ Error al enviar el audio')
+  }
+}
+
+handler.command = ['play']
+handler.tags = ['descargas']
+handler.help = ['play <canción>']
+handler.menu = true
 
 export default handler
