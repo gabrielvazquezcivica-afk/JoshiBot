@@ -5,12 +5,13 @@ export const handler = async (m, {
   sock,
   from,
   args,
-  command,
   reply
 }) => {
   try {
     const text = args.join(' ').trim()
-    if (!text) return reply('🎧 Escribe el nombre de una canción\n\nEjemplo:\n.play beliver')
+    if (!text) {
+      return reply('🎧 Escribe el nombre de la canción\n\nEjemplo:\n.play ozuna')
+    }
 
     // 🔎 Buscar en YouTube
     const search = await yts(text)
@@ -19,7 +20,7 @@ export const handler = async (m, {
     const video = search.all.find(v => v.seconds) || search.all[0]
     const { title, url, timestamp, views, thumbnail } = video
 
-    // 🎵 Reacción
+    // 🎶 Reacción inicial
     await sock.sendMessage(from, {
       react: { text: '🎶', key: m.key }
     })
@@ -32,7 +33,7 @@ export const handler = async (m, {
 │ ⏱ ${timestamp}
 │ 👁 ${views.toLocaleString()} vistas
 │
-╰─⏳ Descargando audio...
+╰─⏳ Procesando audio...
 `.trim()
 
     await sock.sendMessage(from, {
@@ -40,18 +41,33 @@ export const handler = async (m, {
       caption
     }, { quoted: m })
 
-    // ⚡ API RÁPIDA (FGMODS)
-    const api = await fetch(
-      `https://api-fgmods.ddns.net/api/downloader/ytmp3?url=${encodeURIComponent(url)}&apikey=fg-dylux`
-    ).then(res => res.json())
+    let audioUrl = null
 
-    if (!api.result?.download) {
-      return reply('❌ Error al obtener el audio')
+    // ⚡ API 1 — STELLAR (MUY RÁPIDA)
+    try {
+      const api1 = await fetch(
+        `https://api.stellarwa.xyz/dl/ytmp3?url=${encodeURIComponent(url)}&key=proyectsV2`
+      ).then(res => res.json())
+
+      audioUrl = api1?.data?.dl
+    } catch {}
+
+    // 🔁 API 2 — FGMODS (RESPALDO)
+    if (!audioUrl) {
+      const api2 = await fetch(
+        `https://api-fgmods.ddns.net/api/downloader/ytmp3?url=${encodeURIComponent(url)}&apikey=fg-dylux`
+      ).then(res => res.json())
+
+      audioUrl = api2?.result?.download
+    }
+
+    if (!audioUrl) {
+      return reply('❌ No se pudo obtener el audio (APIs caídas)')
     }
 
     // 📤 Enviar audio
     await sock.sendMessage(from, {
-      audio: { url: api.result.download },
+      audio: { url: audioUrl },
       mimetype: 'audio/mpeg',
       fileName: `${title}.mp3`
     }, { quoted: m })
@@ -62,7 +78,7 @@ export const handler = async (m, {
     })
 
   } catch (e) {
-    console.error(e)
+    console.error('PLAY ERROR:', e)
     reply('❌ Error al procesar el audio')
   }
 }
