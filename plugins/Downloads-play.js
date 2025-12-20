@@ -68,5 +68,7 @@ const handler = async (m, {
 handler.command = ['play']
 handler.tags = ['descargas']
 handler.help = ['play <texto>']
+handler.menu = true
+handler.prefix = true
 
 export default handler
