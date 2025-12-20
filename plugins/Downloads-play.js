@@ -9,27 +9,46 @@ export const handler = async (m, {
 }) => {
   try {
     const text = args.join(' ').trim()
-    if (!text) return reply('🎧 Escribe una canción\nEjemplo:\n.play ozuna')
+    if (!text) {
+      return reply(
+`🎧 *JOSHI AUDIO SYSTEM*
+━━━━━━━━━━━━━━━━━━
+📌 Escribe el nombre de una canción
 
-    // 🔎 Buscar
+Ejemplo:
+.play bad bunny`
+      )
+    }
+
+    // 🔎 Buscar en YouTube
     const search = await yts(text)
     if (!search.all.length) return reply('❌ No encontré resultados')
 
     const v = search.all.find(x => x.seconds) || search.all[0]
-    const { title, url, timestamp, views, thumbnail } = v
+    const { title, url, timestamp, views, thumbnail, author, ago } = v
 
+    // 🎶 Reacción inicial
     await sock.sendMessage(from, {
       react: { text: '🎶', key: m.key }
     })
 
+    // 🧾 DISEÑO FUTURISTA
     const caption = `
-╭─〔 🎧 JOSHI AUDIO 〕
-│
-│ 🎵 ${title}
-│ ⏱ ${timestamp}
-│ 👁 ${views.toLocaleString()} vistas
-│
-╰─⏳ Descargando audio...
+╔══════════════════════╗
+║   🎧 JOSHI AUDIO 🔊   ║
+╚══════════════════════╝
+
+🎵 *Título:* ${title}
+👤 *Canal:* ${author?.name || 'Desconocido'}
+⏱ *Duración:* ${timestamp}
+👁 *Vistas:* ${views.toLocaleString()}
+📅 *Publicado:* ${ago}
+
+━━━━━━━━━━━━━━━━━━━━━━
+⚡ *Estado:* Procesando audio
+💾 *Formato:* MP3 Alta calidad
+🤖 *Bot:* JOSHI-BOT
+━━━━━━━━━━━━━━━━━━━━━━
 `.trim()
 
     await sock.sendMessage(from, {
@@ -37,19 +56,19 @@ export const handler = async (m, {
       caption
     }, { quoted: m })
 
-    // ⚡ DESCARGA REAL (SIN DDNS)
+    // ⬇️ DESCARGA (API ESTABLE)
     const res = await axios.get(
       `https://p.savenow.to/ajax/download.php?format=mp3&url=${encodeURIComponent(url)}`
     )
 
     if (!res.data?.success) {
-      return reply('❌ No se pudo descargar el audio')
+      return reply('❌ No se pudo obtener el audio')
     }
 
     const id = res.data.id
     let dl
 
-    // ⏳ Esperar a que termine
+    // ⏳ Esperar progreso
     while (true) {
       const p = await axios.get(
         `https://p.savenow.to/ajax/progress?id=${id}`
@@ -68,6 +87,7 @@ export const handler = async (m, {
       fileName: `${title}.mp3`
     }, { quoted: m })
 
+    // ✅ Reacción final
     await sock.sendMessage(from, {
       react: { text: '✅', key: m.key }
     })
