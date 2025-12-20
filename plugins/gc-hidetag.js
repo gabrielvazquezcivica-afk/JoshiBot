@@ -1,6 +1,5 @@
 import { downloadContentFromMessage } from '@whiskeysockets/baileys'
 
-/* 🗓️ FOOTER */
 function footer(botName) {
   const meses = [
     { name: 'enero', emojis: ['❄️','☃️','✨'] },
@@ -25,7 +24,7 @@ function footer(botName) {
 }
 
 /* ================= HANDLER ================= */
-const handler = async (m, {
+export const handler = async (m, {
   sock,
   from,
   args,
@@ -49,13 +48,13 @@ const handler = async (m, {
   const participants = metadata.participants.map(p => p.id)
   const botName = sock.user?.name || 'JoshiBot'
 
-  // ✅ TEXTO LIMPIO (YA SIN .n)
+  // ✅ TEXTO LIMPIO (SIN .n)
   const text = args.join(' ')
 
-  // 📌 MENSAJE RESPONDIDO
   const ctx = m.message?.extendedTextMessage?.contextInfo
   const quoted = ctx?.quotedMessage
 
+  // 📌 RESPONDIENDO A ALGO
   if (quoted) {
     const type = Object.keys(quoted)[0]
     let msg = {}
@@ -66,10 +65,8 @@ const handler = async (m, {
         (quoted.conversation ||
         quoted.extendedTextMessage?.text ||
         '') + footer(botName)
-    }
-
-    // 📥 MEDIA
-    else {
+    } else {
+      // 📥 MEDIA
       const mediaType = type.replace('Message', '')
       const stream = await downloadContentFromMessage(
         quoted[type],
@@ -108,10 +105,9 @@ const handler = async (m, {
   reply('⚠️ Usa:\n.n <texto>\nO responde a un mensaje')
 }
 
+/* ====== METADATA ====== */
 handler.command = ['n']
 handler.tags = ['group']
 handler.help = ['n <texto>']
 handler.group = true
 handler.admin = true
-
-export default handler
