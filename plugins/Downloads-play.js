@@ -1,74 +1,38 @@
 import fetch from 'node-fetch'
 import yts from 'yt-search'
-import axios from 'axios'
 
-// 🧠 Obtener texto real
-function getText(m) {
-  return (
-    m.message?.conversation ||
-    m.message?.extendedTextMessage?.text ||
-    m.message?.imageMessage?.caption ||
-    m.message?.videoMessage?.caption ||
-    ''
-  )
-}
-
-// ⬇️ Downloader
-const ddownr = {
-  download: async (url) => {
-    const res = await axios.get(
-      `https://p.savenow.to/ajax/download.php?format=mp3&url=${encodeURIComponent(url)}&api=dfcb6d76f2f6a9894gjkege8a4ab232222`
-    )
-    if (!res.data?.success) throw new Error('Error')
-    return await ddownr.wait(res.data.id)
-  },
-
-  wait: async (id) => {
-    while (true) {
-      const r = await axios.get(
-        `https://p.savenow.to/ajax/progress?id=${id}`
-      )
-      if (r.data?.success && r.data.progress === 1000) {
-        return r.data.download_url
-      }
-      await new Promise(r => setTimeout(r, 2500))
-    }
-  }
-}
-
-export const handler = async (m, { sock, from, reply }) => {
+export const handler = async (m, {
+  sock,
+  from,
+  args,
+  command,
+  reply
+}) => {
   try {
-    const text = getText(m)
-      .replace(/^\.\w+\s?/, '')
-      .trim()
+    const text = args.join(' ').trim()
+    if (!text) return reply('🎧 Escribe el nombre de una canción\n\nEjemplo:\n.play beliver')
 
-    if (!text) return reply('🎧 Escribe el nombre de la canción')
-
-    // 🔎 Buscar
+    // 🔎 Buscar en YouTube
     const search = await yts(text)
-    if (!search.all.length) {
-      return reply('❌ No se encontraron resultados')
-    }
+    if (!search.all.length) return reply('❌ No encontré resultados')
 
-    const v = search.all.find(x => x.seconds) || search.all[0]
-    const { title, thumbnail, timestamp, views, ago, url } = v
+    const video = search.all.find(v => v.seconds) || search.all[0]
+    const { title, url, timestamp, views, thumbnail } = video
 
-    // 🎶 Reacción
+    // 🎵 Reacción
     await sock.sendMessage(from, {
       react: { text: '🎶', key: m.key }
     })
 
-    // 🧾 MENSAJE FUTURISTA
+    // 🧾 Diseño
     const caption = `
 ╭─〔 🎧 JOSHI AUDIO 〕
+│
 │ 🎵 ${title}
-├────────────────
-│ ⏱ Duración: ${timestamp}
-│ 👁 Vistas: ${views.toLocaleString()}
-│ 📅 Publicado: ${ago}
-├────────────────
-│ 🚀 Procesando audio…
-╰─〔 🤖 JoshiBot 〕
+│ ⏱ ${timestamp}
+│ 👁 ${views.toLocaleString()} vistas
+│
+╰─⏳ Descargando audio...
 `.trim()
 
     await sock.sendMessage(from, {
@@ -76,31 +40,30 @@ export const handler = async (m, { sock, from, reply }) => {
       caption
     }, { quoted: m })
 
-    // ⬇️ Descargar
-    let dl
-    try {
-      dl = await ddownr.download(url)
-    } catch {
-      const api = await fetch(
-        `https://api.stellarwa.xyz/dl/ytmp3?url=${url}&key=proyectsV2`
-      ).then(r => r.json())
-      dl = api.data.dl
+    // ⚡ API RÁPIDA (FGMODS)
+    const api = await fetch(
+      `https://api-fgmods.ddns.net/api/downloader/ytmp3?url=${encodeURIComponent(url)}&apikey=fg-dylux`
+    ).then(res => res.json())
+
+    if (!api.result?.download) {
+      return reply('❌ Error al obtener el audio')
     }
 
-    // 🎧 Enviar AUDIO
+    // 📤 Enviar audio
     await sock.sendMessage(from, {
-      audio: { url: dl },
+      audio: { url: api.result.download },
       mimetype: 'audio/mpeg',
       fileName: `${title}.mp3`
     }, { quoted: m })
 
+    // ✅ Reacción final
     await sock.sendMessage(from, {
       react: { text: '✅', key: m.key }
     })
 
   } catch (e) {
     console.error(e)
-    reply('❌ Error al enviar el audio')
+    reply('❌ Error al procesar el audio')
   }
 }
 
