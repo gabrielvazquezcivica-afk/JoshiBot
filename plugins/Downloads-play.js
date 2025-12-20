@@ -1,35 +1,28 @@
 import yts from 'yt-search'
 import fetch from 'node-fetch'
 
-const handler = async (m, {
-  sock,
-  from,
-  text,
-  reply
-}) => {
-  if (!text?.trim()) {
-    return reply('⚡ *JOSHI AUDIO*\n\n🔎 Escribe el nombre o link de YouTube')
+const handler = async (m, { sock, from, text, reply }) => {
+  if (!text) {
+    return reply('⚡ JOSHI AUDIO\n\nUsa:\n.play <nombre o link>')
   }
 
   await m.react('🎧')
 
   try {
-    const res = await yts(text.trim())
-    if (!res?.videos?.length) {
-      return reply('❌ *JOSHI AUDIO*\nNo se encontraron resultados')
+    const res = await yts(text)
+    if (!res.videos.length) {
+      return reply('❌ No encontré resultados')
     }
 
     const v = res.videos[0]
 
     const caption = `
-╔═══〔 ⚡ J O S H I   A U D I O ⚡ 〕═══╗
-║ 🎵 *Título:* ${v.title}
-║ 👤 *Canal:* ${v.author.name}
-║ ⏱️ *Duración:* ${v.duration.timestamp}
-║ 👁️ *Vistas:* ${v.views.toLocaleString()}
-╠═══════════════════════════════════╣
-║ ⬇️ *Procesando audio…*
-╚═══════════════════════════════════╝
+╔═〔 ⚡ JOSHI AUDIO ⚡ 〕═╗
+║ 🎵 ${v.title}
+║ 👤 ${v.author.name}
+║ ⏱️ ${v.duration.timestamp}
+║ 👁️ ${v.views.toLocaleString()}
+╚══════════════════════╝
 `
 
     const thumb = await (await fetch(v.thumbnail)).buffer()
@@ -44,27 +37,24 @@ const handler = async (m, {
     )
     const j = await r.json()
     const dl = j?.dl_url || j?.res?.url
-
-    if (!dl) return reply('❌ *JOSHI AUDIO*\nNo se pudo obtener el audio')
+    if (!dl) return reply('❌ No pude descargar el audio')
 
     await sock.sendMessage(from, {
       audio: { url: dl },
-      mimetype: 'audio/mpeg',
-      ptt: false
+      mimetype: 'audio/mpeg'
     }, { quoted: m })
 
     await m.react('⚡')
 
   } catch (e) {
-    console.error('JOSHI AUDIO ERROR:', e)
-    reply('⚠️ *JOSHI AUDIO*\nError al procesar el audio')
+    console.error(e)
+    reply('❌ Error en JOSHI AUDIO')
   }
 }
 
-handler.command = ['play']
-handler.tags = ['youtube']
-handler.help = ['play <texto>']
-handler.menu = true
-handler.prefix = true
+/* 🔥 CLAVE */
+handler.command = 'play'
+handler.tags = 'youtube'
+handler.help = 'play <texto>'
 
 export default handler
