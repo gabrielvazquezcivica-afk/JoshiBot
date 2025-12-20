@@ -1,6 +1,6 @@
 // ───── FF 4VS4 LISTA SIMPLE ─────
 const games = {}
-const MAX = 8
+const MAX = 4
 
 function tag (jid) {
   return '@' + jid.split('@')[0]
