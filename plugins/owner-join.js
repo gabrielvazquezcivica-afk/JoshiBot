@@ -1,34 +1,60 @@
-export const handler = async (m, { sock, args, sender, owner, reply }) => {
-  const owners = owner.numbers || []
+// ───── COMANDO JOIN (FIX REAL) ─────
+export const handler = async (m, {
+  sock,
+  args,
+  sender,
+  owner,
+  reply
+}) => {
+  // 🔐 SOLO OWNER
+  const owners = owner?.numbers || []
+  const senderNum = sender.replace(/[^0-9]/g, '')
 
-  // limpiar sender (lid o jid)
-  const cleanSender = sender.replace(/[^0-9]/g, '')
-
-  if (!owners.includes(cleanSender)) {
+  if (!owners.includes(senderNum)) {
     return reply('🚫 Solo el OWNER puede usar este comando')
   }
 
+  // 🔗 LINK
   const link = args[0]
-  if (!link) return reply('❌ Usa: .join <link>')
+  if (!link) {
+    return reply('❌ Usa:\n.join https://chat.whatsapp.com/XXXX')
+  }
 
-  const code = link.split('/').pop().split('?')[0]
+  // 🧠 EXTRAER CÓDIGO REAL
+  const match = link.match(/chat\.whatsapp\.com\/([A-Za-z0-9]+)/i)
+  if (!match) {
+    return reply('❌ Link de grupo inválido')
+  }
+
+  const inviteCode = match[1]
 
   try {
-    // intento normal
-    await sock.groupAcceptInvite(code)
-    return reply('✅ Unido al grupo correctamente')
-  } catch (e1) {
-    try {
-      // fallback nuevo (WhatsApp MD 2025)
-      await sock.groupAcceptInviteV4(code)
-      return reply('✅ Unido al grupo (modo V4)')
-    } catch (e2) {
-      console.error('JOIN ERROR:', e2)
-      return reply('❌ No pude unirme al grupo\n🔒 El link puede estar restringido')
+    // ⏳ INTENTO REAL
+    const res = await sock.groupAcceptInvite(inviteCode)
+
+    // 🧪 VERIFICACIÓN REAL
+    if (!res) {
+      return reply('❌ WhatsApp rechazó la invitación')
     }
+
+    return reply('✅ El bot **SÍ se unió** al grupo correctamente')
+  } catch (err) {
+    console.error('❌ JOIN ERROR:', err)
+
+    return reply(
+`❌ No pude unirme al grupo
+
+Posibles razones:
+• El bot ya está dentro
+• El link está vencido
+• El grupo es restringido
+• WhatsApp bloqueó la invitación`
+    )
   }
 }
 
 handler.command = ['join']
 handler.tags = ['owner']
 handler.owner = true
+handler.menu = true
+handler.help = ['join <link>']
