@@ -1,24 +1,24 @@
-// 🔞 NSFW & 👑 MODOADMIN ON / OFF (solo admins)
+// 🔞 NSFW & 👑 MODOADMIN ON / OFF (admins)
+// Persistente + visible en menú
 
 export const handler = async (m, {
   sock,
   from,
   isGroup,
   args,
+  command,
   reply
 }) => {
 
   // 🛑 Solo grupos
   if (!isGroup) return reply('⚠️ Este comando solo funciona en grupos')
 
-  // 📋 Metadata
+  // 📋 Metadata grupo
   const metadata = await sock.groupMetadata(from)
-  const participants = metadata.participants || []
-
-  // 👤 Sender seguro (FIX)
-  const sender = m.key.participant || m.key.remoteJid
+  const participants = metadata.participants
 
   // 👑 Verificar admin
+  const sender = m.key.participant
   const isAdmin = participants.some(
     p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
   )
@@ -27,9 +27,7 @@ export const handler = async (m, {
     return reply('🚫 Solo administradores pueden usar este comando')
   }
 
-  // 🧠 Inicializar DB
-  if (!global.db) global.db = {}
-  if (!global.db.groups) global.db.groups = {}
+  // 🧠 Inicializar grupo si no existe
   if (!global.db.groups[from]) {
     global.db.groups[from] = {
       nsfw: false,
@@ -37,15 +35,15 @@ export const handler = async (m, {
     }
   }
 
-  const groupData = global.db.groups[from]
+  const group = global.db.groups[from]
 
-  // 📌 Sin argumentos → mostrar estado
+  // 📌 Mostrar estado
   if (!args[0]) {
     return reply(
-`⚙️ CONFIGURACIÓN DEL GRUPO
+`⚙️ *CONFIGURACIÓN DEL GRUPO*
 
-🔞 NSFW: ${groupData.nsfw ? '✅ ACTIVADO' : '❌ DESACTIVADO'}
-👑 MODO ADMIN: ${groupData.modoadmin ? '✅ ACTIVADO' : '❌ DESACTIVADO'}
+🔞 NSFW: ${group.nsfw ? '✅ ACTIVADO' : '❌ DESACTIVADO'}
+👑 MODO ADMIN: ${group.modoadmin ? '✅ ACTIVADO' : '❌ DESACTIVADO'}
 
 📌 Uso:
 .nsfw on | off
@@ -53,38 +51,34 @@ export const handler = async (m, {
     )
   }
 
-  // 🛡️ Texto seguro (FIX)
-  const text = (
-    m.message?.conversation ||
-    m.message?.extendedTextMessage?.text ||
-    ''
-  ).trim()
-
-  const command = text.split(' ')[0].replace('.', '').toLowerCase()
   const option = args[0].toLowerCase()
 
   // 🔞 NSFW
   if (command === 'nsfw') {
     if (option === 'on') {
-      groupData.nsfw = true
-      return reply('✅ NSFW ACTIVADO\nLos comandos 🔞 ahora están permitidos')
+      group.nsfw = true
+      global.saveDB()
+      return reply('✅ NSFW ACTIVADO\nLos comandos 🔞 están permitidos')
     }
 
     if (option === 'off') {
-      groupData.nsfw = false
-      return reply('❌ NSFW DESACTIVADO\nLos comandos 🔞 han sido bloqueados')
+      group.nsfw = false
+      global.saveDB()
+      return reply('❌ NSFW DESACTIVADO\nLos comandos 🔞 fueron bloqueados')
     }
   }
 
   // 👑 MODO ADMIN
   if (command === 'modoadmin') {
     if (option === 'on') {
-      groupData.modoadmin = true
+      group.modoadmin = true
+      global.saveDB()
       return reply('👑 MODO ADMIN ACTIVADO\nSolo admins pueden usar comandos')
     }
 
     if (option === 'off') {
-      groupData.modoadmin = false
+      group.modoadmin = false
+      global.saveDB()
       return reply('👥 MODO ADMIN DESACTIVADO\nTodos pueden usar comandos')
     }
   }
@@ -99,6 +93,11 @@ export const handler = async (m, {
 
 handler.command = ['nsfw', 'modoadmin']
 handler.tags = ['on/off']
+handler.help = [
+  'nsfw on/off',
+  'modoadmin on/off'
+]
+
 handler.group = true
 handler.admin = true
 handler.menu = true
