@@ -13,10 +13,12 @@ export const handler = async (m, {
 
   // 📋 Metadata
   const metadata = await sock.groupMetadata(from)
-  const participants = metadata.participants
+  const participants = metadata.participants || []
 
-  // 👤 Verificar admin
-  const sender = m.key.participant
+  // 👤 Sender seguro (FIX)
+  const sender = m.key.participant || m.key.remoteJid
+
+  // 👑 Verificar admin
   const isAdmin = participants.some(
     p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
   )
@@ -51,7 +53,14 @@ export const handler = async (m, {
     )
   }
 
-  const command = m.text.split(' ')[0].replace('.', '').toLowerCase()
+  // 🛡️ Texto seguro (FIX)
+  const text = (
+    m.message?.conversation ||
+    m.message?.extendedTextMessage?.text ||
+    ''
+  ).trim()
+
+  const command = text.split(' ')[0].replace('.', '').toLowerCase()
   const option = args[0].toLowerCase()
 
   // 🔞 NSFW
