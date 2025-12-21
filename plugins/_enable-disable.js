@@ -1,33 +1,31 @@
-// 🔞 NSFW & 👑 MODOADMIN ON / OFF (admins)
-// Persistente + visible en menú
+// 🔞 NSFW & 👑 MODOADMIN ON / OFF (solo admins)
 
 export const handler = async (m, {
   sock,
   from,
   isGroup,
   args,
-  command,
   reply
 }) => {
 
   // 🛑 Solo grupos
   if (!isGroup) return reply('⚠️ Este comando solo funciona en grupos')
 
-  // 📋 Metadata grupo
+  // 📋 Metadata
   const metadata = await sock.groupMetadata(from)
   const participants = metadata.participants
-
-  // 👑 Verificar admin
   const sender = m.key.participant
+
+  // 👤 Verificar admin
   const isAdmin = participants.some(
     p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
   )
 
-  if (!isAdmin) {
-    return reply('🚫 Solo administradores pueden usar este comando')
-  }
+  if (!isAdmin) return reply('🚫 Solo administradores pueden usar este comando')
 
-  // 🧠 Inicializar grupo si no existe
+  // 🧠 DB persistente
+  if (!global.db) global.db = {}
+  if (!global.db.groups) global.db.groups = {}
   if (!global.db.groups[from]) {
     global.db.groups[from] = {
       nsfw: false,
@@ -35,15 +33,15 @@ export const handler = async (m, {
     }
   }
 
-  const group = global.db.groups[from]
+  const groupData = global.db.groups[from]
 
-  // 📌 Mostrar estado
+  // 📌 Sin argumentos → estado
   if (!args[0]) {
     return reply(
-`⚙️ *CONFIGURACIÓN DEL GRUPO*
+`⚙️ CONFIGURACIÓN DEL GRUPO
 
-🔞 NSFW: ${group.nsfw ? '✅ ACTIVADO' : '❌ DESACTIVADO'}
-👑 MODO ADMIN: ${group.modoadmin ? '✅ ACTIVADO' : '❌ DESACTIVADO'}
+🔞 NSFW: ${groupData.nsfw ? '✅ ACTIVADO' : '❌ DESACTIVADO'}
+👑 MODO ADMIN: ${groupData.modoadmin ? '✅ ACTIVADO' : '❌ DESACTIVADO'}
 
 📌 Uso:
 .nsfw on | off
@@ -51,55 +49,46 @@ export const handler = async (m, {
     )
   }
 
+  const cmd = m.text.split(' ')[0].replace('.', '').toLowerCase()
   const option = args[0].toLowerCase()
 
   // 🔞 NSFW
-  if (command === 'nsfw') {
+  if (cmd === 'nsfw') {
     if (option === 'on') {
-      group.nsfw = true
-      global.saveDB()
-      return reply('✅ NSFW ACTIVADO\nLos comandos 🔞 están permitidos')
+      groupData.nsfw = true
+      return reply('✅ NSFW ACTIVADO')
     }
-
     if (option === 'off') {
-      group.nsfw = false
-      global.saveDB()
-      return reply('❌ NSFW DESACTIVADO\nLos comandos 🔞 fueron bloqueados')
+      groupData.nsfw = false
+      return reply('❌ NSFW DESACTIVADO')
     }
   }
 
   // 👑 MODO ADMIN
-  if (command === 'modoadmin') {
+  if (cmd === 'modoadmin') {
     if (option === 'on') {
-      group.modoadmin = true
-      global.saveDB()
-      return reply('👑 MODO ADMIN ACTIVADO\nSolo admins pueden usar comandos')
+      groupData.modoadmin = true
+      return reply('👑 MODO ADMIN ACTIVADO')
     }
-
     if (option === 'off') {
-      group.modoadmin = false
-      global.saveDB()
-      return reply('👥 MODO ADMIN DESACTIVADO\nTodos pueden usar comandos')
+      groupData.modoadmin = false
+      return reply('👥 MODO ADMIN DESACTIVADO')
     }
   }
 
-  reply(
-`⚠️ Uso incorrecto
-
-.nsfw on | off
-.modoadmin on | off`
-  )
+  reply('⚠️ Usa:\n.nsfw on | off\n.modoadmin on | off')
 }
 
 handler.command = ['nsfw', 'modoadmin']
-handler.tags = ['admins']
-handler.help = [
-  'nsfw on/off',
-  'modoadmin on/off'
-]
 
+// 🔑 ESTO ES LO QUE HACE QUE SALGA EN EL MENÚ
+handler.tags = ['on/off']
+handler.help = [
+  'nsfw on | off',
+  'modoadmin on | off'
+]
+handler.menu = true
 handler.group = true
 handler.admin = true
-handler.menu = true
 
 export default handler
