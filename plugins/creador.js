@@ -1,21 +1,28 @@
 export const handler = async (m, { sock, from }) => {
 
-  const ownerNumber = '523310167470' // NO se muestra
+  const ownerNumber = '523310167470' // SIN +
 
-  const text = `
-╔══════════════════════╗
-║ 👑 *CREADOR DEL BOT*
-╠══════════════════════╣
-║ 🤖 JoshiBot
-║ ⚡ Soporte directo
-║ 🧠 Desarrollo activo
-╚══════════════════════╝
+  const vcard = `
+BEGIN:VCARD
+VERSION:3.0
+N:Joshi;Creador;;;
+FN:Joshi – Creador del Bot
+ORG:JoshiBot
+TITLE:Developer
+TEL;type=CELL;type=VOICE;waid=${ownerNumber}:${ownerNumber}
+END:VCARD
+`.trim()
 
-👉 *Pulsa aquí para contactar al creador:*
-🔗 https://wa.me/${ownerNumber}
-`
-
-  await sock.sendMessage(from, { text }, { quoted: m })
+  await sock.sendMessage(from, {
+    contacts: {
+      displayName: '👑 Creador del Bot',
+      contacts: [
+        {
+          vcard
+        }
+      ]
+    }
+  }, { quoted: m })
 }
 
 handler.command = ['creador', 'owner', 'creator']
