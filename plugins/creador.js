@@ -1,6 +1,6 @@
 export const handler = async (m, { sock, from }) => {
 
-  const phone = '523310167470' // +52 33 1016 7470 → SIN + NI ESPACIOS
+  const phone = '523310167470' // +52 33 1016 7470 (oculto)
 
   const text = `
 ╔══〔 👑 CREADOR DEL BOT 〕══╗
@@ -11,20 +11,23 @@ export const handler = async (m, { sock, from }) => {
 
   await sock.sendMessage(from, {
     text,
-    footer: 'Contacto directo con el creador',
-    buttons: [
-      {
-        buttonText: { displayText: '📞 Contactar creador' },
-        buttonType: 2,
-        buttonId: `https://wa.me/${phone}?text=Hola%20necesito%20ayuda%20con%20JoshiBot`
+    contextInfo: {
+      externalAdReply: {
+        title: '📞 Contactar creador',
+        body: 'Soporte directo de JoshiBot',
+        thumbnailUrl: 'https://i.postimg.cc/W3gbckFb/27969f9eb4afa31ef9ad64f8ede1ad45.jpg',
+        sourceUrl: `https://wa.me/${phone}?text=Hola%20necesito%20ayuda%20con%20JoshiBot`,
+        mediaType: 1,
+        renderLargerThumbnail: true,
+        showAdAttribution: false
       }
-    ],
-    headerType: 1
+    }
   }, { quoted: m })
 }
 
 handler.command = ['creador', 'owner', 'creator']
 handler.tags = ['info']
 handler.help = ['creador']
+handler.menu = true
 
 export default handler
