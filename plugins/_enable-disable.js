@@ -1,4 +1,4 @@
-// 🔞 NSFW ON / OFF (solo admins)
+// 🔞 NSFW & 👑 MODOADMIN ON / OFF (solo admins)
 
 export const handler = async (m, {
   sock,
@@ -9,7 +9,7 @@ export const handler = async (m, {
 }) => {
 
   // 🛑 Solo grupos
-  if (!isGroup) return reply('🔞 Este comando solo funciona en grupos')
+  if (!isGroup) return reply('⚠️ Este comando solo funciona en grupos')
 
   // 📋 Metadata
   const metadata = await sock.groupMetadata(from)
@@ -25,41 +25,70 @@ export const handler = async (m, {
     return reply('🚫 Solo administradores pueden usar este comando')
   }
 
-  // 🧠 Inicializar DB si no existe
+  // 🧠 Inicializar DB
   if (!global.db) global.db = {}
   if (!global.db.groups) global.db.groups = {}
   if (!global.db.groups[from]) {
-    global.db.groups[from] = { nsfw: false }
+    global.db.groups[from] = {
+      nsfw: false,
+      modoadmin: false
+    }
   }
 
   const groupData = global.db.groups[from]
 
-  // 📌 Sin argumento = mostrar estado
+  // 📌 Sin argumentos → mostrar estado
   if (!args[0]) {
     return reply(
-      `🔞 NSFW está actualmente: ${
-        groupData.nsfw ? '✅ ACTIVADO' : '❌ DESACTIVADO'
-      }\n\nUsa:\n.nsfw on\n.nsfw off`
+`⚙️ CONFIGURACIÓN DEL GRUPO
+
+🔞 NSFW: ${groupData.nsfw ? '✅ ACTIVADO' : '❌ DESACTIVADO'}
+👑 MODO ADMIN: ${groupData.modoadmin ? '✅ ACTIVADO' : '❌ DESACTIVADO'}
+
+📌 Uso:
+.nsfw on | off
+.modoadmin on | off`
     )
   }
 
-  // ⚙️ Encender / apagar
+  const command = m.text.split(' ')[0].replace('.', '').toLowerCase()
   const option = args[0].toLowerCase()
 
-  if (option === 'on') {
-    groupData.nsfw = true
-    return reply('✅ NSFW ACTIVADO\nAhora los comandos 🔞 están permitidos')
+  // 🔞 NSFW
+  if (command === 'nsfw') {
+    if (option === 'on') {
+      groupData.nsfw = true
+      return reply('✅ NSFW ACTIVADO\nLos comandos 🔞 ahora están permitidos')
+    }
+
+    if (option === 'off') {
+      groupData.nsfw = false
+      return reply('❌ NSFW DESACTIVADO\nLos comandos 🔞 han sido bloqueados')
+    }
   }
 
-  if (option === 'off') {
-    groupData.nsfw = false
-    return reply('❌ NSFW DESACTIVADO\nLos comandos 🔞 han sido bloqueados')
+  // 👑 MODO ADMIN
+  if (command === 'modoadmin') {
+    if (option === 'on') {
+      groupData.modoadmin = true
+      return reply('👑 MODO ADMIN ACTIVADO\nSolo admins pueden usar comandos')
+    }
+
+    if (option === 'off') {
+      groupData.modoadmin = false
+      return reply('👥 MODO ADMIN DESACTIVADO\nTodos pueden usar comandos')
+    }
   }
 
-  reply('⚠️ Usa:\n.nsfw on\n.nsfw off')
+  reply(
+`⚠️ Uso incorrecto
+
+.nsfw on | off
+.modoadmin on | off`
+  )
 }
 
-handler.command = ['nsfw']
+handler.command = ['nsfw', 'modoadmin']
 handler.tags = ['on/off']
 handler.group = true
 handler.admin = true
