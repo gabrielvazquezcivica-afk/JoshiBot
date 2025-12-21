@@ -21,8 +21,9 @@ export const handler = async (m, {
   const dev = 'SoyGabo'
   const saludo = getGreeting()
 
-  // 🎯 Emoji fijo por categoría
+  // 🎯 Emoji por categoría
   const tagEmoji = {
+    info: 'ℹ️',
     main: '🧩',
     group: '🛠️',
     admin: '👑',
@@ -31,10 +32,9 @@ export const handler = async (m, {
     descargas: '🎵',
     search: '🔍',
     tools: '🧰',
+    stickers: '🖼️',
     owner: '👤',
-    nsfw: '🔞',
-    info: 'ℹ️',
-    stickers: '🖼️'
+    nsfw: '🔞'
   }
 
   const defaultEmoji = '⬢'
@@ -53,7 +53,23 @@ export const handler = async (m, {
     }
   }
 
-  // 🧠 MENÚ FUTURISTA
+  // 📌 ORDEN DEL MENÚ (INFO PRIMERO)
+  const orderedTags = [
+    'info',
+    'main',
+    'group',
+    'admin',
+    'juegos',
+    'ff',
+    'descargas',
+    'search',
+    'tools',
+    'stickers',
+    'owner',
+    'nsfw'
+  ]
+
+  // 🧠 MENÚ
   let menu = `
 ╔═══〔 🤖 JOSHI BOT • AI SYSTEM 〕═══╗
 ║ ⚡ Estado: ONLINE
@@ -69,11 +85,13 @@ export const handler = async (m, {
 ⧉⧉⧉⧉⧉⧉⧉⧉⧉⧉⧉⧉⧉⧉⧉
 `
 
-  for (const tag in categories) {
+  for (const tag of orderedTags) {
+    if (!categories[tag]) continue
+
     const emoji = tagEmoji[tag] || defaultEmoji
 
     menu += `
-╭──〔 ${emoji} ${tag.toUpperCase()} MODULE 〕──╮
+╭──〔 ${emoji} ${tag.toUpperCase()} 〕──╮
 `
 
     for (const cmd of categories[tag]) {
@@ -105,7 +123,7 @@ handler.command = ['menu', 'help', 'comandos']
 handler.tags = ['info']
 handler.group = false
 
-/* ⏱️ */
+// ⏱️
 function clockString(ms) {
   let h = Math.floor(ms / 3600000)
   let m = Math.floor(ms / 60000) % 60
