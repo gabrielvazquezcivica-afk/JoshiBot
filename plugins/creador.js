@@ -1,16 +1,16 @@
 export const handler = async (m, { sock, from }) => {
 
   const ownerNumber = '523310167470'
-  const waLink = `https://wa.me/${ownerNumber}?text=Hola%20vengo%20desde%20JoshiBot`
+  const link = `https://wa.me/${ownerNumber}?text=Hola%20vengo%20desde%20JoshiBot`
 
   const text = `
 ╭─〔 👑 CREADOR DEL BOT 〕
 │ 🤖 JoshiBot
 │ 👨‍💻 Developer: SoyGabo
 │ ⚡ Soporte oficial
-╰───────────────────
+╰────────────────────
 
-👉 *Toca el botón de abajo para abrir el chat directo*
+👉 *Toca abajo para abrir el chat directo*
 `
 
   await sock.sendMessage(from, {
@@ -21,13 +21,14 @@ export const handler = async (m, { sock, from }) => {
         body: 'Soporte directo • JoshiBot',
         mediaType: 1,
         showAdAttribution: true,
-        sourceUrl: waLink
+        sourceUrl: link
       }
     }
   }, { quoted: m })
 }
 
-handler.command = ['creador', 'owner', 'creator']
+/* 👇 ESTO ES LO MÁS IMPORTANTE */
+handler.command = /^(creador|owner|creator)$/i
 handler.tags = ['info']
 handler.help = ['creador']
 handler.group = false
