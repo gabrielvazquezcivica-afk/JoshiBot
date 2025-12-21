@@ -92,7 +92,7 @@ export const handler = async (m, {
 }
 
 handler.command = ['nsfw', 'modoadmin']
-handler.tags = ['on/off']
+handler.tags = ['admins']
 handler.help = [
   'nsfw on/off',
   'modoadmin on/off'
