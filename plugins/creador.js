@@ -1,36 +1,21 @@
 export const handler = async (m, { sock, from }) => {
 
-  const ownerNumber = '523310167470' // +52 33 1016 7470
+  const ownerNumber = '523310167470' // NO se muestra
 
   const text = `
-╔════════════════════╗
+╔══════════════════════╗
 ║ 👑 *CREADOR DEL BOT*
-╠════════════════════╣
+╠══════════════════════╣
 ║ 🤖 JoshiBot
-║ 🧠 Desarrollo activo
 ║ ⚡ Soporte directo
-╚════════════════════╝
+║ 🧠 Desarrollo activo
+╚══════════════════════╝
 
-📌 Toca el botón para hablar con el creador
+👉 *Pulsa aquí para contactar al creador:*
+🔗 https://wa.me/${ownerNumber}
 `
 
-  await sock.sendMessage(from, {
-    text,
-    buttons: [
-      {
-        buttonId: 'owner_chat',
-        buttonText: { displayText: '👤 Contactar creador' },
-        type: 1
-      }
-    ],
-    headerType: 1
-  }, {
-    quoted: m,
-    linkPreview: {
-      canonicalUrl: `https://wa.me/${ownerNumber}`,
-      matchedText: `https://wa.me/${ownerNumber}`
-    }
-  })
+  await sock.sendMessage(from, { text }, { quoted: m })
 }
 
 handler.command = ['creador', 'owner', 'creator']
