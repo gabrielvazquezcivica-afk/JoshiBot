@@ -5,8 +5,26 @@ export const handler = async (m, {
   sock,
   from,
   args,
-  reply
+  reply,
+  isGroup
 }) => {
+
+  // 🔒 MODO ADMIN (BLOQUEO SILENCIOSO)
+  if (isGroup) {
+    const groupData = global.db?.groups?.[from]
+    if (groupData?.modoadmin) {
+      const metadata = await sock.groupMetadata(from)
+      const participants = metadata.participants
+      const sender = m.key.participant
+
+      const isAdmin = participants.some(
+        p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
+      )
+
+      if (!isAdmin) return
+    }
+  }
+
   try {
     const text = args.join(' ').trim()
     if (!text) {
