@@ -51,6 +51,36 @@ global.APIKeys = config.APIKeys
 global.limits = config.limits
 /* ───────────────────────────── */
 
+
+/* =====================================================
+   🔽 AÑADIDO — DB PERSISTENTE (NSFW / MODOADMIN)
+===================================================== */
+
+const GROUP_DB = './database/groups.json'
+
+if (!fs.existsSync('./database')) {
+  fs.mkdirSync('./database', { recursive: true })
+}
+
+global.db = { groups: {} }
+
+// 📥 Cargar DB
+if (fs.existsSync(GROUP_DB)) {
+  try {
+    global.db.groups = JSON.parse(fs.readFileSync(GROUP_DB))
+  } catch {
+    global.db.groups = {}
+  }
+}
+
+// 💾 Guardar DB
+global.saveDB = () => {
+  fs.writeFileSync(GROUP_DB, JSON.stringify(global.db.groups, null, 2))
+}
+
+/* ===================================================== */
+
+
 const PREFIX = global.prefix
 const plugins = []
 
@@ -174,7 +204,7 @@ async function start () {
     const args = text.slice(PREFIX.length).trim().split(/\s+/)
     const command = args.shift().toLowerCase()
 
-    // 🏷️ NOMBRE DEL CHAT (SIN ID)
+    // 🏷️ NOMBRE DEL CHAT
     let chatName = 'Privado'
     if (isGroup) {
       try {
@@ -183,7 +213,6 @@ async function start () {
       } catch {}
     }
 
-    // 🧾 LOG CON GRUPO
     console.log(
       chalk.magentaBright('\n══════════ 📩 COMANDO ══════════'),
       '\n',
