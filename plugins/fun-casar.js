@@ -4,11 +4,36 @@ export const handler = async (m, {
   sock,
   from,
   isGroup,
-  reply
+  reply,
+  owner
 }) => {
+
   if (!isGroup) {
     return reply('💍 Este comando solo funciona en grupos')
   }
+
+  /* ───── 👑 MODO ADMIN (SILENCIOSO) ───── */
+  if (!global.db) global.db = {}
+  if (!global.db.groups) global.db.groups = {}
+  if (!global.db.groups[from]) {
+    global.db.groups[from] = { modoadmin: false }
+  }
+
+  if (global.db.groups[from].modoadmin) {
+    const metadata = await sock.groupMetadata(from)
+    const participants = metadata.participants || []
+    const sender = m.key.participant || m.key.remoteJid
+
+    // 👑 OWNER BYPASS
+    const ownerJids = owner?.jid || []
+    if (!ownerJids.includes(sender)) {
+      const isAdmin = participants.some(
+        p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
+      )
+      if (!isAdmin) return // 🚫 bloqueo silencioso
+    }
+  }
+  /* ─────────────────────────────────── */
 
   // 📋 Obtener participantes
   let metadata
