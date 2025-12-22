@@ -6,22 +6,40 @@ export const handler = async (m, {
   from,
   args,
   reply,
-  isGroup
+  isGroup,
+  owner
 }) => {
+
+  // 🧠 Inicializar DB si no existe
+  if (!global.db) global.db = {}
+  if (!global.db.groups) global.db.groups = {}
+  if (!global.db.groups[from]) {
+    global.db.groups[from] = {
+      nsfw: false,
+      modoadmin: false
+    }
+  }
 
   // 🔒 MODO ADMIN (BLOQUEO SILENCIOSO)
   if (isGroup) {
-    const groupData = global.db?.groups?.[from]
-    if (groupData?.modoadmin) {
+    const groupData = global.db.groups[from]
+
+    if (groupData.modoadmin) {
       const metadata = await sock.groupMetadata(from)
       const participants = metadata.participants
       const sender = m.key.participant
 
-      const isAdmin = participants.some(
-        p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
-      )
+      // 👑 OWNER SIEMPRE PERMITIDO
+      const ownerJids = (owner?.jid || [])
+      if (ownerJids.includes(sender)) {
+        // owner pasa sin bloqueo
+      } else {
+        const isAdmin = participants.some(
+          p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
+        )
 
-      if (!isAdmin) return
+        if (!isAdmin) return // 🚫 bloqueo silencioso
+      }
     }
   }
 
