@@ -1,17 +1,25 @@
 import fs from 'fs'
 
-const DB = './database/mutes.json'
+/* ───── CONFIG DB ───── */
+const DB_PATH = './database/mutes.json'
+
+function ensureDB () {
+  if (!fs.existsSync('./database')) fs.mkdirSync('./database')
+  if (!fs.existsSync(DB_PATH)) fs.writeFileSync(DB_PATH, JSON.stringify({}))
+}
 
 function getDB () {
-  if (!fs.existsSync('./database')) fs.mkdirSync('./database')
-  if (!fs.existsSync(DB)) fs.writeFileSync(DB, JSON.stringify({}))
-  return JSON.parse(fs.readFileSync(DB))
+  ensureDB()
+  return JSON.parse(fs.readFileSync(DB_PATH))
 }
 
 function saveDB (db) {
-  fs.writeFileSync(DB, JSON.stringify(db, null, 2))
+  fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2))
 }
 
+/* =====================================================
+   🔇 COMANDO .mute
+===================================================== */
 export const handler = async (m, {
   sock,
   isGroup,
@@ -30,9 +38,8 @@ export const handler = async (m, {
   if (!admins.includes(sender))
     return reply('⛔ Solo administradores')
 
-  const user =
-    m.message?.extendedTextMessage?.contextInfo?.participant ||
-    m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0]
+  const ctx = m.message?.extendedTextMessage?.contextInfo
+  const user = ctx?.participant || ctx?.mentionedJid?.[0]
 
   if (!user)
     return reply('⚠️ Responde a un mensaje o menciona a alguien')
@@ -40,10 +47,11 @@ export const handler = async (m, {
   const db = getDB()
   if (!db[from]) db[from] = []
 
-  if (!db[from].includes(user)) {
-    db[from].push(user)
-    saveDB(db)
-  }
+  if (db[from].includes(user))
+    return reply('⚠️ Ese usuario ya está muteado')
+
+  db[from].push(user)
+  saveDB(db)
 
   await sock.sendMessage(from, {
     text:
@@ -55,9 +63,38 @@ export const handler = async (m, {
   })
 }
 
+/* =====================================================
+   🗑️ LISTENER → BORRAR MENSAJES
+===================================================== */
+handler.all = async (m, { sock, isGroup }) => {
+  if (!isGroup) return
+  if (!m.message) return
+
+  const from = m.key.remoteJid
+  const sender = m.key.participant
+
+  const db = getDB()
+  if (!db[from]) return
+  if (!db[from].includes(sender)) return
+
+  try {
+    await sock.sendMessage(from, {
+      delete: {
+        remoteJid: from,
+        fromMe: false,
+        id: m.key.id,
+        participant: sender
+      }
+    })
+  } catch {}
+}
+
+/* ───── CONFIG ───── */
 handler.command = ['mute']
 handler.tags = ['group']
 handler.group = true
 handler.admin = true
 handler.botAdmin = true
 handler.menu = true
+
+export default handler
