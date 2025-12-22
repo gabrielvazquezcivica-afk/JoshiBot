@@ -18,28 +18,59 @@ export const handler = async (m, {
   from,
   isGroup,
   sender,
-  reply
+  reply,
+  owner
 }) => {
   if (!isGroup) return reply('❌ Este comando solo funciona en grupos')
+
+  /* ───── 🧠 DB SAFE ───── */
+  if (!global.db) global.db = {}
+  if (!global.db.groups) global.db.groups = {}
+  if (!global.db.groups[from]) {
+    global.db.groups[from] = {
+      nsfw: false,
+      modoadmin: false
+    }
+  }
+
+  const groupData = global.db.groups[from]
+
+  /* ───── 🔞 NSFW (silencioso) ───── */
+  if (!groupData.nsfw) return
+
+  /* ───── 👑 MODO ADMIN (silencioso) ───── */
+  if (groupData.modoadmin) {
+    const metadata = await sock.groupMetadata(from)
+    const participants = metadata.participants || []
+
+    const ownerJids = owner?.jid || []
+    if (!ownerJids.includes(sender)) {
+      const isAdmin = participants.some(
+        p =>
+          p.id === sender &&
+          (p.admin === 'admin' || p.admin === 'superadmin')
+      )
+      if (!isAdmin) return
+    }
+  }
+  /* ─────────────────────────────── */
 
   const ctx = m.message?.extendedTextMessage?.contextInfo
   const mentions = ctx?.mentionedJid || []
 
   let user1, user2
 
-  // 👥 SI MENCIONA 2 PERSONAS
+  // 👥 2 menciones
   if (mentions.length >= 2) {
     user1 = mentions[0]
     user2 = mentions[1]
   }
-
-  // 👤 SI MENCIONA 1 PERSONA → ship con el que ejecuta
+  // 👤 1 mención → ship con quien ejecuta
   else if (mentions.length === 1) {
     user1 = sender
     user2 = mentions[0]
   }
-
-  // ❌ MAL USO
+  // ❌ mal uso
   else {
     return reply(
       '💘 *USO DEL SHIP*\n\n' +
@@ -52,7 +83,6 @@ export const handler = async (m, {
   // 🎯 PROBABILIDAD
   const percent = Math.floor(Math.random() * 101)
 
-  // 💬 TEXTO SEGÚN %
   let estado
   if (percent >= 80) estado = '💍 DESTINADOS'
   else if (percent >= 60) estado = '💖 MUY POSIBLE'
@@ -63,9 +93,9 @@ export const handler = async (m, {
   const texto = `
 ╭─〔 💘 SHIP DEL AMOR 〕
 │
-│ 👤 ${'@' + user1.split('@')[0]}
+│ 👤 @${user1.split('@')[0]}
 │ 💞
-│ 👤 ${'@' + user2.split('@')[0]}
+│ 👤 @${user2.split('@')[0]}
 │
 │ ❤️ Probabilidad: *${percent}%*
 │ 🧠 Estado: ${estado}
@@ -88,3 +118,5 @@ handler.tags = ['juegos']
 handler.help = ['ship @user', 'ship @user1 @user2']
 handler.group = true
 handler.menu = true
+
+export default handler
