@@ -17,91 +17,75 @@ export const handler = async (m, {
     global.db.groups[from] = { nsfw: false }
   }
 
-  const groupData = global.db.groups[from]
-
-  /* ───── NSFW OBLIGATORIO ───── */
-  if (!groupData.nsfw) {
+  if (!global.db.groups[from].nsfw) {
     return reply(
       '🔞 *Comandos NSFW desactivados*\n\n' +
-      'Un admin debe activar con:\n' +
-      '.nsfw on'
+      'Activa con:\n.ns fw on'
     )
   }
 
-  /* ───── TEXTO ───── */
-  const queryRaw = args.join(' ').trim()
-  if (!queryRaw) {
+  if (!args.length) {
     return reply(
-      '❌ Escribe qué buscar\n\n' +
+      '❌ Usa:\n' +
+      '.rule34 <tags>\n\n' +
       'Ejemplo:\n' +
       '.rule34 valentine skullgirls'
     )
   }
 
-  // 🧠 FIX RULE34 TAGS
-  const query = `${queryRaw} rating:explicit`
+  // 🧠 limpiar tags
+  const cleanTags = args
+    .join(' ')
+    .replace(/[()]/g, '')
+    .trim()
+
+  const tryTags = [
+    `${cleanTags} rating:explicit`,
+    `${args[0]} rating:explicit`,
+    `anime rating:explicit`
+  ]
 
   await sock.sendMessage(from, {
     react: { text: '🔞', key: m.key }
   })
 
-  try {
-    const url =
-      'https://api.rule34.xxx/index.php' +
-      '?page=dapi&s=post&q=index' +
-      `&tags=${encodeURIComponent(query)}` +
-      '&limit=100&json=1'
-
-    const res = await fetch(url)
-    const raw = await res.text()
-
-    // ❌ XML = sin resultados
-    if (raw.startsWith('<?xml')) {
-      return reply('❌ No se encontraron resultados')
-    }
-
-    let data
+  for (const tags of tryTags) {
     try {
-      data = JSON.parse(raw)
-    } catch {
-      return reply('❌ Error leyendo resultados')
-    }
+      const url =
+        'https://api.rule34.xxx/index.php' +
+        '?page=dapi&s=post&q=index' +
+        `&tags=${encodeURIComponent(tags)}` +
+        '&limit=100&json=1'
 
-    if (!Array.isArray(data) || data.length === 0) {
-      return reply('❌ No se encontraron resultados')
-    }
+      const res = await fetch(url)
+      const text = await res.text()
 
-    // 🎲 Random post
-    const post = data[Math.floor(Math.random() * data.length)]
-    const media = post.file_url
+      if (text.startsWith('<?xml')) continue
 
-    if (!media) return reply('❌ Resultado inválido')
+      const data = JSON.parse(text)
+      if (!Array.isArray(data) || !data.length) continue
 
-    const isImage = /\.(jpg|jpeg|png)$/i.test(media)
+      const post = data[Math.floor(Math.random() * data.length)]
+      const media = post.file_url
+      if (!media) continue
 
-    await sock.sendMessage(
-      from,
-      isImage
-        ? {
-            image: { url: media },
-            caption: `🔞 Resultado de:\n${queryRaw}`
-          }
-        : {
-            video: { url: media },
-            gifPlayback: true,
-            caption: `🔞 Resultado de:\n${queryRaw}`
-          },
-      { quoted: m }
-    )
+      const isImg = /\.(jpg|png|jpeg)$/i.test(media)
 
-  } catch (e) {
-    console.error('RULE34 ERROR:', e)
-    reply('❌ Error al buscar contenido')
+      await sock.sendMessage(
+        from,
+        isImg
+          ? { image: { url: media }, caption: `🔞 ${cleanTags}` }
+          : { video: { url: media }, gifPlayback: true, caption: `🔞 ${cleanTags}` },
+        { quoted: m }
+      )
+      return
+    } catch {}
   }
+
+  reply('❌ No se encontraron resultados válidos')
 }
 
-/* ───── CONFIG ───── */
-handler.command = ['rule34', 'rule']
+handler.command = ['rule34']
 handler.group = true
 handler.tags = ['nsfw']
 handler.menu = false
