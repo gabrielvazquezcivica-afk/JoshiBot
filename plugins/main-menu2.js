@@ -7,7 +7,7 @@ export const handler = async (m, {
   isGroup
 }) => {
 
-  // 🔞 Recomendado: solo en grupos
+  // 🔞 Solo grupos
   if (!isGroup) {
     return reply('🔞 Este menú solo está disponible en grupos')
   }
@@ -25,28 +25,24 @@ export const handler = async (m, {
   const botName = 'JoshiBot'
   const dev = 'SoyGabo'
 
-  // 📦 Recolectar SOLO NSFW
+  // 📦 Recolectar comandos NSFW
   const nsfwCommands = []
 
   for (const plugin of plugins) {
-    if (!plugin?.handler) continue
-
-    const h = plugin.handler
-    if (!h.command || !h.tags) continue
+    const h = plugin?.handler
+    if (!h?.command || !h?.tags) continue
 
     if (h.tags.includes('nsfw')) {
       const cmds = Array.isArray(h.command) ? h.command : [h.command]
-      for (const c of cmds) {
-        nsfwCommands.push(c)
-      }
+      nsfwCommands.push(...cmds)
     }
   }
 
-  if (nsfwCommands.length === 0) {
+  if (!nsfwCommands.length) {
     return reply('❌ No hay comandos NSFW disponibles.')
   }
 
-  // 🧠 MENÚ NSFW
+  // 🧠 MENÚ TEXTO
   let menu = `
 ╔═══〔 🔞 JOSHI BOT • NSFW ZONE 〕═══╗
 ║ ⚠️ Contenido solo para adultos
@@ -56,7 +52,7 @@ export const handler = async (m, {
 `
 
   for (const cmd of nsfwCommands.sort()) {
-    menu += `│ 🔥  .${cmd}\n`
+    menu += `│ 🔥 .${cmd}\n`
   }
 
   menu += `
@@ -67,12 +63,7 @@ export const handler = async (m, {
 
   await sock.sendMessage(
     from,
-    {
-      image: {
-        url: 'https://i.postimg.cc/Jh0N7QYb/nsfw-dark.jpg'
-      },
-      caption: menu
-    },
+    { text: menu.trim() },
     { quoted: m }
   )
 }
@@ -80,5 +71,6 @@ export const handler = async (m, {
 handler.command = ['menu2', 'menunsfw']
 handler.tags = ['info']
 handler.group = true
+handler.menu = true
 
 export default handler
