@@ -4,15 +4,49 @@ import os from 'os'
 import webp from 'node-webpmux'
 import { downloadContentFromMessage } from '@whiskeysockets/baileys'
 
-export const handler = async (m, { sock, args, reply }) => {
+export const handler = async (m, {
+  sock,
+  from,
+  isGroup,
+  sender,
+  args,
+  reply,
+  owner
+}) => {
 
-  // 📝 TEXTO WM
+  /* ───── 🧠 DB SAFE ───── */
+  if (!global.db) global.db = {}
+  if (!global.db.groups) global.db.groups = {}
+  if (isGroup && !global.db.groups[from]) {
+    global.db.groups[from] = {
+      modoadmin: false
+    }
+  }
+
+  /* ───── 👑 MODO ADMIN (silencioso) ───── */
+  if (isGroup && global.db.groups[from].modoadmin) {
+    const metadata = await sock.groupMetadata(from)
+    const participants = metadata.participants || []
+
+    const ownerJids = owner?.jid || []
+    if (!ownerJids.includes(sender)) {
+      const isAdmin = participants.some(
+        p =>
+          p.id === sender &&
+          (p.admin === 'admin' || p.admin === 'superadmin')
+      )
+      if (!isAdmin) return
+    }
+  }
+  /* ─────────────────────────────── */
+
+  /* ───── 📝 TEXTO WM ───── */
   const texto = args.join(' ').trim()
   if (!texto) {
     return reply('❌ Escribe un texto después de .wm')
   }
 
-  // 🔎 OBTENER STICKER RESPONDIDO (FORMA CORRECTA PARA TU CORE)
+  /* ───── 🔎 STICKER RESPONDIDO ───── */
   const ctx = m.message?.extendedTextMessage?.contextInfo
   const quoted = ctx?.quotedMessage
 
@@ -20,33 +54,35 @@ export const handler = async (m, { sock, args, reply }) => {
     return reply('❌ Responde a un sticker')
   }
 
+  let input, output
+
   try {
-    // 📥 DESCARGAR STICKER
+    /* ───── 📥 DESCARGAR STICKER ───── */
     const stream = await downloadContentFromMessage(
       quoted.stickerMessage,
       'sticker'
     )
 
-    let buffer = Buffer.from([])
+    let buffer = Buffer.alloc(0)
     for await (const chunk of stream) {
       buffer = Buffer.concat([buffer, chunk])
     }
 
-    // 📂 ARCHIVOS TEMPORALES
+    /* ───── 📂 TEMPORALES ───── */
     const tmp = os.tmpdir()
-    const input = path.join(tmp, `wm_in_${Date.now()}.webp`)
-    const output = path.join(tmp, `wm_out_${Date.now()}.webp`)
+    input = path.join(tmp, `wm_in_${Date.now()}.webp`)
+    output = path.join(tmp, `wm_out_${Date.now()}.webp`)
     fs.writeFileSync(input, buffer)
 
-    // 🧷 CARGAR WEBP
+    /* ───── 🧷 CARGAR WEBP ───── */
     const img = new webp.Image()
     await img.load(input)
 
-    // 🧠 EXIF → TEXTO COMO DESCRIPCIÓN
+    /* ───── 🧠 EXIF (WM) ───── */
     const exifData = {
       'sticker-pack-id': 'joshibot-wm',
-      'sticker-pack-name': texto, // 👈 AQUÍ VA EL WM
-      'sticker-pack-publisher': '',
+      'sticker-pack-name': texto,
+      'sticker-pack-publisher': 'JoshiBot',
       emojis: []
     }
 
@@ -69,20 +105,21 @@ export const handler = async (m, { sock, args, reply }) => {
     img.exif = exifAttr
     await img.save(output)
 
-    // 📤 ENVIAR STICKER (SIN MENSAJE EXTRA)
+    /* ───── 📤 ENVIAR STICKER ───── */
     await sock.sendMessage(
-      m.key.remoteJid,
+      from,
       { sticker: fs.readFileSync(output) },
       { quoted: m }
     )
 
-    // 🧹 LIMPIEZA
-    fs.unlinkSync(input)
-    fs.unlinkSync(output)
-
   } catch (e) {
     console.error('WM ERROR:', e)
     reply('❌ Error procesando el sticker')
+
+  } finally {
+    /* ───── 🧹 LIMPIEZA SEGURA ───── */
+    try { if (input) fs.unlinkSync(input) } catch {}
+    try { if (output) fs.unlinkSync(output) } catch {}
   }
 }
 
@@ -90,3 +127,5 @@ handler.command = ['wm']
 handler.tags = ['stickers']
 handler.menu = true
 handler.group = false
+
+export default handler
