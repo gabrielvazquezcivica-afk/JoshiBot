@@ -7,36 +7,38 @@ export const handler = async (m, {
 }) => {
 
   // 🛑 Solo grupos
-  if (!isGroup) return reply('❌ Solo funciona en grupos')
+  if (!isGroup) return
 
   /* ───── 🧠 DB SAFE ───── */
   if (!global.db) global.db = {}
   if (!global.db.groups) global.db.groups = {}
   if (!global.db.groups[from]) {
-    global.db.groups[from] = { nsfw: false }
+    global.db.groups[from] = {
+      nsfw: false
+    }
   }
 
   const groupData = global.db.groups[from]
 
-  /* ───── 🔞 NSFW OBLIGATORIO ───── */
-  if (!groupData.nsfw) {
-    return reply('🔞 Este comando requiere NSFW activado')
-  }
+  /* ───── 🔞 NSFW OBLIGATORIO (SILENCIOSO) ───── */
+  if (!groupData.nsfw) return
 
   /* ───── 👤 TARGET ───── */
+  let target
   const ctx = m.message?.extendedTextMessage?.contextInfo
-  let target =
-    ctx?.mentionedJid?.[0] ||
-    ctx?.participant
 
-  if (!target) {
+  if (ctx?.mentionedJid?.length) {
+    target = ctx.mentionedJid[0]
+  } else if (ctx?.participant) {
+    target = ctx.participant
+  } else {
     return reply('❌ Etiqueta o responde a alguien')
   }
 
-  const name1 = await sock.getName(sender)
-  const name2 = await sock.getName(target)
+  const user1 = '@' + sender.split('@')[0]
+  const user2 = '@' + target.split('@')[0]
 
-  const texto = `${name1} está haciendo un 69 con ${name2}`
+  const texto = `${user1} está haciendo un 69 con ${user2}`
 
   /* ───── 🔥 REACCIÓN ───── */
   await sock.sendMessage(from, {
@@ -71,11 +73,14 @@ export const handler = async (m, {
   )
 }
 
-/* ───── CONFIG ───── */
+/* ───── CONFIGURACIÓN ───── */
 handler.command = ['69', 'sixnine']
 handler.group = true
 handler.tags = ['nsfw']
+
+handler.menu = false
+handler.menu2 = true
+
 handler.help = ['69 @usuario']
-handler.menu2 = false
 
 export default handler
