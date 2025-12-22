@@ -20,8 +20,14 @@ export const handler = async (m, {
 
   const groupData = global.db.groups[from]
 
-  /* ───── 🔞 NSFW OBLIGATORIO (SILENCIOSO) ───── */
-  if (!groupData.nsfw) return
+  /* ───── 🔞 NSFW OBLIGATORIO (CON AVISO) ───── */
+  if (!groupData.nsfw) {
+    return reply(
+      '🔞 *Comandos NSFW desactivados*\n\n' +
+      'Un admin debe activar con:\n' +
+      '.nsfw on'
+    )
+  }
 
   /* ───── 👤 TARGET ───── */
   let target
@@ -76,11 +82,9 @@ export const handler = async (m, {
 /* ───── CONFIGURACIÓN ───── */
 handler.command = ['69', 'sixnine']
 handler.group = true
-handler.tags = ['nsfw']
-
 handler.menu = false
 handler.menu2 = true
-
+handler.tags = ['nsfw']
 handler.help = ['69 @usuario']
 
 export default handler
