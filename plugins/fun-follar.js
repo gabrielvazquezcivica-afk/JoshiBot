@@ -4,9 +4,32 @@ export const handler = async (m, {
   from,
   sender,
   isGroup,
-  reply
+  reply,
+  owner
 }) => {
   if (!isGroup) return reply('❌ Este comando solo funciona en grupos')
+
+  /* ───── 👑 MODO ADMIN (SILENCIOSO) ───── */
+  if (!global.db) global.db = {}
+  if (!global.db.groups) global.db.groups = {}
+  if (!global.db.groups[from]) {
+    global.db.groups[from] = { modoadmin: false }
+  }
+
+  if (global.db.groups[from].modoadmin) {
+    const metadata = await sock.groupMetadata(from)
+    const participants = metadata.participants || []
+
+    // 👑 OWNER bypass
+    const ownerJids = owner?.jid || []
+    if (!ownerJids.includes(sender)) {
+      const isAdmin = participants.some(
+        p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
+      )
+      if (!isAdmin) return // 🚫 bloqueo silencioso
+    }
+  }
+  /* ─────────────────────────────────── */
 
   // 👥 Detectar mención o respuesta
   let target =
@@ -17,7 +40,7 @@ export const handler = async (m, {
     return reply('⚠️ Menciona a alguien o responde a un mensaje')
   }
 
-  // 😈 FRASES PASADAS (NO EXPLÍCITAS)
+  // 😈 FRASES (NO EXPLÍCITAS)
   const frases = [
     '💥 Lo dejó caminando raro',
     '😈 Salió con traumas emocionales',
@@ -47,15 +70,19 @@ export const handler = async (m, {
   const user2 = '@' + target.split('@')[0]
 
   // 📤 MENSAJE FINAL
-  await sock.sendMessage(from, {
-    text:
+  await sock.sendMessage(
+    from,
+    {
+      text:
 `😈 *ACCIÓN DETECTADA*
 ━━━━━━━━━━━━━━━
 ${user1} *se folló a* ${user2}
 ${frase}
 ━━━━━━━━━━━━━━━`,
-    mentions: [sender, target]
-  }, { quoted: m })
+      mentions: [sender, target]
+    },
+    { quoted: m }
+  )
 }
 
 handler.command = ['follar']
@@ -63,3 +90,5 @@ handler.tags = ['juegos']
 handler.group = true
 handler.menu = true
 handler.help = ['follar @usuario']
+
+export default handler
