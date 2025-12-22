@@ -1,14 +1,48 @@
-// fun-formarpareja2.js (+18 light)
+// fun-formarpareja2.js 🔞💖 (+18 light)
 
 export const handler = async (m, {
   sock,
   from,
   isGroup,
-  reply
+  reply,
+  sender,
+  owner
 }) => {
+
   if (!isGroup) {
     return reply('🔞 Este comando +18 solo funciona en grupos')
   }
+
+  /* ───── 🧠 DB INICIAL ───── */
+  if (!global.db) global.db = {}
+  if (!global.db.groups) global.db.groups = {}
+  if (!global.db.groups[from]) {
+    global.db.groups[from] = {
+      nsfw: false,
+      modoadmin: false
+    }
+  }
+
+  const groupData = global.db.groups[from]
+
+  /* ───── 🔞 NSFW CHECK ───── */
+  if (!groupData.nsfw) return
+
+  /* ───── 👑 MODO ADMIN (SILENCIOSO) ───── */
+  if (groupData.modoadmin) {
+    const metadata = await sock.groupMetadata(from)
+    const participants = metadata.participants || []
+
+    // 👑 OWNER bypass
+    const ownerJids = owner?.jid || []
+    if (!ownerJids.includes(sender)) {
+      const isAdmin = participants.some(
+        p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
+      )
+      if (!isAdmin) return
+    }
+  }
+  /* ─────────────────────────────────── */
 
   // 📋 Obtener participantes
   let metadata
