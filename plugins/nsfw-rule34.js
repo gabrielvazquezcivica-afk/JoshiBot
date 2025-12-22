@@ -19,19 +19,23 @@ export const handler = async (m, {
 
   if (!global.db.groups[from].nsfw) {
     return reply(
-      '🔞 *NSFW desactivado*\n\n' +
-      'Activa con:\n.nsfw on'
+      '🔞 *NSFW desactivado*\n\nActiva con:\n.nsfw on'
     )
   }
 
   if (!args.length) {
     return reply(
-      '❌ Usa:\n.rule34 <tag>\n\nEjemplo:\n.rule34 valentine'
+      '❌ Usa:\n.rule34 <tag>\n\nEj:\n.rule34 anime'
     )
   }
 
+  /* ───── NORMALIZAR TAG ───── */
   const tag = args.join(' ')
-    .replace(/[()]/g, '')
+    .toLowerCase()
+    .normalize('NFD')                 // quita acentos
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9_ ]/g, '')
+    .replace(/\s+/g, '_')
     .trim()
 
   await sock.sendMessage(from, {
@@ -53,17 +57,15 @@ export const handler = async (m, {
 
     const xml = await res.text()
 
-    // ❌ sin resultados
     if (!xml.includes('<post ')) {
-      return reply('❌ No se encontraron resultados')
+      return reply(`❌ Sin resultados para:\n${tag}`)
     }
 
-    // 🔎 extraer file_url
     const files = [...xml.matchAll(/file_url="([^"]+)"/g)]
       .map(v => v[1])
 
     if (!files.length) {
-      return reply('❌ No se encontraron archivos válidos')
+      return reply('❌ No hay archivos válidos')
     }
 
     const media = files[Math.floor(Math.random() * files.length)]
@@ -79,7 +81,7 @@ export const handler = async (m, {
 
   } catch (e) {
     console.error(e)
-    reply('❌ Error al obtener contenido')
+    reply('❌ Error al consultar Rule34')
   }
 }
 
