@@ -7,116 +7,79 @@ import {
   prepareWAMessageMedia
 } from '@whiskeysockets/baileys'
 
-/* ───── DB PARA EVITAR REPETIDOS ───── */
-const dbFilePath = path.resolve('./database/sentUrls.json')
+/* ───── DB ───── */
+const dbPath = path.resolve('./database/rule34.json')
 
 const readDb = async () => {
   try {
-    const data = await fs.readFile(dbFilePath, 'utf8')
-    return JSON.parse(data)
+    return JSON.parse(await fs.readFile(dbPath, 'utf8'))
   } catch {
     return {}
   }
 }
 
 const writeDb = async (data) => {
-  await fs.writeFile(dbFilePath, JSON.stringify(data, null, 2))
-}
-
-const cleanDb = async () => {
-  const db = await readDb()
-  const now = Date.now()
-  const MAX = 30 * 24 * 60 * 60 * 1000
-
-  for (const url in db) {
-    if (now - db[url] > MAX) delete db[url]
-  }
-  await writeDb(db)
+  await fs.writeFile(dbPath, JSON.stringify(data, null, 2))
 }
 
 /* ───── HANDLER ───── */
-export const handler = async (m, {
-  sock,
-  from,
-  isGroup,
-  args,
-  reply
-}) => {
+const handler = async (m, { sock, from, isGroup, args, reply }) => {
 
-  // 🛑 SOLO GRUPOS
   if (!isGroup) return
 
-  /* ───── 🧠 DB GROUP ───── */
-  if (!global.db) global.db = {}
-  if (!global.db.groups) global.db.groups = {}
-  if (!global.db.groups[from]) {
-    global.db.groups[from] = { nsfw: false }
-  }
-
-  const groupData = global.db.groups[from]
-
-  /* ───── 🔞 NSFW OBLIGATORIO (CON AVISO) ───── */
-  if (!groupData.nsfw) {
+  if (!global.db.groups[from]?.nsfw) {
     return reply(
-      '🔞 *Comandos NSFW desactivados*\n\n' +
-      'Un admin debe activarlos con:\n' +
+      '🔞 *NSFW DESACTIVADO*\n\n' +
+      'Un admin debe activarlo con:\n' +
       '.nsfw on'
     )
   }
 
-  /* ───── 🔍 TEXTO ───── */
-  const text = args.join(' ').trim()
-  if (!text) {
+  const query = args.join(' ').trim()
+  if (!query) {
     return reply(
-      '❌ Debes escribir un tag\n\n' +
-      'Ejemplo:\n' +
+      '❌ Usa el comando así:\n\n' +
       '.rule34 valentine_(skullgirls)'
     )
   }
 
   try {
-    await cleanDb()
-
     await sock.sendMessage(from, {
       react: { text: '🔥', key: m.key }
     })
 
-    /* ───── API FIX ───── */
-    const apiUrl =
+    /* ✅ JSON REAL */
+    const url =
       `https://api.rule34.xxx/index.php` +
       `?page=dapi&s=post&q=index` +
-      `&limit=100` +
-      `&tags=${encodeURIComponent(text)}`
+      `&json=1&limit=100` +
+      `&tags=${encodeURIComponent(query)}`
 
-    const res = await fetch(apiUrl)
+    const res = await fetch(url)
     const data = await res.json()
 
     if (!Array.isArray(data) || data.length === 0) {
       return reply(
         '❌ No se encontraron resultados para:\n' +
-        `🔎 *${text}*\n\n` +
-        '💡 Prueba con:\n' +
-        '- otro nombre\n' +
-        '- sin paréntesis\n' +
-        '- solo el personaje'
+        `🔎 *${query}*\n\n` +
+        '💡 Prueba sin paréntesis o con menos tags'
       )
     }
 
     const db = await readDb()
-    const fresh = data.filter(p => !db[p.file_url])
+    const fresh = data.filter(v => v.file_url && !db[v.file_url])
 
-    if (fresh.length === 0) {
+    if (!fresh.length) {
       return reply('⚠️ Ya no hay imágenes nuevas para ese tag')
     }
 
     const selected = fresh.sort(() => 0.5 - Math.random()).slice(0, 6)
 
     const cards = await Promise.all(
-      selected.map(async (post, i) => {
-        const imgRes = await fetch(post.file_url)
-        const buffer = await imgRes.buffer()
-
-        db[post.file_url] = Date.now()
+      selected.map(async (img, i) => {
+        const r = await fetch(img.file_url)
+        const buffer = await r.buffer()
+        db[img.file_url] = Date.now()
 
         const media = await prepareWAMessageMedia(
           { image: buffer },
@@ -125,13 +88,11 @@ export const handler = async (m, {
 
         return {
           header: proto.Message.InteractiveMessage.Header.fromObject({
-            title: `🔥 Hentai ${i + 1}`,
+            title: `🔥 Imagen ${i + 1}`,
             hasMediaAttachment: true,
             imageMessage: media.imageMessage
           }),
-          body: proto.Message.InteractiveMessage.Body.fromObject({
-            text: null
-          }),
+          body: proto.Message.InteractiveMessage.Body.fromObject({ text: null }),
           footer: proto.Message.InteractiveMessage.Footer.fromObject({
             text: 'Desliza →'
           }),
@@ -152,15 +113,9 @@ export const handler = async (m, {
           message: {
             interactiveMessage:
               proto.Message.InteractiveMessage.fromObject({
-                body: {
-                  text: `🔞 RESULTADOS PARA:\n*${text}*`
-                },
-                footer: {
-                  text: 'JoshiBot • NSFW'
-                },
-                carouselMessage: {
-                  cards
-                }
+                body: { text: `🔞 RESULTADOS PARA:\n*${query}*` },
+                footer: { text: 'JoshiBot • Rule34' },
+                carouselMessage: { cards }
               })
           }
         }
@@ -174,7 +129,7 @@ export const handler = async (m, {
 
   } catch (e) {
     console.error(e)
-    reply('❌ Error al obtener contenido NSFW')
+    reply('❌ Error al obtener contenido Rule34')
   }
 }
 
