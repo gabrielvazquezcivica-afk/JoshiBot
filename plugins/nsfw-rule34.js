@@ -19,59 +19,51 @@ export const handler = async (m, {
 
   if (!global.db.groups[from].nsfw) {
     return reply(
-      '🔞 *NSFW desactivado*\n\nActiva con:\n.nsfw on'
+      '🔞 NSFW desactivado\nUsa:\n.nsfw on'
     )
   }
 
   if (!args.length) {
     return reply(
-      '❌ Usa:\n.rule34 <tag>\n\nEj:\n.rule34 genshin_impact'
+      '❌ Uso:\n.rule34 <tag>\n\nEj:\n.rule34 rem_(re_zero)'
     )
   }
 
-  /* ───── NORMALIZAR TAG ───── */
+  /* ───── TAG CORRECTO ───── */
   const tag = args.join(' ')
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9_ ]/g, '')
+    .replace(/[^a-z0-9_() ]/g, '') // 🔥 FIX AQUÍ
     .replace(/\s+/g, '_')
     .trim()
 
-  const tryFetch = async (t) => {
-    const url =
-      `https://api.rule34.xxx/index.php?page=dapi&s=post&q=index&tags=${encodeURIComponent(t)}&limit=100`
-
-    const res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0' }
-    })
-
-    const xml = await res.text()
-    if (!xml.includes('<post ')) return null
-
-    const files = [...xml.matchAll(/file_url="([^"]+)"/g)]
-      .map(v => v[1])
-
-    return files.length ? files : null
-  }
+  const url =
+    `https://api.rule34.xxx/index.php?page=dapi&s=post&q=index&tags=${encodeURIComponent(tag)}&limit=100`
 
   await sock.sendMessage(from, {
     react: { text: '🔍', key: m.key }
   })
 
-  let results =
-    await tryFetch(tag) ||
-    await tryFetch(tag.replace(/_/g, '')) ||
-    await tryFetch(tag.split('_')[0])
+  const res = await fetch(url, {
+    headers: { 'User-Agent': 'Mozilla/5.0' }
+  })
 
-  if (!results) {
+  const xml = await res.text()
+
+  if (!xml.includes('<post ')) {
     return reply(
       `❌ No hay resultados válidos para:\n${tag}\n\n` +
-      `💡 Usa personajes reales\nEj:\n.rule34 rem_(re_zero)`
+      `💡 Ejemplos reales:\n` +
+      `.rule34 rem_(re_zero)\n` +
+      `.rule34 skullgirls`
     )
   }
 
-  const media = results[Math.floor(Math.random() * results.length)]
+  const files = [...xml.matchAll(/file_url="([^"]+)"/g)]
+    .map(v => v[1])
+
+  const media = files[Math.floor(Math.random() * files.length)]
   const isImg = /\.(jpg|jpeg|png)$/i.test(media)
 
   await sock.sendMessage(
