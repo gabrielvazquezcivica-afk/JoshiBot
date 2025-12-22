@@ -1,13 +1,55 @@
-export const handler = async (m, { sock, from, isGroup, args, reply }) => {
+export const handler = async (m, {
+  sock,
+  from,
+  isGroup,
+  args,
+  sender,
+  reply,
+  owner
+}) => {
   if (!isGroup) return reply('🚫 Solo funciona en grupos')
 
+  /* ───── 🧠 DB SAFE ───── */
+  if (!global.db) global.db = {}
+  if (!global.db.groups) global.db.groups = {}
+  if (!global.db.groups[from]) {
+    global.db.groups[from] = {
+      nsfw: false,
+      modoadmin: false
+    }
+  }
+
+  const groupData = global.db.groups[from]
+
+  /* ───── 👑 MODO ADMIN (silencioso) ───── */
+  if (groupData.modoadmin) {
+    const metadata = await sock.groupMetadata(from)
+    const participants = metadata.participants || []
+
+    const ownerJids = owner?.jid || []
+    if (!ownerJids.includes(sender)) {
+      const isAdmin = participants.some(
+        p =>
+          p.id === sender &&
+          (p.admin === 'admin' || p.admin === 'superadmin')
+      )
+      if (!isAdmin) return
+    }
+  }
+  /* ─────────────────────────────── */
+
   if (!args.length) {
-    return reply('❌ Uso:\n.top <texto>\nEjemplo:\n.top gay')
+    return reply(
+      '❌ *Uso correcto*\n\n' +
+      '.top <texto>\n' +
+      'Ejemplo:\n' +
+      '.top gay'
+    )
   }
 
   const texto = args.join(' ').toLowerCase()
 
-  // 🧠 Emojis según palabra
+  /* ───── 🧠 EMOJIS INTELIGENTES ───── */
   const emojiMap = [
     { keys: ['gay', 'gei', 'lgbt'], emojis: ['🏳️‍🌈', '💅', '✨', '😌'] },
     { keys: ['feo', 'feos'], emojis: ['🤡', '💀', '👹'] },
@@ -29,18 +71,16 @@ export const handler = async (m, { sock, from, isGroup, args, reply }) => {
     return defaultEmojis[Math.floor(Math.random() * defaultEmojis.length)]
   }
 
-  // 📥 Metadata
+  /* ───── 📥 METADATA ───── */
   const metadata = await sock.groupMetadata(from)
 
-  // 👥 INCLUIR A TODOS (incluido el que ejecuta)
   let members = metadata.participants.map(p => p.id)
 
   if (!members.length) return reply('❌ No hay usuarios')
 
-  // 🔀 Mezclar
+  /* ───── 🔀 MEZCLAR ───── */
   members = members.sort(() => Math.random() - 0.5)
 
-  // 🔟 Top 10
   const top = members.slice(0, Math.min(10, members.length))
 
   let msg = `🏆 *TOP 10 ${texto.toUpperCase()}*\n\n`
@@ -59,3 +99,5 @@ handler.command = ['top']
 handler.group = true
 handler.tags = ['juegos']
 handler.menu = true
+
+export default handler
