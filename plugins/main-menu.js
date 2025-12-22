@@ -33,8 +33,7 @@ export const handler = async (m, {
     search: '🔍',
     tools: '🧰',
     stickers: '🖼️',
-    owner: '👤',
-    nsfw: '🔞'
+    owner: '👤'
   }
 
   const defaultEmoji = '⬢'
