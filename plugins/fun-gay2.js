@@ -13,15 +13,11 @@ export const handler = async (m, {
   if (!global.db.groups) global.db.groups = {}
   if (!global.db.groups[from]) {
     global.db.groups[from] = {
-      nsfw: false,
       modoadmin: false
     }
   }
 
   const groupData = global.db.groups[from]
-
-  /* ───── 🔞 NSFW (silencioso) ───── */
-  if (!groupData.nsfw) return
 
   /* ───── 👑 MODO ADMIN (silencioso) ───── */
   if (groupData.modoadmin) {
