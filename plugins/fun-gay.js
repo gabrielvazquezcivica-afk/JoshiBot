@@ -1,5 +1,42 @@
-export const handler = async (m, { sock, from, isGroup, sender, reply }) => {
+export const handler = async (m, {
+  sock,
+  from,
+  isGroup,
+  sender,
+  reply,
+  owner
+}) => {
   if (!isGroup) return reply('🚫 Este comando solo funciona en grupos')
+
+  /* ───── 🧠 DB INICIAL ───── */
+  if (!global.db) global.db = {}
+  if (!global.db.groups) global.db.groups = {}
+  if (!global.db.groups[from]) {
+    global.db.groups[from] = {
+      nsfw: false,
+      modoadmin: false
+    }
+  }
+
+  const groupData = global.db.groups[from]
+
+  /* ───── 🔞 NSFW CHECK (SILENCIOSO) ───── */
+  if (!groupData.nsfw) return
+
+  /* ───── 👑 MODO ADMIN (SILENCIOSO) ───── */
+  if (groupData.modoadmin) {
+    const metadata = await sock.groupMetadata(from)
+    const participants = metadata.participants || []
+
+    const ownerJids = owner?.jid || []
+    if (!ownerJids.includes(sender)) {
+      const isAdmin = participants.some(
+        p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
+      )
+      if (!isAdmin) return
+    }
+  }
+  /* ─────────────────────────────────── */
 
   let target
 
@@ -60,21 +97,23 @@ export const handler = async (m, { sock, from, isGroup, sender, reply }) => {
 
   const phrase = phrases[Math.floor(Math.random() * phrases.length)]
 
-  const text =
-`🏳️‍🌈 *Gayómetro Supremo*
+  const text = `
+🏳️‍🌈 *Gayómetro Supremo*
 
 👤 Usuario: @${target.split('@')[0]}
 📊 Porcentaje: *${percent}%*
 ☠️ Veredicto: ${phrase}
-`
+`.trim()
 
   await sock.sendMessage(from, {
     text,
     mentions: [target]
-  })
+  }, { quoted: m })
 }
 
 handler.command = ['gay']
 handler.group = true
 handler.tags = ['juegos']
 handler.menu = true
+
+export default handler
