@@ -1,138 +1,117 @@
 import fetch from 'node-fetch'
-import fs from 'fs/promises'
-import path from 'path'
-import {
-  proto,
-  generateWAMessageFromContent,
-  prepareWAMessageMedia
-} from '@whiskeysockets/baileys'
 
-/* ───── DB ───── */
-const dbPath = path.resolve('./database/rule34.json')
+export const handler = async (m, {
+  sock,
+  from,
+  isGroup,
+  args,
+  reply
+}) => {
 
-const readDb = async () => {
-  try {
-    return JSON.parse(await fs.readFile(dbPath, 'utf8'))
-  } catch {
-    return {}
+  // 🛑 Solo grupos
+  if (!isGroup) return
+
+  /* ───── 🧠 DB SAFE ───── */
+  if (!global.db) global.db = {}
+  if (!global.db.groups) global.db.groups = {}
+  if (!global.db.groups[from]) {
+    global.db.groups[from] = { nsfw: false }
   }
-}
 
-const writeDb = async (data) => {
-  await fs.writeFile(dbPath, JSON.stringify(data, null, 2))
-}
+  const groupData = global.db.groups[from]
 
-/* ───── HANDLER ───── */
-let handler = async (m, { conn, text, args }) => {
-
-  /* 🔞 NSFW obligatorio */
-  if (m.isGroup && !global.db.data.chats[m.chat].nsfw) {
-    return m.reply(
+  /* ───── 🔞 NSFW OBLIGATORIO (CON AVISO) ───── */
+  if (!groupData.nsfw) {
+    return reply(
       '🔞 *Comandos NSFW desactivados*\n\n' +
-      'Un admin debe activarlos con:\n' +
+      'Un admin debe activar con:\n' +
       '.nsfw on'
     )
   }
 
-  const query = text?.trim()
+  /* ───── 📌 TEXTO ───── */
+  const query = args.join(' ').trim()
   if (!query) {
-    return m.reply(
-      '❌ Usa el comando así:\n\n' +
+    return reply(
+      '❌ Escribe qué buscar\n\n' +
+      'Ejemplo:\n' +
       '.rule34 valentine_(skullgirls)'
     )
   }
 
-  try {
-    await conn.sendMessage(m.chat, {
-      react: { text: '🔥', key: m.key }
-    })
+  /* ───── 🔥 REACCIÓN ───── */
+  await sock.sendMessage(from, {
+    react: { text: '🔞', key: m.key }
+  })
 
-    /* ✅ JSON real */
+  try {
+    /* ───── 🌐 API RULE34 (JSON FORZADO) ───── */
     const url =
-      `https://api.rule34.xxx/index.php` +
-      `?page=dapi&s=post&q=index` +
-      `&json=1&limit=100` +
-      `&tags=${encodeURIComponent(query)}`
+      'https://api.rule34.xxx/index.php' +
+      '?page=dapi&s=post&q=index' +
+      `&tags=${encodeURIComponent(query)}` +
+      '&json=1'
 
     const res = await fetch(url)
-    const data = await res.json()
+    const text = await res.text()
+
+    // ❌ Si devuelve XML
+    if (text.startsWith('<?xml')) {
+      return reply('❌ No se encontraron resultados')
+    }
+
+    let data
+    try {
+      data = JSON.parse(text)
+    } catch {
+      return reply('❌ Error procesando resultados')
+    }
 
     if (!Array.isArray(data) || data.length === 0) {
-      return m.reply(`❌ No se encontraron resultados para:\n*${query}*`)
+      return reply('❌ No se encontraron resultados')
     }
 
-    const db = await readDb()
-    const fresh = data.filter(v => v.file_url && !db[v.file_url])
+    /* ───── 🎲 MEDIA ALEATORIA ───── */
+    const post = data[Math.floor(Math.random() * data.length)]
+    const media = post.file_url
 
-    if (!fresh.length) {
-      return m.reply('⚠️ No hay imágenes nuevas para ese tag')
+    if (!media) {
+      return reply('❌ Resultado inválido')
     }
 
-    const selected = fresh.sort(() => 0.5 - Math.random()).slice(0, 6)
+    const isImage =
+      media.endsWith('.jpg') ||
+      media.endsWith('.png') ||
+      media.endsWith('.jpeg')
 
-    const cards = await Promise.all(
-      selected.map(async (img, i) => {
-        const r = await fetch(img.file_url)
-        const buffer = await r.buffer()
-        db[img.file_url] = Date.now()
-
-        const media = await prepareWAMessageMedia(
-          { image: buffer },
-          { upload: conn.waUploadToServer }
-        )
-
-        return {
-          header: proto.Message.InteractiveMessage.Header.fromObject({
-            title: `🔥 Imagen ${i + 1}`,
-            hasMediaAttachment: true,
-            imageMessage: media.imageMessage
-          }),
-          body: proto.Message.InteractiveMessage.Body.fromObject({ text: null }),
-          footer: proto.Message.InteractiveMessage.Footer.fromObject({
-            text: 'Desliza →'
-          }),
-          nativeFlowMessage:
-            proto.Message.InteractiveMessage.NativeFlowMessage.fromObject({
-              buttons: []
-            })
-        }
-      })
-    )
-
-    await writeDb(db)
-
-    const msg = generateWAMessageFromContent(
-      m.chat,
-      {
-        viewOnceMessage: {
-          message: {
-            interactiveMessage:
-              proto.Message.InteractiveMessage.fromObject({
-                body: { text: `🔞 RESULTADOS PARA:\n*${query}*` },
-                footer: { text: 'JoshiBot • Rule34' },
-                carouselMessage: { cards }
-              })
+    /* ───── 📤 ENVIAR ───── */
+    await sock.sendMessage(
+      from,
+      isImage
+        ? {
+            image: { url: media },
+            caption: `🔞 Resultado de:\n${query}`
           }
-        }
-      },
+        : {
+            video: { url: media },
+            gifPlayback: true,
+            caption: `🔞 Resultado de:\n${query}`
+          },
       { quoted: m }
     )
 
-    await conn.relayMessage(m.chat, msg.message, {
-      messageId: msg.key.id
-    })
-
   } catch (e) {
-    console.error(e)
-    m.reply('❌ Error al obtener contenido Rule34')
+    console.error('RULE34 ERROR:', e)
+    reply('❌ Error al buscar contenido')
   }
 }
 
-/* ───── CONFIG PARA MENU2 ───── */
-handler.help = ['rule34 <tag>']
-handler.tags = ['nsfw']
+/* ───── CONFIGURACIÓN ───── */
 handler.command = ['rule34', 'rule']
 handler.group = true
-handler.menu = true
+handler.tags = ['nsfw']
+handler.menu = false
+handler.menu2 = true
+handler.help = ['rule34 <búsqueda>']
 
 export default handler
