@@ -1,11 +1,52 @@
-export const handler = async (m, { sock, from, isGroup, sender, reply }) => {
+export const handler = async (m, {
+  sock,
+  from,
+  isGroup,
+  sender,
+  reply,
+  owner
+}) => {
   if (!isGroup) return reply('🚫 Solo funciona en grupos')
+
+  /* ───── 🧠 DB ───── */
+  if (!global.db) global.db = {}
+  if (!global.db.groups) global.db.groups = {}
+  if (!global.db.groups[from]) {
+    global.db.groups[from] = {
+      nsfw: false,
+      modoadmin: false
+    }
+  }
+
+  const groupData = global.db.groups[from]
+
+  /* ───── 🔞 NSFW (silencioso) ───── */
+  if (!groupData.nsfw) return
+
+  /* ───── 👑 MODO ADMIN (silencioso) ───── */
+  if (groupData.modoadmin) {
+    const metadata = await sock.groupMetadata(from)
+    const participants = metadata.participants || []
+
+    const ownerJids = owner?.jid || []
+    if (!ownerJids.includes(sender)) {
+      const isAdmin = participants.some(
+        p =>
+          p.id === sender &&
+          (p.admin === 'admin' || p.admin === 'superadmin')
+      )
+      if (!isAdmin) return
+    }
+  }
+  /* ─────────────────────────────── */
 
   let target
 
   if (m.message?.extendedTextMessage?.contextInfo?.participant) {
     target = m.message.extendedTextMessage.contextInfo.participant
-  } else if (m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.length) {
+  } else if (
+    m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.length
+  ) {
     target = m.message.extendedTextMessage.contextInfo.mentionedJid[0]
   } else {
     target = sender
@@ -36,16 +77,22 @@ export const handler = async (m, { sock, from, isGroup, sender, reply }) => {
 💬 ${frase}
 
 🏳️‍🌈 🟥🟧🟨🟩🟦🟪 🏳️‍🌈
-`
+`.trim()
 
-  await sock.sendMessage(from, {
-    image: { url: pp },
-    caption: texto,
-    mentions: [target]
-  }, { quoted: m })
+  await sock.sendMessage(
+    from,
+    {
+      image: { url: pp },
+      caption: texto,
+      mentions: [target]
+    },
+    { quoted: m }
+  )
 }
 
 handler.command = ['gay2']
 handler.group = true
 handler.tags = ['juegos']
 handler.menu = true
+
+export default handler
