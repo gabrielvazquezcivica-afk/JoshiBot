@@ -19,77 +19,76 @@ export const handler = async (m, {
 
   if (!global.db.groups[from].nsfw) {
     return reply(
-      '🔞 *Comandos NSFW desactivados*\n\n' +
-      'Activa con:\n.ns fw on'
+      '🔞 *NSFW desactivado*\n\n' +
+      'Activa con:\n.nsfw on'
     )
   }
 
   if (!args.length) {
     return reply(
-      '❌ Usa:\n' +
-      '.rule34 <tags>\n\n' +
-      'Ejemplo:\n' +
-      '.rule34 valentine skullgirls'
+      '❌ Usa:\n.rule34 <tag>\n\nEjemplo:\n.rule34 valentine'
     )
   }
 
-  // 🧠 limpiar tags
-  const cleanTags = args
-    .join(' ')
+  const tag = args.join(' ')
     .replace(/[()]/g, '')
     .trim()
-
-  const tryTags = [
-    `${cleanTags} rating:explicit`,
-    `${args[0]} rating:explicit`,
-    `anime rating:explicit`
-  ]
 
   await sock.sendMessage(from, {
     react: { text: '🔞', key: m.key }
   })
 
-  for (const tags of tryTags) {
-    try {
-      const url =
-        'https://api.rule34.xxx/index.php' +
-        '?page=dapi&s=post&q=index' +
-        `&tags=${encodeURIComponent(tags)}` +
-        '&limit=100&json=1'
+  try {
+    const url =
+      'https://api.rule34.xxx/index.php' +
+      '?page=dapi&s=post&q=index' +
+      `&tags=${encodeURIComponent(tag + ' rating:explicit')}` +
+      '&limit=100'
 
-      const res = await fetch(url)
-      const text = await res.text()
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0'
+      }
+    })
 
-      if (text.startsWith('<?xml')) continue
+    const xml = await res.text()
 
-      const data = JSON.parse(text)
-      if (!Array.isArray(data) || !data.length) continue
+    // ❌ sin resultados
+    if (!xml.includes('<post ')) {
+      return reply('❌ No se encontraron resultados')
+    }
 
-      const post = data[Math.floor(Math.random() * data.length)]
-      const media = post.file_url
-      if (!media) continue
+    // 🔎 extraer file_url
+    const files = [...xml.matchAll(/file_url="([^"]+)"/g)]
+      .map(v => v[1])
 
-      const isImg = /\.(jpg|png|jpeg)$/i.test(media)
+    if (!files.length) {
+      return reply('❌ No se encontraron archivos válidos')
+    }
 
-      await sock.sendMessage(
-        from,
-        isImg
-          ? { image: { url: media }, caption: `🔞 ${cleanTags}` }
-          : { video: { url: media }, gifPlayback: true, caption: `🔞 ${cleanTags}` },
-        { quoted: m }
-      )
-      return
-    } catch {}
+    const media = files[Math.floor(Math.random() * files.length)]
+    const isImg = /\.(jpg|jpeg|png)$/i.test(media)
+
+    await sock.sendMessage(
+      from,
+      isImg
+        ? { image: { url: media }, caption: `🔞 ${tag}` }
+        : { video: { url: media }, gifPlayback: true, caption: `🔞 ${tag}` },
+      { quoted: m }
+    )
+
+  } catch (e) {
+    console.error(e)
+    reply('❌ Error al obtener contenido')
   }
-
-  reply('❌ No se encontraron resultados válidos')
 }
 
+/* ───── CONFIG ───── */
 handler.command = ['rule34']
 handler.group = true
 handler.tags = ['nsfw']
 handler.menu = false
 handler.menu2 = true
-handler.help = ['rule34 <tags>']
+handler.help = ['rule34 <tag>']
 
 export default handler
