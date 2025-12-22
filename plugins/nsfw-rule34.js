@@ -8,10 +8,9 @@ export const handler = async (m, {
   reply
 }) => {
 
-  // 🛑 Solo grupos
   if (!isGroup) return
 
-  /* ───── 🧠 DB SAFE ───── */
+  /* ───── DB SAFE ───── */
   if (!global.db) global.db = {}
   if (!global.db.groups) global.db.groups = {}
   if (!global.db.groups[from]) {
@@ -20,7 +19,7 @@ export const handler = async (m, {
 
   const groupData = global.db.groups[from]
 
-  /* ───── 🔞 NSFW OBLIGATORIO (CON AVISO) ───── */
+  /* ───── NSFW OBLIGATORIO ───── */
   if (!groupData.nsfw) {
     return reply(
       '🔞 *Comandos NSFW desactivados*\n\n' +
@@ -29,73 +28,68 @@ export const handler = async (m, {
     )
   }
 
-  /* ───── 📌 TEXTO ───── */
-  const query = args.join(' ').trim()
-  if (!query) {
+  /* ───── TEXTO ───── */
+  const queryRaw = args.join(' ').trim()
+  if (!queryRaw) {
     return reply(
       '❌ Escribe qué buscar\n\n' +
       'Ejemplo:\n' +
-      '.rule34 valentine_(skullgirls)'
+      '.rule34 valentine skullgirls'
     )
   }
 
-  /* ───── 🔥 REACCIÓN ───── */
+  // 🧠 FIX RULE34 TAGS
+  const query = `${queryRaw} rating:explicit`
+
   await sock.sendMessage(from, {
     react: { text: '🔞', key: m.key }
   })
 
   try {
-    /* ───── 🌐 API RULE34 (JSON FORZADO) ───── */
     const url =
       'https://api.rule34.xxx/index.php' +
       '?page=dapi&s=post&q=index' +
       `&tags=${encodeURIComponent(query)}` +
-      '&json=1'
+      '&limit=100&json=1'
 
     const res = await fetch(url)
-    const text = await res.text()
+    const raw = await res.text()
 
-    // ❌ Si devuelve XML
-    if (text.startsWith('<?xml')) {
+    // ❌ XML = sin resultados
+    if (raw.startsWith('<?xml')) {
       return reply('❌ No se encontraron resultados')
     }
 
     let data
     try {
-      data = JSON.parse(text)
+      data = JSON.parse(raw)
     } catch {
-      return reply('❌ Error procesando resultados')
+      return reply('❌ Error leyendo resultados')
     }
 
     if (!Array.isArray(data) || data.length === 0) {
       return reply('❌ No se encontraron resultados')
     }
 
-    /* ───── 🎲 MEDIA ALEATORIA ───── */
+    // 🎲 Random post
     const post = data[Math.floor(Math.random() * data.length)]
     const media = post.file_url
 
-    if (!media) {
-      return reply('❌ Resultado inválido')
-    }
+    if (!media) return reply('❌ Resultado inválido')
 
-    const isImage =
-      media.endsWith('.jpg') ||
-      media.endsWith('.png') ||
-      media.endsWith('.jpeg')
+    const isImage = /\.(jpg|jpeg|png)$/i.test(media)
 
-    /* ───── 📤 ENVIAR ───── */
     await sock.sendMessage(
       from,
       isImage
         ? {
             image: { url: media },
-            caption: `🔞 Resultado de:\n${query}`
+            caption: `🔞 Resultado de:\n${queryRaw}`
           }
         : {
             video: { url: media },
             gifPlayback: true,
-            caption: `🔞 Resultado de:\n${query}`
+            caption: `🔞 Resultado de:\n${queryRaw}`
           },
       { quoted: m }
     )
@@ -106,12 +100,12 @@ export const handler = async (m, {
   }
 }
 
-/* ───── CONFIGURACIÓN ───── */
+/* ───── CONFIG ───── */
 handler.command = ['rule34', 'rule']
 handler.group = true
 handler.tags = ['nsfw']
 handler.menu = false
 handler.menu2 = true
-handler.help = ['rule34 <búsqueda>']
+handler.help = ['rule34 <tags>']
 
 export default handler
