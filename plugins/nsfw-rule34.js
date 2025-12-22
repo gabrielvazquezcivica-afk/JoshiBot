@@ -29,52 +29,68 @@ export const handler = async (m, {
     )
   }
 
-  /* ───── TAG CLEAN ───── */
   const tag = args.join(' ')
     .toLowerCase()
     .replace(/\s+/g, '_')
 
   const url =
-    `https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1&tags=${encodeURIComponent(tag)}&limit=100`
+    `https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1&limit=100&tags=${encodeURIComponent(tag)}`
 
   await sock.sendMessage(from, {
     react: { text: '🔍', key: m.key }
   })
 
-  let res
+  let text
   try {
-    res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0' }
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0',
+        'Accept': 'application/json'
+      }
     })
-  } catch {
+    text = await res.text()
+  } catch (e) {
     return reply('❌ Error al conectar con Gelbooru')
   }
 
+  /* ───── PARSE SEGURO ───── */
   let data
   try {
-    data = await res.json()
+    data = JSON.parse(text)
   } catch {
-    return reply('❌ Respuesta inválida del servidor')
+    return reply(
+      '❌ Gelbooru respondió algo no válido\n' +
+      'Intenta otro tag'
+    )
   }
 
-  if (!data?.post?.length) {
+  /* ───── NORMALIZAR RESPUESTA ───── */
+  let posts = []
+
+  if (Array.isArray(data)) {
+    posts = data
+  } else if (Array.isArray(data.post)) {
+    posts = data.post
+  }
+
+  if (!posts.length) {
     return reply(
-      `❌ No hay resultados para:\n${tag}\n\n` +
-      `💡 Ejemplos válidos:\n` +
+      `❌ Sin resultados para:\n${tag}\n\n` +
+      `Ejemplos válidos:\n` +
       `.rule34 rem_(re_zero)\n` +
       `.rule34 skullgirls\n` +
       `.rule34 genshin_impact`
     )
   }
 
-  const post = data.post[Math.floor(Math.random() * data.post.length)]
+  const post = posts[Math.floor(Math.random() * posts.length)]
   const file = post.file_url
 
-  const isImg = /\.(jpg|jpeg|png)$/i.test(file)
+  const isImage = /\.(jpg|jpeg|png)$/i.test(file)
 
   await sock.sendMessage(
     from,
-    isImg
+    isImage
       ? { image: { url: file }, caption: `🔞 ${tag}` }
       : { video: { url: file }, gifPlayback: true, caption: `🔞 ${tag}` },
     { quoted: m }
