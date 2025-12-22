@@ -43,7 +43,8 @@ export const handler = async (m, {
   from,
   command,
   reply,
-  isGroup
+  isGroup,
+  owner
 }) => {
   try {
 
@@ -60,11 +61,15 @@ export const handler = async (m, {
         const participants = metadata.participants || []
         const sender = m.key.participant || m.key.remoteJid
 
-        const isAdmin = participants.some(
-          p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
-        )
+        // 👑 OWNER SIEMPRE PASA
+        const ownerJids = owner?.jid || []
+        if (!ownerJids.includes(sender)) {
+          const isAdmin = participants.some(
+            p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
+          )
 
-        if (!isAdmin) return
+          if (!isAdmin) return // 🚫 bloqueo silencioso
+        }
       }
     }
     /* ─────────────────────────────────── */
