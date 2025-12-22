@@ -19,7 +19,7 @@ export const handler = async (m, {
 
   if (!global.db.groups[from].nsfw) {
     return reply(
-      '🔞 NSFW desactivado\nUsa:\n.nsfw on'
+      '🔞 *NSFW desactivado*\n\nActívalo con:\n.nsfw on'
     )
   }
 
@@ -29,48 +29,54 @@ export const handler = async (m, {
     )
   }
 
-  /* ───── TAG CORRECTO ───── */
+  /* ───── TAG CLEAN ───── */
   const tag = args.join(' ')
     .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9_() ]/g, '') // 🔥 FIX AQUÍ
     .replace(/\s+/g, '_')
-    .trim()
 
   const url =
-    `https://api.rule34.xxx/index.php?page=dapi&s=post&q=index&tags=${encodeURIComponent(tag)}&limit=100`
+    `https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1&tags=${encodeURIComponent(tag)}&limit=100`
 
   await sock.sendMessage(from, {
     react: { text: '🔍', key: m.key }
   })
 
-  const res = await fetch(url, {
-    headers: { 'User-Agent': 'Mozilla/5.0' }
-  })
+  let res
+  try {
+    res = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0' }
+    })
+  } catch {
+    return reply('❌ Error al conectar con Gelbooru')
+  }
 
-  const xml = await res.text()
+  let data
+  try {
+    data = await res.json()
+  } catch {
+    return reply('❌ Respuesta inválida del servidor')
+  }
 
-  if (!xml.includes('<post ')) {
+  if (!data?.post?.length) {
     return reply(
-      `❌ No hay resultados válidos para:\n${tag}\n\n` +
-      `💡 Ejemplos reales:\n` +
+      `❌ No hay resultados para:\n${tag}\n\n` +
+      `💡 Ejemplos válidos:\n` +
       `.rule34 rem_(re_zero)\n` +
-      `.rule34 skullgirls`
+      `.rule34 skullgirls\n` +
+      `.rule34 genshin_impact`
     )
   }
 
-  const files = [...xml.matchAll(/file_url="([^"]+)"/g)]
-    .map(v => v[1])
+  const post = data.post[Math.floor(Math.random() * data.post.length)]
+  const file = post.file_url
 
-  const media = files[Math.floor(Math.random() * files.length)]
-  const isImg = /\.(jpg|jpeg|png)$/i.test(media)
+  const isImg = /\.(jpg|jpeg|png)$/i.test(file)
 
   await sock.sendMessage(
     from,
     isImg
-      ? { image: { url: media }, caption: `🔞 ${tag}` }
-      : { video: { url: media }, gifPlayback: true, caption: `🔞 ${tag}` },
+      ? { image: { url: file }, caption: `🔞 ${tag}` }
+      : { video: { url: file }, gifPlayback: true, caption: `🔞 ${tag}` },
     { quoted: m }
   )
 }
