@@ -1,6 +1,3 @@
-import fs from 'fs'
-import path from 'path'
-
 export const handler = async (m, {
   sock,
   from,
@@ -10,31 +7,29 @@ export const handler = async (m, {
 }) => {
 
   // 🛑 Solo grupos
-  if (!isGroup) return
+  if (!isGroup) return reply('❌ Solo funciona en grupos')
 
   /* ───── 🧠 DB SAFE ───── */
   if (!global.db) global.db = {}
   if (!global.db.groups) global.db.groups = {}
   if (!global.db.groups[from]) {
-    global.db.groups[from] = {
-      nsfw: false
-    }
+    global.db.groups[from] = { nsfw: false }
   }
 
   const groupData = global.db.groups[from]
 
-  /* ───── 🔞 NSFW OBLIGATORIO (SILENCIOSO) ───── */
-  if (!groupData.nsfw) return
+  /* ───── 🔞 NSFW OBLIGATORIO ───── */
+  if (!groupData.nsfw) {
+    return reply('🔞 Este comando requiere NSFW activado')
+  }
 
   /* ───── 👤 TARGET ───── */
-  let target
   const ctx = m.message?.extendedTextMessage?.contextInfo
+  let target =
+    ctx?.mentionedJid?.[0] ||
+    ctx?.participant
 
-  if (ctx?.mentionedJid?.length) {
-    target = ctx.mentionedJid[0]
-  } else if (ctx?.participant) {
-    target = ctx.participant
-  } else {
+  if (!target) {
     return reply('❌ Etiqueta o responde a alguien')
   }
 
@@ -80,7 +75,7 @@ export const handler = async (m, {
 handler.command = ['69', 'sixnine']
 handler.group = true
 handler.tags = ['nsfw']
-handler.help = ['69 @user']
-handler.menu2 = true   // 👈 APARECE SOLO EN MENU2
+handler.help = ['69 @usuario']
+handler.menu2 = false
 
 export default handler
