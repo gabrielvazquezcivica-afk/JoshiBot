@@ -53,27 +53,34 @@ global.limits = config.limits
 
 
 /* =====================================================
-   🔽 AÑADIDO — DB PERSISTENTE (NSFW / MODOADMIN)
+   🧠 DB PERSISTENTE (NSFW / MODOADMIN)
+   ⚠️ SIN MOVER NADA, SOLO FIX
 ===================================================== */
 
-const GROUP_DB = './database/groups.json'
+const GROUP_DB = './data/groups.json'
 
-if (!fs.existsSync('./database')) {
-  fs.mkdirSync('./database', { recursive: true })
+// Crear carpeta si no existe
+if (!fs.existsSync('./data')) {
+  fs.mkdirSync('./data', { recursive: true })
 }
 
-global.db = { groups: {} }
-
-// 📥 Cargar DB
-if (fs.existsSync(GROUP_DB)) {
-  try {
-    global.db.groups = JSON.parse(fs.readFileSync(GROUP_DB))
-  } catch {
-    global.db.groups = {}
-  }
+// Crear archivo si no existe
+if (!fs.existsSync(GROUP_DB)) {
+  fs.writeFileSync(GROUP_DB, JSON.stringify({}))
 }
 
-// 💾 Guardar DB
+// Cargar DB
+global.db = {
+  groups: {}
+}
+
+try {
+  global.db.groups = JSON.parse(fs.readFileSync(GROUP_DB))
+} catch {
+  global.db.groups = {}
+}
+
+// Guardar DB (USADO POR LOS PLUGINS)
 global.saveDB = () => {
   fs.writeFileSync(GROUP_DB, JSON.stringify(global.db.groups, null, 2))
 }
@@ -88,11 +95,10 @@ const plugins = []
 const botStartTime = Math.floor(Date.now() / 1000)
 
 // 📁 DB MUTES (PERSISTENTE)
-const MUTE_DB = './database/mutes.json'
+const MUTE_DB = './data/mutes.json'
 
 function getMutes () {
   if (!fs.existsSync(MUTE_DB)) {
-    fs.mkdirSync('./database', { recursive: true })
     fs.writeFileSync(MUTE_DB, JSON.stringify({}))
   }
   return JSON.parse(fs.readFileSync(MUTE_DB))
