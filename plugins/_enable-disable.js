@@ -81,7 +81,6 @@ export const handler = async (m, {
 
 handler.command = ['nsfw', 'modoadmin']
 
-// 🔑 ESTO ES LO QUE HACE QUE SALGA EN EL MENÚ
 handler.tags = ['on/off']
 handler.help = [
   'nsfw on | off',
