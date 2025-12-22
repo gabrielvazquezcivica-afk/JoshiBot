@@ -23,7 +23,7 @@ export const handler = async (m, {
     }
   }
 
-  /* ───── 👑 MODO ADMIN (silencioso) ───── */
+  /* ───── 👑 MODO ADMIN (SILENCIOSO) ───── */
   if (isGroup && global.db.groups[from].modoadmin) {
     const metadata = await sock.groupMetadata(from)
     const participants = metadata.participants || []
@@ -78,27 +78,27 @@ export const handler = async (m, {
     const img = new webp.Image()
     await img.load(input)
 
-    /* ───── 🧠 EXIF (WM) ───── */
+    /* ───── 🧠 EXIF LIMPIO (SIN BOT) ───── */
     const exifData = {
-      'sticker-pack-id': 'joshibot-wm',
-      'sticker-pack-name': texto,
-      'sticker-pack-publisher': 'JoshiBot',
+      'sticker-pack-id': `wm-${Date.now()}`,
+      'sticker-pack-name': texto,   // 👈 SOLO el texto del usuario
+      'sticker-pack-publisher': '', // 👈 vacío → no aparece bot
       emojis: []
     }
 
     const exif = Buffer.from(JSON.stringify(exifData), 'utf-8')
 
     const exifAttr = Buffer.concat([
-      Buffer.from([0x49,0x49,0x2A,0x00,0x08,0x00,0x00,0x00]),
-      Buffer.from([0x01,0x00]),
-      Buffer.from([0x41,0x57,0x07,0x00]),
+      Buffer.from([0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00]),
+      Buffer.from([0x01, 0x00]),
+      Buffer.from([0x41, 0x57, 0x07, 0x00]),
       Buffer.from([
         exif.length & 0xff,
         (exif.length >> 8) & 0xff,
         (exif.length >> 16) & 0xff,
         (exif.length >> 24) & 0xff
       ]),
-      Buffer.from([0x16,0x00,0x00,0x00]),
+      Buffer.from([0x16, 0x00, 0x00, 0x00]),
       exif
     ])
 
@@ -117,7 +117,7 @@ export const handler = async (m, {
     reply('❌ Error procesando el sticker')
 
   } finally {
-    /* ───── 🧹 LIMPIEZA SEGURA ───── */
+    /* ───── 🧹 LIMPIEZA ───── */
     try { if (input) fs.unlinkSync(input) } catch {}
     try { if (output) fs.unlinkSync(output) } catch {}
   }
