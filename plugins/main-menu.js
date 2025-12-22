@@ -46,13 +46,17 @@ export const handler = async (m, {
     const h = plugin.handler
     if (!h.command || !h.tags) continue
 
+    // 🚫 OCULTAR NSFW DEL MENÚ PRINCIPAL
+    if (h.nsfw) continue
+
     for (const tag of h.tags) {
+      if (tag === 'nsfw') continue // doble seguridad
       if (!categories[tag]) categories[tag] = []
       categories[tag].push(h.command[0])
     }
   }
 
-  // 📌 ORDEN DEL MENÚ (INFO PRIMERO)
+  // 📌 ORDEN DEL MENÚ (SIN NSFW)
   const orderedTags = [
     'info',
     'main',
@@ -64,8 +68,7 @@ export const handler = async (m, {
     'search',
     'tools',
     'stickers',
-    'owner',
-    'nsfw'
+    'owner'
   ]
 
   // 🧠 MENÚ
@@ -135,4 +138,4 @@ function getGreeting() {
   if (hour >= 5 && hour < 12) return '☀️ Buenos días'
   if (hour >= 12 && hour < 19) return '🌤️ Buenas tardes'
   return '🌙 Buenas noches'
-}
+                                                  }
