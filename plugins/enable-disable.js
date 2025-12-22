@@ -1,27 +1,34 @@
-// 🔞 NSFW & 👑 MODOADMIN ON / OFF (solo admins)
+// 🔞 NSFW & 👑 MODOADMIN ON / OFF (admins)
 
 export const handler = async (m, {
   sock,
   from,
   isGroup,
   args,
-  reply
+  reply,
+  command
 }) => {
 
   // 🛑 Solo grupos
-  if (!isGroup) return reply('⚠️ Este comando solo funciona en grupos')
+  if (!isGroup) {
+    return reply('⚠️ Este comando solo funciona en grupos')
+  }
 
   // 📋 Metadata
   const metadata = await sock.groupMetadata(from)
-  const participants = metadata.participants
-  const sender = m.key.participant
+  const participants = metadata.participants || []
+  const sender = m.key.participant || m.key.remoteJid
 
   // 👤 Verificar admin
   const isAdmin = participants.some(
-    p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
+    p =>
+      p.id === sender &&
+      (p.admin === 'admin' || p.admin === 'superadmin')
   )
 
-  if (!isAdmin) return reply('🚫 Solo administradores pueden usar este comando')
+  if (!isAdmin) {
+    return reply('🚫 Solo administradores pueden usar este comando')
+  }
 
   // 🧠 DB persistente
   if (!global.db) global.db = {}
@@ -36,9 +43,9 @@ export const handler = async (m, {
   const groupData = global.db.groups[from]
 
   // 📌 Sin argumentos → estado
-  if (!args[0]) {
+  if (!args?.[0]) {
     return reply(
-`⚙️ CONFIGURACIÓN DEL GRUPO
+`⚙️ *CONFIGURACIÓN DEL GRUPO*
 
 🔞 NSFW: ${groupData.nsfw ? '✅ ACTIVADO' : '❌ DESACTIVADO'}
 👑 MODO ADMIN: ${groupData.modoadmin ? '✅ ACTIVADO' : '❌ DESACTIVADO'}
@@ -49,38 +56,36 @@ export const handler = async (m, {
     )
   }
 
-  const cmd = m.text.split(' ')[0].replace('.', '').toLowerCase()
   const option = args[0].toLowerCase()
 
-  // 🔞 NSFW
-  if (cmd === 'nsfw') {
+  /* ───── 🔞 NSFW ───── */
+  if (command === 'nsfw') {
     if (option === 'on') {
       groupData.nsfw = true
-      return reply('✅ NSFW ACTIVADO')
+      return reply('✅ *NSFW ACTIVADO*')
     }
     if (option === 'off') {
       groupData.nsfw = false
-      return reply('❌ NSFW DESACTIVADO')
+      return reply('❌ *NSFW DESACTIVADO*')
     }
   }
 
-  // 👑 MODO ADMIN
-  if (cmd === 'modoadmin') {
+  /* ───── 👑 MODO ADMIN ───── */
+  if (command === 'modoadmin') {
     if (option === 'on') {
       groupData.modoadmin = true
-      return reply('👑 MODO ADMIN ACTIVADO')
+      return reply('👑 *MODO ADMIN ACTIVADO*')
     }
     if (option === 'off') {
       groupData.modoadmin = false
-      return reply('👥 MODO ADMIN DESACTIVADO')
+      return reply('👥 *MODO ADMIN DESACTIVADO*')
     }
   }
 
-  reply('⚠️ Usa:\n.nsfw on | off\n.modoadmin on | off')
+  return reply('⚠️ Usa:\n.nsfw on | off\n.modoadmin on | off')
 }
 
 handler.command = ['nsfw', 'modoadmin']
-
 handler.tags = ['admins']
 handler.help = [
   'nsfw on | off',
