@@ -23,32 +23,31 @@ const writeDb = async (data) => {
 }
 
 /* ───── HANDLER ───── */
-const handler = async (m, { sock, from, isGroup, args, reply }) => {
+let handler = async (m, { conn, text, args }) => {
 
-  if (!isGroup) return
-
-  if (!global.db.groups[from]?.nsfw) {
-    return reply(
-      '🔞 *NSFW DESACTIVADO*\n\n' +
-      'Un admin debe activarlo con:\n' +
+  /* 🔞 NSFW obligatorio */
+  if (m.isGroup && !global.db.data.chats[m.chat].nsfw) {
+    return m.reply(
+      '🔞 *Comandos NSFW desactivados*\n\n' +
+      'Un admin debe activarlos con:\n' +
       '.nsfw on'
     )
   }
 
-  const query = args.join(' ').trim()
+  const query = text?.trim()
   if (!query) {
-    return reply(
+    return m.reply(
       '❌ Usa el comando así:\n\n' +
       '.rule34 valentine_(skullgirls)'
     )
   }
 
   try {
-    await sock.sendMessage(from, {
+    await conn.sendMessage(m.chat, {
       react: { text: '🔥', key: m.key }
     })
 
-    /* ✅ JSON REAL */
+    /* ✅ JSON real */
     const url =
       `https://api.rule34.xxx/index.php` +
       `?page=dapi&s=post&q=index` +
@@ -59,18 +58,14 @@ const handler = async (m, { sock, from, isGroup, args, reply }) => {
     const data = await res.json()
 
     if (!Array.isArray(data) || data.length === 0) {
-      return reply(
-        '❌ No se encontraron resultados para:\n' +
-        `🔎 *${query}*\n\n` +
-        '💡 Prueba sin paréntesis o con menos tags'
-      )
+      return m.reply(`❌ No se encontraron resultados para:\n*${query}*`)
     }
 
     const db = await readDb()
     const fresh = data.filter(v => v.file_url && !db[v.file_url])
 
     if (!fresh.length) {
-      return reply('⚠️ Ya no hay imágenes nuevas para ese tag')
+      return m.reply('⚠️ No hay imágenes nuevas para ese tag')
     }
 
     const selected = fresh.sort(() => 0.5 - Math.random()).slice(0, 6)
@@ -83,7 +78,7 @@ const handler = async (m, { sock, from, isGroup, args, reply }) => {
 
         const media = await prepareWAMessageMedia(
           { image: buffer },
-          { upload: sock.waUploadToServer }
+          { upload: conn.waUploadToServer }
         )
 
         return {
@@ -107,7 +102,7 @@ const handler = async (m, { sock, from, isGroup, args, reply }) => {
     await writeDb(db)
 
     const msg = generateWAMessageFromContent(
-      from,
+      m.chat,
       {
         viewOnceMessage: {
           message: {
@@ -123,21 +118,21 @@ const handler = async (m, { sock, from, isGroup, args, reply }) => {
       { quoted: m }
     )
 
-    await sock.relayMessage(from, msg.message, {
+    await conn.relayMessage(m.chat, msg.message, {
       messageId: msg.key.id
     })
 
   } catch (e) {
     console.error(e)
-    reply('❌ Error al obtener contenido Rule34')
+    m.reply('❌ Error al obtener contenido Rule34')
   }
 }
 
-/* ───── CONFIG ───── */
+/* ───── CONFIG PARA MENU2 ───── */
+handler.help = ['rule34 <tag>']
+handler.tags = ['nsfw']
 handler.command = ['rule34', 'rule']
 handler.group = true
-handler.tags = ['nsfw']
-handler.menu = false
-handler.menu2 = true
+handler.menu = true
 
 export default handler
