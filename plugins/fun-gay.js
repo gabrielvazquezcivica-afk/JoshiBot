@@ -13,15 +13,11 @@ export const handler = async (m, {
   if (!global.db.groups) global.db.groups = {}
   if (!global.db.groups[from]) {
     global.db.groups[from] = {
-      nsfw: false,
       modoadmin: false
     }
   }
 
   const groupData = global.db.groups[from]
-
-  /* ───── 🔞 NSFW CHECK (SILENCIOSO) ───── */
-  if (!groupData.nsfw) return
 
   /* ───── 👑 MODO ADMIN (SILENCIOSO) ───── */
   if (groupData.modoadmin) {
@@ -55,7 +51,7 @@ export const handler = async (m, {
 
   const percent = Math.floor(Math.random() * 101)
 
-  // ☠️ FRASES TÓXICAS
+  // ☠️ FRASES
   let phrases = []
 
   if (percent < 15) {
