@@ -20,12 +20,7 @@ function saveDB (db) {
 /* =====================================================
    🔇 COMANDO .mute
 ===================================================== */
-export const handler = async (m, {
-  sock,
-  isGroup,
-  sender,
-  reply
-}) => {
+export const handler = async (m, { sock, isGroup, sender, reply }) => {
   if (!isGroup) return reply('🚫 Solo en grupos')
 
   const from = m.key.remoteJid
@@ -67,11 +62,10 @@ export const handler = async (m, {
    🗑️ LISTENER → BORRAR MENSAJES
 ===================================================== */
 handler.all = async (m, { sock, isGroup }) => {
-  if (!isGroup) return
-  if (!m.message) return
+  if (!isGroup || !m.message) return
 
   const from = m.key.remoteJid
-  const sender = m.key.participant
+  const sender = m.key.participant || m.participant
 
   const db = getDB()
   if (!db[from]) return
@@ -86,7 +80,9 @@ handler.all = async (m, { sock, isGroup }) => {
         participant: sender
       }
     })
-  } catch {}
+  } catch (e) {
+    console.log('Error al borrar mensaje:', e)
+  }
 }
 
 /* ───── CONFIG ───── */
