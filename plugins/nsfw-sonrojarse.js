@@ -1,21 +1,30 @@
-/* =====================================================
-   🤭 BLUSH / SONROJARSE (NSFW)
-===================================================== */
+// ❌ No se usan fs ni path, eliminados
 
-export const handler = async (m, {
-  sock,
+let handler = async (m, {
+  conn,
   isGroup,
   sender,
   reply
 }) => {
-  if (!isGroup) return reply('🚫 Solo funciona en grupos')
 
-  const from = m.key.remoteJid
+  // 🛑 Solo grupos
+  if (!isGroup) return
 
-  // ───── DB GRUPO ─────
-  const groupData = global.db?.data?.chats?.[from] || {}
+  const from = m.chat
 
-  /* ───── 🔞 NSFW OBLIGATORIO (CON AVISO) ───── */
+  /* ───── 🧠 DB SEGURA (NO RESETEA) ───── */
+  if (!global.db) return reply('⚠️ DB no inicializada')
+  if (!db.data) return reply('⚠️ DB.data no existe')
+  if (!db.data.chats) return reply('⚠️ DB.chats no existe')
+
+  // ⚠️ IMPORTANTE: NO volver a crear nsfw=false
+  if (!db.data.chats[from]) {
+    db.data.chats[from] = {}
+  }
+
+  const groupData = db.data.chats[from]
+
+  /* ───── 🔞 NSFW OBLIGATORIO ───── */
   if (!groupData.nsfw) {
     return reply(
       '🔞 *Comandos NSFW desactivados*\n\n' +
@@ -24,30 +33,29 @@ export const handler = async (m, {
     )
   }
 
-  // ───── USUARIO OBJETIVO ─────
+  /* ───── 👤 TARGET ───── */
+  let target
   const ctx = m.message?.extendedTextMessage?.contextInfo
-  const user =
-    ctx?.mentionedJid?.[0] ||
-    ctx?.participant
 
-  if (!user)
-    return reply('⚠️ Responde a un mensaje o menciona a alguien')
+  if (ctx?.mentionedJid?.length) {
+    target = ctx.mentionedJid[0]
+  } else if (ctx?.participant) {
+    target = ctx.participant
+  } else {
+    return reply('❌ Etiqueta o responde a alguien')
+  }
 
-  // ───── NOMBRES (SIN getName) ─────
-  const senderName = m.pushName || 'Alguien'
-  const userName = user.split('@')[0]
+  const user1 = '@' + sender.split('@')[0]
+  const user2 = '@' + target.split('@')[0]
 
-  // ───── REACCIÓN ─────
-  try {
-    await sock.sendMessage(from, {
-      react: { text: '🤭', key: m.key }
-    })
-  } catch {}
+  const texto = `${user1} se sonrojó por ${user2}`
 
-  const caption =
-`🤭 *${senderName} se sonrojó por @${userName}*`
+  /* ───── 🤭 REACCIÓN ───── */
+  await conn.sendMessage(from, {
+    react: { text: '🤭', key: m.key }
+  })
 
-  // ───── VIDEOS ─────
+  /* ───── 🎞️ VIDEOS ───── */
   const videos = [
     'https://telegra.ph/file/a4f925aac453cad828ef2.mp4',
     'https://telegra.ph/file/f19318f1e8dad54303055.mp4',
@@ -60,18 +68,23 @@ export const handler = async (m, {
 
   const video = videos[Math.floor(Math.random() * videos.length)]
 
-  // ───── ENVIAR ─────
-  await sock.sendMessage(from, {
-    video: { url: video },
-    gifPlayback: true,
-    caption,
-    mentions: [user]
-  })
+  /* ───── 📤 ENVIAR ───── */
+  await conn.sendMessage(
+    from,
+    {
+      video: { url: video },
+      gifPlayback: true,
+      caption: texto,
+      mentions: [sender, target]
+    },
+    { quoted: m }
+  )
 }
 
 /* ───── CONFIG ───── */
-handler.command = ['blush', 'sonrojarse']
+handler.help = ['sonrojarse @usuario']
 handler.tags = ['nsfw']
+handler.command = ['sonrojarse', 'blush']
 handler.group = true
 handler.menu = false
 handler.menu2 = true
