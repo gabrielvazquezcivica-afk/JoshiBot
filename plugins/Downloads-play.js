@@ -20,7 +20,7 @@ export const handler = async (m, {
     }
   }
 
-  /* ───── 🔒 MODO ADMIN (SILENCIOSO) ───── */
+  /* ───── 🔒 MODO ADMIN ───── */
   if (isGroup && global.db.groups[from].modoadmin) {
     const metadata = await sock.groupMetadata(from)
     const participants = metadata.participants
@@ -77,21 +77,22 @@ Ejemplo:
     { quoted: m }
   )
 
-  /* ───── ⚡ API DIRECTA (SIN ESPERA) ───── */
-  const API = global.APIs?.ytmp3 || 'https://api.akuari.my.id'
+  /* ───── ⚡ API FGMODS (TU CONFIG) ───── */
+  const api = global.APIs.fgmods
+  const key = global.APIKeys[api]
 
   const res = await axios.get(
-    `${API}/downloader/youtube`,
+    `${api}/api/downloader/yta`,
     {
       params: {
-        link: url,
-        format: 'mp3'
+        url,
+        apikey: key
       },
       timeout: 20000
     }
   )
 
-  const audioUrl = res.data?.res?.audio?.[0]?.url
+  const audioUrl = res.data?.result?.dl_url
   if (!audioUrl)
     return reply('❌ No se pudo obtener el audio')
 
