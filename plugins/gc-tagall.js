@@ -4,15 +4,25 @@ export const handler = async (m, { sock, from, isGroup, reply }) => {
   // 📋 Metadata
   const metadata = await sock.groupMetadata(from)
   const participants = metadata.participants
+  const groupName = metadata.subject
 
   // 👤 Verificar admin
   const sender = m.key.participant
   const isAdmin = participants.some(
     p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
   )
-  if (!isAdmin) return
 
-  // 🌍 Prefijos → ISO (NO se muestran)
+  // 🚨 AVISO SI NO ES ADMIN
+  if (!isAdmin) {
+    return reply('⛔ *Solo administradores pueden usar este comando*')
+  }
+
+  // 🔔 REACCIÓN AL EJECUTOR
+  await sock.sendMessage(from, {
+    react: { text: '🔔', key: m.key }
+  })
+
+  // 🌍 Prefijos → ISO
   const countryCodes = {
     '52': 'MX','54': 'AR','55': 'BR','57': 'CO','58': 'VE',
     '51': 'PE','56': 'CL','593': 'EC','591': 'BO','595': 'PY',
@@ -29,7 +39,6 @@ export const handler = async (m, { sock, from, isGroup, reply }) => {
     '61': 'AU','64': 'NZ'
   }
 
-  // 🏳️ ISO → bandera
   function isoToFlag(iso) {
     return iso
       .toUpperCase()
@@ -38,7 +47,6 @@ export const handler = async (m, { sock, from, isGroup, reply }) => {
       )
   }
 
-  // 🎲 Bandera aleatoria
   const randomFlags = [
     '🇮🇸','🇮🇪','🇸🇪','🇳🇴','🇫🇮','🇩🇰','🇵🇱','🇨🇿','🇸🇰','🇭🇺',
     '🇬🇷','🇷🇴','🇧🇬','🇺🇦','🇭🇷','🇸🇮','🇱🇹','🇱🇻','🇪🇪',
@@ -58,15 +66,15 @@ export const handler = async (m, { sock, from, isGroup, reply }) => {
     return randomFlags[Math.floor(Math.random() * randomFlags.length)]
   }
 
-  // 🧠 TEXTO FUTURISTA (MEJORADO)
+  /* ───── 🎨 DISEÑO ───── */
   let text = `
-╔══════════════════════════╗
-║ 🌐 MENCIÓN GLOBAL SYSTEM ║
-╠══════════════════════════╣
-║ 🤖 Bot: JOSHI-BOT        ║
-║ ⚡ Modo: Hidetag Total   ║
-║ 👥 Usuarios: ${participants.length}       ║
-╚══════════════════════════╝
+╔════════════════════════════╗
+║ 🔔 INVOCANDO GRUPO         ║
+╠════════════════════════════╣
+║ 🏷 Grupo: ${groupName}
+║ 👥 Miembros: ${participants.length}
+║ 🤖 Bot: JOSHI-BOT
+╚════════════════════════════╝
 `.trim()
 
   const mentions = []
@@ -78,11 +86,11 @@ export const handler = async (m, { sock, from, isGroup, reply }) => {
   }
 
   text += `
-\n══════════════════════════
-✔ Protocolo finalizado
-🚀 Transmisión completa
+\n════════════════════════════
+✅ Invocación completada
+🚀 Notificación global enviada
 🤖 Powered by JOSHI-BOT
-══════════════════════════
+════════════════════════════
 `
 
   await sock.sendMessage(
