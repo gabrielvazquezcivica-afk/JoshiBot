@@ -11,8 +11,8 @@ export const handler = async (m, { sock, from }) => {
   const ownerNumber = config.owner.numbers[0] || 'No definido'
   const ownerJid = `${ownerNumber}@s.whatsapp.net`
 
-  // 📸 Instagram
-  const instagramUser = 'joshi.bot' // ← SOLO cambia el user
+  // 📸 Instagram OFICIAL
+  const instagramUser = 'gabriel_gdl_90'
   const instagramURL = `https://instagram.com/${instagramUser}`
 
   const text = `
@@ -52,5 +52,4 @@ export const handler = async (m, { sock, from }) => {
 
 handler.command = ['owner', 'creador', 'dueño']
 handler.tags = ['info']
-handler.menu = true
 handler.help = ['owner']
