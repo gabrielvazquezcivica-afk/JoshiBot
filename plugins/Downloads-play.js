@@ -10,7 +10,7 @@ export const handler = async (m, {
   owner
 }) => {
 
-  // 🧠 Inicializar DB si no existe
+  /* ───── 🧠 DB SAFE ───── */
   if (!global.db) global.db = {}
   if (!global.db.groups) global.db.groups = {}
   if (!global.db.groups[from]) {
@@ -20,25 +20,21 @@ export const handler = async (m, {
     }
   }
 
-  // 🔒 MODO ADMIN (BLOQUEO SILENCIOSO)
+  /* ───── 🔒 MODO ADMIN (SILENCIOSO) ───── */
   if (isGroup) {
     const groupData = global.db.groups[from]
-
     if (groupData.modoadmin) {
       const metadata = await sock.groupMetadata(from)
       const participants = metadata.participants
       const sender = m.key.participant
 
-      // 👑 OWNER SIEMPRE PERMITIDO
-      const ownerJids = (owner?.jid || [])
-      if (ownerJids.includes(sender)) {
-        // owner pasa sin bloqueo
-      } else {
+      const ownerJids = owner?.jid || []
+      if (!ownerJids.includes(sender)) {
         const isAdmin = participants.some(
-          p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
+          p => p.id === sender &&
+          (p.admin === 'admin' || p.admin === 'superadmin')
         )
-
-        if (!isAdmin) return // 🚫 bloqueo silencioso
+        if (!isAdmin) return
       }
     }
   }
@@ -56,19 +52,17 @@ Ejemplo:
       )
     }
 
-    // 🔎 Buscar en YouTube
+    /* ───── 🔎 BUSCAR EN YOUTUBE ───── */
     const search = await yts(text)
     if (!search.all.length) return reply('❌ No encontré resultados')
 
     const v = search.all.find(x => x.seconds) || search.all[0]
     const { title, url, timestamp, views, thumbnail, author, ago } = v
 
-    // 🎶 Reacción inicial
     await sock.sendMessage(from, {
       react: { text: '🎶', key: m.key }
     })
 
-    // 🧾 DISEÑO FUTURISTA
     const caption = `
 ╔══════════════════════╗
 ║   🎧 JOSHI AUDIO 🔊   ║
@@ -80,50 +74,66 @@ Ejemplo:
 👁 *Vistas:* ${views.toLocaleString()}
 📅 *Publicado:* ${ago}
 
-━━━━━━━━━━━━━━━━━━━━━━
-⚡ *Estado:* Procesando audio
-💾 *Formato:* MP3 Alta calidad
-🤖 *Bot:* JOSHI-BOT
-━━━━━━━━━━━━━━━━━━━━━━
+⚡ Procesando audio...
 `.trim()
 
-    await sock.sendMessage(from, {
-      image: { url: thumbnail },
-      caption
-    }, { quoted: m })
-
-    // ⬇️ DESCARGA (API ESTABLE)
-    const res = await axios.get(
-      `https://p.savenow.to/ajax/download.php?format=mp3&url=${encodeURIComponent(url)}`
+    await sock.sendMessage(
+      from,
+      { image: { url: thumbnail }, caption },
+      { quoted: m }
     )
 
-    if (!res.data?.success) {
-      return reply('❌ No se pudo obtener el audio')
-    }
+    /* ───── ⚡ API RÁPIDA (GLOBAL.APIs) ───── */
+    const API_BASE =
+      global.APIs?.savenow ||
+      'https://p.savenow.to'
 
-    const id = res.data.id
-    let dl
+    const start = await axios.get(
+      `${API_BASE}/ajax/download.php`,
+      {
+        params: {
+          format: 'mp3',
+          url
+        },
+        timeout: 15000
+      }
+    )
 
-    // ⏳ Esperar progreso
-    while (true) {
-      const p = await axios.get(
-        `https://p.savenow.to/ajax/progress?id=${id}`
+    if (!start.data?.success)
+      return reply('❌ No se pudo generar el audio')
+
+    const id = start.data.id
+    let audioUrl
+
+    /* ───── ⏳ ESPERA OPTIMIZADA ───── */
+    for (let i = 0; i < 10; i++) {
+      const progress = await axios.get(
+        `${API_BASE}/ajax/progress`,
+        { params: { id }, timeout: 10000 }
       )
-      if (p.data?.success && p.data.progress === 1000) {
-        dl = p.data.download_url
+
+      if (progress.data?.success && progress.data.download_url) {
+        audioUrl = progress.data.download_url
         break
       }
-      await new Promise(r => setTimeout(r, 2000))
+
+      await new Promise(r => setTimeout(r, 1000))
     }
 
-    // 📤 Enviar audio
-    await sock.sendMessage(from, {
-      audio: { url: dl },
-      mimetype: 'audio/mpeg',
-      fileName: `${title}.mp3`
-    }, { quoted: m })
+    if (!audioUrl)
+      return reply('❌ El audio tardó demasiado')
 
-    // ✅ Reacción final
+    /* ───── 📤 ENVIAR AUDIO ───── */
+    await sock.sendMessage(
+      from,
+      {
+        audio: { url: audioUrl },
+        mimetype: 'audio/mpeg',
+        fileName: `${title}.mp3`
+      },
+      { quoted: m }
+    )
+
     await sock.sendMessage(from, {
       react: { text: '✅', key: m.key }
     })
@@ -134,6 +144,7 @@ Ejemplo:
   }
 }
 
+/* ───── CONFIG ───── */
 handler.command = ['play']
 handler.tags = ['descargas']
 handler.help = ['play <canción>']
