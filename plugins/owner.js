@@ -7,12 +7,13 @@ export const handler = async (m, { sock, from }) => {
     react: { text: '👑', key: m.key }
   })
 
-  // 📞 Número principal del owner
+  // 📞 Owner
   const ownerNumber = config.owner.numbers[0] || 'No definido'
   const ownerJid = `${ownerNumber}@s.whatsapp.net`
 
-  // 📸 Instagram (editable)
-  const instagram = '@joshi.bot' // ← CAMBIA AQUÍ
+  // 📸 Instagram
+  const instagramUser = 'joshi.bot' // ← SOLO cambia el user
+  const instagramURL = `https://instagram.com/${instagramUser}`
 
   const text = `
 ╔════════════════════════════╗
@@ -23,7 +24,7 @@ export const handler = async (m, { sock, from }) => {
 ║ 📞 Número:
 ║ ${ownerNumber}
 ║ 📸 Instagram:
-║ ${instagram}
+║ @${instagramUser}
 ╚════════════════════════════╝
 
 ✨ Contacto directo del creador
@@ -36,7 +37,12 @@ export const handler = async (m, { sock, from }) => {
     buttons: [
       {
         buttonId: `https://wa.me/${ownerNumber}`,
-        buttonText: { displayText: '📞 Contactar por WhatsApp' },
+        buttonText: { displayText: '📞 WhatsApp' },
+        type: 1
+      },
+      {
+        buttonId: instagramURL,
+        buttonText: { displayText: '📸 Instagram' },
         type: 1
       }
     ],
