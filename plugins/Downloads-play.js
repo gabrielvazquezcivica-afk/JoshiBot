@@ -10,32 +10,7 @@ export const handler = async (m, {
   owner
 }) => {
 
-  /* ───── 🧠 DB SAFE ───── */
-  if (!global.db) global.db = {}
-  if (!global.db.groups) global.db.groups = {}
-  if (!global.db.groups[from]) {
-    global.db.groups[from] = {
-      nsfw: false,
-      modoadmin: false
-    }
-  }
-
-  /* ───── 🔒 MODO ADMIN ───── */
-  if (isGroup && global.db.groups[from].modoadmin) {
-    const metadata = await sock.groupMetadata(from)
-    const participants = metadata.participants
-    const sender = m.key.participant
-
-    const ownerJids = owner?.jid || []
-    if (!ownerJids.includes(sender)) {
-      const isAdmin = participants.some(
-        p => p.id === sender &&
-        (p.admin === 'admin' || p.admin === 'superadmin')
-      )
-      if (!isAdmin) return
-    }
-  }
-
+  /* ───── VALIDACIÓN TEXTO ───── */
   const text = args.join(' ').trim()
   if (!text) {
     return reply(
@@ -44,74 +19,119 @@ export const handler = async (m, {
 📌 Escribe el nombre de una canción
 
 Ejemplo:
-.play bad bunny`
+.play pisteare`
     )
   }
 
-  /* ───── 🔎 BUSCAR ───── */
-  const search = await yts(text)
-  if (!search.videos.length)
-    return reply('❌ No encontré resultados')
+  try {
+    /* ───── BUSCAR EN YOUTUBE ───── */
+    const search = await yts(text)
+    if (!search.all.length)
+      return reply('❌ No encontré resultados')
 
-  const v = search.videos[0]
-  const { title, url, timestamp, views, thumbnail, author } = v
+    const v = search.all.find(x => x.seconds) || search.all[0]
+    const {
+      title,
+      url,
+      timestamp,
+      views,
+      thumbnail,
+      author,
+      ago
+    } = v
 
-  await sock.sendMessage(from, {
-    react: { text: '🎶', key: m.key }
-  })
+    /* ───── REACCIÓN INICIAL ───── */
+    await sock.sendMessage(from, {
+      react: { text: '🎶', key: m.key }
+    })
 
-  await sock.sendMessage(
-    from,
-    {
-      image: { url: thumbnail },
-      caption:
-`🎧 *JOSHI AUDIO*
-━━━━━━━━━━━━━━
-🎵 ${title}
-👤 ${author.name}
-⏱ ${timestamp}
-👁 ${views.toLocaleString()}
-━━━━━━━━━━━━━━
-⚡ Descargando audio...`
-    },
-    { quoted: m }
-  )
+    /* ───── INFO ───── */
+    const caption = `
+╔══════════════════════╗
+║   🎧 JOSHI AUDIO 🔊   ║
+╚══════════════════════╝
 
-  /* ───── ⚡ API FGMODS (TU CONFIG) ───── */
-  const api = global.APIs.fgmods
-  const key = global.APIKeys[api]
+🎵 *Título:* ${title}
+👤 *Canal:* ${author?.name || 'Desconocido'}
+⏱ *Duración:* ${timestamp}
+👁 *Vistas:* ${views.toLocaleString()}
+📅 *Publicado:* ${ago}
 
-  const res = await axios.get(
-    `${api}/api/downloader/yta`,
-    {
-      params: {
-        url,
-        apikey: key
-      },
-      timeout: 20000
+━━━━━━━━━━━━━━━━━━━━━━
+⚡ *Estado:* Descargando audio
+💾 *Formato:* MP3
+━━━━━━━━━━━━━━━━━━━━━━
+`.trim()
+
+    await sock.sendMessage(
+      from,
+      { image: { url: thumbnail }, caption },
+      { quoted: m }
+    )
+
+    /* ───── DESCARGA AUDIO (FALLBACK) ───── */
+    let audioUrl = null
+
+    /* ── 1️⃣ FGMODS ── */
+    try {
+      const api = global.APIs.fgmods
+      const key = global.APIKeys[api]
+
+      const r = await axios.get(
+        `${api}/api/downloader/yta`,
+        {
+          params: { url, apikey: key },
+          timeout: 15000
+        }
+      )
+
+      audioUrl = r.data?.result?.dl_url
+    } catch (e) {
+      console.log('[PLAY] FGMODS caído')
     }
-  )
 
-  const audioUrl = res.data?.result?.dl_url
-  if (!audioUrl)
-    return reply('❌ No se pudo obtener el audio')
+    /* ── 2️⃣ LOLHUMAN ── */
+    if (!audioUrl) {
+      const api = global.APIs.lol
+      const key = global.APIKeys[api]
 
-  /* ───── 📤 ENVIAR AUDIO ───── */
-  await sock.sendMessage(
-    from,
-    {
-      audio: { url: audioUrl },
-      mimetype: 'audio/mpeg',
-      fileName: `${title}.mp3`
-    },
-    { quoted: m }
-  )
+      const r = await axios.get(
+        `${api}/api/ytaudio`,
+        {
+          params: { url, apikey: key },
+          timeout: 20000
+        }
+      )
 
-  await sock.sendMessage(from, {
-    react: { text: '✅', key: m.key }
-  })
+      audioUrl = r.data?.result?.link
+    }
+
+    if (!audioUrl)
+      return reply('❌ No se pudo descargar el audio')
+
+    /* ───── ENVIAR AUDIO ───── */
+    await sock.sendMessage(
+      from,
+      {
+        audio: { url: audioUrl },
+        mimetype: 'audio/mpeg',
+        fileName: `${title}.mp3`
+      },
+      { quoted: m }
+    )
+
+    /* ───── REACCIÓN FINAL ───── */
+    await sock.sendMessage(from, {
+      react: { text: '✅', key: m.key }
+    })
+
+  } catch (err) {
+    console.error('PLAY ERROR:', err)
+    reply('❌ Error al procesar el audio')
+  }
 }
 
+/* ───── CONFIG ───── */
 handler.command = ['play']
 handler.tags = ['descargas']
 handler.help = ['play <canción>']
