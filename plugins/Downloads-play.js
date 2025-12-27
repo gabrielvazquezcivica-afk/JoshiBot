@@ -5,93 +5,135 @@ export const handler = async (m, {
   sock,
   from,
   args,
-  reply
+  reply,
+  isGroup,
+  owner
 }) => {
 
-  const text = args.join(' ').trim()
-  if (!text) {
-    return reply(
-`🎧 *JOSHI AUDIO*
-━━━━━━━━━━━━━━
-📌 Escribe una canción
+  // 🧠 Inicializar DB si no existe
+  if (!global.db) global.db = {}
+  if (!global.db.groups) global.db.groups = {}
+  if (!global.db.groups[from]) {
+    global.db.groups[from] = {
+      nsfw: false,
+      modoadmin: false
+    }
+  }
 
-Ejemplo:
-.play pisteare`
-    )
+  // 🔒 MODO ADMIN (BLOQUEO SILENCIOSO)
+  if (isGroup) {
+    const groupData = global.db.groups[from]
+
+    if (groupData.modoadmin) {
+      const metadata = await sock.groupMetadata(from)
+      const participants = metadata.participants
+      const sender = m.key.participant
+
+      // 👑 OWNER SIEMPRE PERMITIDO
+      const ownerJids = (owner?.jid || [])
+      if (ownerJids.includes(sender)) {
+        // owner pasa sin bloqueo
+      } else {
+        const isAdmin = participants.some(
+          p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
+        )
+
+        if (!isAdmin) return // 🚫 bloqueo silencioso
+      }
+    }
   }
 
   try {
-    /* 🔎 BUSCAR */
+    const text = args.join(' ').trim()
+    if (!text) {
+      return reply(
+`🎧 *JOSHI AUDIO SYSTEM*
+━━━━━━━━━━━━━━━━━━
+📌 Escribe el nombre de una canción
+
+Ejemplo:
+.play bad bunny`
+      )
+    }
+
+    // 🔎 Buscar en YouTube
     const search = await yts(text)
-    if (!search.all.length)
-      return reply('❌ No encontré resultados')
+    if (!search.all.length) return reply('❌ No encontré resultados')
 
-    const v = search.all.find(v => v.seconds && v.seconds < 1800) || search.all[0]
-    const { title, url, timestamp, thumbnail, author } = v
+    const v = search.all.find(x => x.seconds) || search.all[0]
+    const { title, url, timestamp, views, thumbnail, author, ago } = v
 
+    // 🎶 Reacción inicial
     await sock.sendMessage(from, {
-      react: { text: '🎧', key: m.key }
+      react: { text: '🎶', key: m.key }
     })
 
-    await sock.sendMessage(
-      from,
-      {
-        image: { url: thumbnail },
-        caption:
-`🎵 *${title}*
-👤 ${author?.name || 'Desconocido'}
-⏱ ${timestamp}
+    // 🧾 DISEÑO FUTURISTA
+    const caption = `
+╔══════════════════════╗
+║   🎧 JOSHI AUDIO 🔊   ║
+╚══════════════════════╝
 
-⚡ Preparando audio...`
-      },
-      { quoted: m }
+🎵 *Título:* ${title}
+👤 *Canal:* ${author?.name || 'Desconocido'}
+⏱ *Duración:* ${timestamp}
+👁 *Vistas:* ${views.toLocaleString()}
+📅 *Publicado:* ${ago}
+
+━━━━━━━━━━━━━━━━━━━━━━
+⚡ *Estado:* Procesando audio
+💾 *Formato:* MP3 Alta calidad
+🤖 *Bot:* JOSHI-BOT
+━━━━━━━━━━━━━━━━━━━━━━
+`.trim()
+
+    await sock.sendMessage(from, {
+      image: { url: thumbnail },
+      caption
+    }, { quoted: m })
+
+    // ⬇️ DESCARGA (API ESTABLE)
+    const res = await axios.get(
+      `https://p.savenow.to/ajax/download.php?format=mp3&url=${encodeURIComponent(url)}`
     )
 
-    /* ⚡ COBALT API */
-    const res = await axios.post(
-      'https://api.cobalt.tools/api/json',
-      {
-        url,
-        vCodec: 'none',
-        aCodec: 'mp3',
-        aQuality: '128',
-        filenamePattern: 'classic',
-        isAudioOnly: true
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        timeout: 15000
-      }
-    )
-
-    if (!res.data || !res.data.url)
+    if (!res.data?.success) {
       return reply('❌ No se pudo obtener el audio')
+    }
 
-    /* 📤 ENVIAR AUDIO */
-    await sock.sendMessage(
-      from,
-      {
-        audio: { url: res.data.url },
-        mimetype: 'audio/mpeg',
-        fileName: `${title}.mp3`
-      },
-      { quoted: m }
-    )
+    const id = res.data.id
+    let dl
 
+    // ⏳ Esperar progreso
+    while (true) {
+      const p = await axios.get(
+        `https://p.savenow.to/ajax/progress?id=${id}`
+      )
+      if (p.data?.success && p.data.progress === 1000) {
+        dl = p.data.download_url
+        break
+      }
+      await new Promise(r => setTimeout(r, 2000))
+    }
+
+    // 📤 Enviar audio
+    await sock.sendMessage(from, {
+      audio: { url: dl },
+      mimetype: 'audio/mpeg',
+      fileName: `${title}.mp3`
+    }, { quoted: m })
+
+    // ✅ Reacción final
     await sock.sendMessage(from, {
       react: { text: '✅', key: m.key }
     })
 
   } catch (e) {
     console.error('PLAY ERROR:', e)
-    reply('❌ Error al descargar el audio')
+    reply('❌ Error al procesar el audio')
   }
 }
 
-/* ───── CONFIG ───── */
 handler.command = ['play']
 handler.tags = ['descargas']
 handler.help = ['play <canción>']
