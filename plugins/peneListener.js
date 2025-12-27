@@ -1,44 +1,51 @@
-// ───── 🤫 RESPUESTA OCULTA POR PALABRA ─────
-// No comando, no prefijo, no menú
+// 🧠 Memoria temporal (por usuario)
+const bullyLevel = new Map()
+const lastHit = new Map()
 
-const frases = [
-  '😳 Oye… eso se piensa, no se dice.',
-  '🍌 Creo que alguien tiene hambre.',
-  '🧠 Usa el cerebro, no eso.',
-  '😂 Eso explicó muchas cosas.',
-  '🤨 Información que no necesitábamos.',
-  '🚔 El pene no estaba invitado a la conversación.'
-]
+export async function before(m, { reply }) {
+  if (!m.text) return
+  const texto = m.text.toLowerCase()
+  if (!texto.includes('pene')) return
 
-export const handler = async (m, { sock }) => {
-  if (!m.message) return
-  if (m.key.fromMe) return
+  const user = m.sender
+  const now = Date.now()
 
-  // Obtener texto de cualquier tipo de mensaje
-  const text =
-    m.message.conversation ||
-    m.message.extendedTextMessage?.text ||
-    m.message.imageMessage?.caption ||
-    m.message.videoMessage?.caption ||
-    ''
+  // ⏱️ Cooldown 10s por usuario
+  if (lastHit.has(user) && now - lastHit.get(user) < 10000) return
+  lastHit.set(user, now)
 
-  if (!text) return
+  // 📈 Subir nivel
+  const level = (bullyLevel.get(user) || 0) + 1
+  bullyLevel.set(user, level)
 
-  // Detectar palabra (insensible a mayúsculas)
-  if (!text.toLowerCase().includes('pene')) return
+  // 😈 Albures por nivel (no gráficos)
+  const niveles = {
+    1: [
+      'Uy 😏 ese tema te sale muy natural',
+      'Vaya, empezamos suavecito pero con confianza 👀'
+    ],
+    2: [
+      'Ya vas agarrando vuelo… se nota la experiencia 😎',
+      'Con razón hablas tan seguro, ya conoces el terreno 😏'
+    ],
+    3: [
+      'Ajá… ya quedó claro que dominas el tema 😂',
+      'Eso ya no es comentario, es currículum 👀'
+    ],
+    4: [
+      'Hermano, bájale tantito que ya te exhibiste solo 😈',
+      'Si dieran diplomas por eso, tú ya estarías titulado 🎓😏'
+    ],
+    5: [
+      'Ya párale campeón, que aquí no estamos reclutando expertos 🤏🔥',
+      'Tranquilo, que con tanta práctica ya asustas 😎'
+    ]
+  }
 
-  const frase = frases[Math.floor(Math.random() * frases.length)]
+  // 🧨 Nivel máximo se mantiene
+  const pool = niveles[Math.min(level, 5)]
+  const respuesta = pool[Math.floor(Math.random() * pool.length)]
 
-  await sock.sendMessage(m.key.remoteJid, {
-    text: frase
-  }, { quoted: m })
+  await reply(respuesta)
+  return true
 }
-
-// ⚠️ CONFIG OCULTA TOTAL
-handler.all = true
-handler.menu = false
-handler.tags = []
-handler.command = []
-handler.prefix = false
-
-export default handler
