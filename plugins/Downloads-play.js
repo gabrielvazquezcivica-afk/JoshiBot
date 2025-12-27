@@ -11,9 +11,9 @@ export const handler = async (m, {
   const text = args.join(' ').trim()
   if (!text) {
     return reply(
-`🎧 *JOSHI AUDIO SYSTEM*
-━━━━━━━━━━━━━━━━━━
-📌 Escribe el nombre de una canción
+`🎧 *JOSHI AUDIO*
+━━━━━━━━━━━━━━
+📌 Escribe una canción
 
 Ejemplo:
 .play pisteare`
@@ -26,11 +26,11 @@ Ejemplo:
     if (!search.all.length)
       return reply('❌ No encontré resultados')
 
-    const v = search.all.find(x => x.seconds) || search.all[0]
+    const v = search.all.find(v => v.seconds && v.seconds < 1800) || search.all[0]
     const { title, url, timestamp, thumbnail, author } = v
 
     await sock.sendMessage(from, {
-      react: { text: '🎶', key: m.key }
+      react: { text: '🎧', key: m.key }
     })
 
     await sock.sendMessage(
@@ -38,58 +38,43 @@ Ejemplo:
       {
         image: { url: thumbnail },
         caption:
-`🎧 *JOSHI AUDIO*
-━━━━━━━━━━━━━━
-🎵 ${title}
+`🎵 *${title}*
 👤 ${author?.name || 'Desconocido'}
 ⏱ ${timestamp}
 
-⚡ Descargando audio...`
+⚡ Preparando audio...`
       },
       { quoted: m }
     )
 
-    /* ⬇️ DESCARGA (SAVENOW) */
-    const init = await axios.get(
-      'https://p.savenow.to/ajax/download.php',
+    /* ⚡ COBALT API */
+    const res = await axios.post(
+      'https://api.cobalt.tools/api/json',
       {
-        params: {
-          format: 'mp3',
-          url
+        url,
+        vCodec: 'none',
+        aCodec: 'mp3',
+        aQuality: '128',
+        filenamePattern: 'classic',
+        isAudioOnly: true
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         timeout: 15000
       }
     )
 
-    if (!init.data?.success)
-      return reply('❌ No se pudo iniciar descarga')
-
-    const id = init.data.id
-    let audioUrl
-
-    /* ⏳ ESPERAR PROGRESO (MAX 15s) */
-    for (let i = 0; i < 8; i++) {
-      const p = await axios.get(
-        'https://p.savenow.to/ajax/progress',
-        { params: { id }, timeout: 10000 }
-      )
-
-      if (p.data?.success && p.data.download_url) {
-        audioUrl = p.data.download_url
-        break
-      }
-
-      await new Promise(r => setTimeout(r, 2000))
-    }
-
-    if (!audioUrl)
-      return reply('❌ El audio tardó demasiado')
+    if (!res.data || !res.data.url)
+      return reply('❌ No se pudo obtener el audio')
 
     /* 📤 ENVIAR AUDIO */
     await sock.sendMessage(
       from,
       {
-        audio: { url: audioUrl },
+        audio: { url: res.data.url },
         mimetype: 'audio/mpeg',
         fileName: `${title}.mp3`
       },
@@ -102,7 +87,7 @@ Ejemplo:
 
   } catch (e) {
     console.error('PLAY ERROR:', e)
-    reply('❌ Error al procesar el audio')
+    reply('❌ Error al descargar el audio')
   }
 }
 
