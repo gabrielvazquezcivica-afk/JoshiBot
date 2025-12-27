@@ -23,7 +23,7 @@ const config = {
 
   // ───── OWNER ─────
   owner: {
-    name: 'Joshi',
+    name: 'SoyGabo',
 
     // números crudos
     numbers: [
