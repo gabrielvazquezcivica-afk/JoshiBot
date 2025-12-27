@@ -1,51 +1,54 @@
-// 🧠 Memoria temporal (por usuario)
 const bullyLevel = new Map()
 const lastHit = new Map()
 
-export async function before(m, { reply }) {
+let handler = async (m, { reply }) => {
   if (!m.text) return
+
   const texto = m.text.toLowerCase()
   if (!texto.includes('pene')) return
 
   const user = m.sender
   const now = Date.now()
 
-  // ⏱️ Cooldown 10s por usuario
-  if (lastHit.has(user) && now - lastHit.get(user) < 10000) return
+  // ⏱️ Cooldown 8 segundos
+  if (lastHit.has(user) && now - lastHit.get(user) < 8000) return
   lastHit.set(user, now)
 
-  // 📈 Subir nivel
-  const level = (bullyLevel.get(user) || 0) + 1
+  // 📈 Nivel por usuario
+  let level = (bullyLevel.get(user) || 0) + 1
   bullyLevel.set(user, level)
 
-  // 😈 Albures por nivel (no gráficos)
   const niveles = {
     1: [
       'Uy 😏 ese tema te sale muy natural',
-      'Vaya, empezamos suavecito pero con confianza 👀'
+      'Vaya, empezamos tranquilos pero con experiencia 👀'
     ],
     2: [
-      'Ya vas agarrando vuelo… se nota la experiencia 😎',
+      'Ya vas agarrando confianza… se nota el colmillo 😎',
       'Con razón hablas tan seguro, ya conoces el terreno 😏'
     ],
     3: [
-      'Ajá… ya quedó claro que dominas el tema 😂',
-      'Eso ya no es comentario, es currículum 👀'
+      'Eso ya no fue comentario, fue confesión 😂',
+      'Hermano, ese tema te queda demasiado cómodo 👀'
     ],
     4: [
-      'Hermano, bájale tantito que ya te exhibiste solo 😈',
-      'Si dieran diplomas por eso, tú ya estarías titulado 🎓😏'
+      'Ya relájate campeón, que te estás balconeando solo 😈',
+      'Si eso diera puntos, ya irías ganando el torneo 🤏🔥'
     ],
     5: [
-      'Ya párale campeón, que aquí no estamos reclutando expertos 🤏🔥',
-      'Tranquilo, que con tanta práctica ya asustas 😎'
+      'Ya párale, que con tanta experiencia ya impones respeto 😎🔥',
+      'Tranquilo experto, aquí no estamos reclutando profesionales 😈'
     ]
   }
 
-  // 🧨 Nivel máximo se mantiene
-  const pool = niveles[Math.min(level, 5)]
-  const respuesta = pool[Math.floor(Math.random() * pool.length)]
+  if (level > 5) level = 5
+
+  const respuesta = niveles[level][
+    Math.floor(Math.random() * niveles[level].length)
+  ]
 
   await reply(respuesta)
-  return true
 }
+
+handler.all = true
+export default handler
