@@ -9,9 +9,8 @@ export const handler = async (m, { sock, from }) => {
 
   // 📞 Owner
   const ownerNumber = config.owner.numbers[0] || 'No definido'
-  const ownerJid = `${ownerNumber}@s.whatsapp.net`
 
-  // 📸 Instagram OFICIAL
+  // 📸 Instagram (LINK DIRECTO)
   const instagramUser = 'gabriel_gdl_90'
   const instagramURL = `https://instagram.com/${instagramUser}`
 
@@ -23,33 +22,23 @@ export const handler = async (m, { sock, from }) => {
 ║ 👤 Dueño: ${config.owner.name}
 ║ 📞 Número:
 ║ ${ownerNumber}
+║
 ║ 📸 Instagram:
-║ @${instagramUser}
+║ ${instagramURL}
 ╚════════════════════════════╝
 
 ✨ Contacto directo del creador
 🚀 Powered by JOSHI-BOT
 `.trim()
 
-  await sock.sendMessage(from, {
-    text,
-    footer: 'JOSHI-BOT • Owner',
-    buttons: [
-      {
-        buttonId: `https://wa.me/${ownerNumber}`,
-        buttonText: { displayText: '📞 WhatsApp' },
-        type: 1
-      },
-      {
-        buttonId: instagramURL,
-        buttonText: { displayText: '📸 Instagram' },
-        type: 1
-      }
-    ],
-    headerType: 1
-  }, { quoted: m })
+  await sock.sendMessage(
+    from,
+    { text },
+    { quoted: m }
+  )
 }
 
 handler.command = ['owner', 'creador', 'dueño']
 handler.tags = ['info']
+handler.menu = true
 handler.help = ['owner']
