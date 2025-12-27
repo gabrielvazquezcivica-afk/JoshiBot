@@ -5,12 +5,9 @@ export const handler = async (m, {
   sock,
   from,
   args,
-  reply,
-  isGroup,
-  owner
+  reply
 }) => {
 
-  /* ───── VALIDACIÓN TEXTO ───── */
   const text = args.join(' ').trim()
   if (!text) {
     return reply(
@@ -24,92 +21,71 @@ Ejemplo:
   }
 
   try {
-    /* ───── BUSCAR EN YOUTUBE ───── */
+    /* 🔎 BUSCAR */
     const search = await yts(text)
     if (!search.all.length)
       return reply('❌ No encontré resultados')
 
     const v = search.all.find(x => x.seconds) || search.all[0]
-    const {
-      title,
-      url,
-      timestamp,
-      views,
-      thumbnail,
-      author,
-      ago
-    } = v
+    const { title, url, timestamp, thumbnail, author } = v
 
-    /* ───── REACCIÓN INICIAL ───── */
     await sock.sendMessage(from, {
       react: { text: '🎶', key: m.key }
     })
 
-    /* ───── INFO ───── */
-    const caption = `
-╔══════════════════════╗
-║   🎧 JOSHI AUDIO 🔊   ║
-╚══════════════════════╝
-
-🎵 *Título:* ${title}
-👤 *Canal:* ${author?.name || 'Desconocido'}
-⏱ *Duración:* ${timestamp}
-👁 *Vistas:* ${views.toLocaleString()}
-📅 *Publicado:* ${ago}
-
-━━━━━━━━━━━━━━━━━━━━━━
-⚡ *Estado:* Descargando audio
-💾 *Formato:* MP3
-━━━━━━━━━━━━━━━━━━━━━━
-`.trim()
-
     await sock.sendMessage(
       from,
-      { image: { url: thumbnail }, caption },
+      {
+        image: { url: thumbnail },
+        caption:
+`🎧 *JOSHI AUDIO*
+━━━━━━━━━━━━━━
+🎵 ${title}
+👤 ${author?.name || 'Desconocido'}
+⏱ ${timestamp}
+
+⚡ Descargando audio...`
+      },
       { quoted: m }
     )
 
-    /* ───── DESCARGA AUDIO (FALLBACK) ───── */
-    let audioUrl = null
+    /* ⬇️ DESCARGA (SAVENOW) */
+    const init = await axios.get(
+      'https://p.savenow.to/ajax/download.php',
+      {
+        params: {
+          format: 'mp3',
+          url
+        },
+        timeout: 15000
+      }
+    )
 
-    /* ── 1️⃣ FGMODS ── */
-    try {
-      const api = global.APIs.fgmods
-      const key = global.APIKeys[api]
+    if (!init.data?.success)
+      return reply('❌ No se pudo iniciar descarga')
 
-      const r = await axios.get(
-        `${api}/api/downloader/yta`,
-        {
-          params: { url, apikey: key },
-          timeout: 15000
-        }
+    const id = init.data.id
+    let audioUrl
+
+    /* ⏳ ESPERAR PROGRESO (MAX 15s) */
+    for (let i = 0; i < 8; i++) {
+      const p = await axios.get(
+        'https://p.savenow.to/ajax/progress',
+        { params: { id }, timeout: 10000 }
       )
 
-      audioUrl = r.data?.result?.dl_url
-    } catch (e) {
-      console.log('[PLAY] FGMODS caído')
-    }
+      if (p.data?.success && p.data.download_url) {
+        audioUrl = p.data.download_url
+        break
+      }
 
-    /* ── 2️⃣ LOLHUMAN ── */
-    if (!audioUrl) {
-      const api = global.APIs.lol
-      const key = global.APIKeys[api]
-
-      const r = await axios.get(
-        `${api}/api/ytaudio`,
-        {
-          params: { url, apikey: key },
-          timeout: 20000
-        }
-      )
-
-      audioUrl = r.data?.result?.link
+      await new Promise(r => setTimeout(r, 2000))
     }
 
     if (!audioUrl)
-      return reply('❌ No se pudo descargar el audio')
+      return reply('❌ El audio tardó demasiado')
 
-    /* ───── ENVIAR AUDIO ───── */
+    /* 📤 ENVIAR AUDIO */
     await sock.sendMessage(
       from,
       {
@@ -120,13 +96,12 @@ Ejemplo:
       { quoted: m }
     )
 
-    /* ───── REACCIÓN FINAL ───── */
     await sock.sendMessage(from, {
       react: { text: '✅', key: m.key }
     })
 
-  } catch (err) {
-    console.error('PLAY ERROR:', err)
+  } catch (e) {
+    console.error('PLAY ERROR:', e)
     reply('❌ Error al procesar el audio')
   }
 }
