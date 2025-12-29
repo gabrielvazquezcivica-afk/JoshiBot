@@ -6,6 +6,9 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath, pathToFileURL } from 'url'
 
+// 👁️ VIEWONCE WATCHER
+import { viewonceWatcher } from './lib/viewonceWatcher.js'
+
 // 🔇 Silenciar basura interna
 util.inspect.defaultOptions.depth = 0
 util.inspect.defaultOptions.colors = false
@@ -54,22 +57,18 @@ global.limits = config.limits
 
 /* =====================================================
    🧠 DB PERSISTENTE (NSFW / MODOADMIN)
-   ⚠️ SIN MOVER NADA, SOLO FIX
 ===================================================== */
 
 const GROUP_DB = './data/groups.json'
 
-// Crear carpeta si no existe
 if (!fs.existsSync('./data')) {
   fs.mkdirSync('./data', { recursive: true })
 }
 
-// Crear archivo si no existe
 if (!fs.existsSync(GROUP_DB)) {
   fs.writeFileSync(GROUP_DB, JSON.stringify({}))
 }
 
-// Cargar DB
 global.db = {
   groups: {}
 }
@@ -80,13 +79,11 @@ try {
   global.db.groups = {}
 }
 
-// Guardar DB (USADO POR LOS PLUGINS)
 global.saveDB = () => {
   fs.writeFileSync(GROUP_DB, JSON.stringify(global.db.groups, null, 2))
 }
 
 /* ===================================================== */
-
 
 const PREFIX = global.prefix
 const plugins = []
@@ -94,7 +91,7 @@ const plugins = []
 // ⏱️ Ignorar mensajes viejos
 const botStartTime = Math.floor(Date.now() / 1000)
 
-// 📁 DB MUTES (PERSISTENTE)
+// 📁 DB MUTES
 const MUTE_DB = './data/mutes.json'
 
 function getMutes () {
@@ -175,6 +172,13 @@ async function start () {
     if (!m?.message || m.key.fromMe) return
     if (isOldMessage(m)) return
 
+    // 👁️ VIEWONCE WATCHER
+    try {
+      await viewonceWatcher(m)
+    } catch (e) {
+      console.error('❌ Error viewonce watcher:', e)
+    }
+
     const from = m.key.remoteJid
     const isGroup = from.endsWith('@g.us')
     const sender = isGroup ? m.key.participant : from
@@ -210,7 +214,6 @@ async function start () {
     const args = text.slice(PREFIX.length).trim().split(/\s+/)
     const command = args.shift().toLowerCase()
 
-    // 🏷️ NOMBRE DEL CHAT
     let chatName = 'Privado'
     if (isGroup) {
       try {
