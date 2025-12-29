@@ -34,24 +34,25 @@ export const handler = async (m, {
     if (!isAdmin) return
   }
 
-  /* ───── VALIDAR RESPUESTA ───── */
-  const quoted = m.quoted
-  if (!quoted) {
+  /* ───── MENSAJE RESPONDIDO ───── */
+  const q = m.quoted
+  if (!q) {
     return reply('⚠️ Responde a una foto o video de *ver una sola vez*')
   }
 
-  /* ───── EXTRAER VIEW ONCE ───── */
-  const viewOnce =
-    quoted.message?.viewOnceMessageV2?.message ||
-    quoted.message?.viewOnceMessage?.message
+  /* ───── EXTRAER VIEW ONCE (TODOS LOS CASOS) ───── */
+  const msg =
+    q.message?.viewOnceMessageV2?.message ||
+    q.message?.viewOnceMessageV2Extension?.message ||
+    q.message?.viewOnceMessage?.message
 
-  if (!viewOnce) {
+  if (!msg) {
     return reply('❌ Ese mensaje no es *ver una sola vez*')
   }
 
-  /* ───── DETECTAR TIPO ───── */
-  const type = Object.keys(viewOnce)[0]
-  const media = viewOnce[type]
+  /* ───── TIPO ───── */
+  const type = Object.keys(msg)[0]
+  const media = msg[type]
   if (!media) return
 
   /* ───── DESCARGAR ───── */
@@ -65,7 +66,7 @@ export const handler = async (m, {
     buffer = Buffer.concat([buffer, chunk])
   }
 
-  /* ───── ENVIAR SIN AVISO ───── */
+  /* ───── ENVIAR (SIN AVISO) ───── */
   if (type === 'imageMessage') {
     await sock.sendMessage(from, { image: buffer }, { quoted: m })
   }
