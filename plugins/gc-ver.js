@@ -83,7 +83,7 @@ export const handler = async (m, {
 handler.command = ['ver']
 handler.tags = ['tools']
 handler.group = true
-hanlder.menu = true
+handler.menu = true
 handler.help = ['ver (responder a view once)']
 
 export default handler
