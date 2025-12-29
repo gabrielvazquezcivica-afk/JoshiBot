@@ -1,3 +1,6 @@
+import { downloadContentFromMessage } from '@whiskeysockets/baileys'
+import fs from 'fs'
+
 export const handler = async (m, {
   sock,
   from,
@@ -19,17 +22,17 @@ export const handler = async (m, {
 
   const groupData = global.db.groups[from]
 
-  // 🔒 MODO ADMIN (BLOQUEO TOTAL)
+  // 🔒 MODO ADMIN → SILENCIO TOTAL
   if (groupData.modoadmin) return
 
-  // ⚠️ Debe responder a un mensaje
+  // ⚠️ Debe responder
   if (!m.quoted) {
     return reply('❌ Responde a una foto o video de *ver una sola vez*')
   }
 
   const q = m.quoted
 
-  // 🔍 Detectar VIEW ONCE
+  // 🔍 VIEW ONCE
   const viewOnce =
     q.message?.viewOnceMessageV2 ||
     q.message?.viewOnceMessageV2Extension
@@ -38,12 +41,11 @@ export const handler = async (m, {
     return reply('❌ Ese mensaje no es *ver una sola vez*')
   }
 
-  // 📦 Extraer media
-  const media =
+  const msg =
     viewOnce.message.imageMessage ||
     viewOnce.message.videoMessage
 
-  if (!media) {
+  if (!msg) {
     return reply('❌ No se encontró media')
   }
 
@@ -52,17 +54,26 @@ export const handler = async (m, {
     react: { text: '👀', key: m.key }
   })
 
+  // ⬇️ DESCARGAR MEDIA
+  const type = msg.mimetype.split('/')[0] // image | video
+  const stream = await downloadContentFromMessage(msg, type)
+
+  let buffer = Buffer.from([])
+  for await (const chunk of stream) {
+    buffer = Buffer.concat([buffer, chunk])
+  }
+
   // 📤 ENVIAR SIN VIEW ONCE
-  if (media.mimetype?.startsWith('image')) {
+  if (type === 'image') {
     await sock.sendMessage(
       from,
-      { image: media },
+      { image: buffer },
       { quoted: m }
     )
-  } else if (media.mimetype?.startsWith('video')) {
+  } else if (type === 'video') {
     await sock.sendMessage(
       from,
-      { video: media },
+      { video: buffer },
       { quoted: m }
     )
   }
@@ -70,9 +81,9 @@ export const handler = async (m, {
 
 /* ───── CONFIG ───── */
 handler.command = ['ver']
-handler.tags = ['group']
+handler.tags = ['tools']
 handler.group = true
-handler.menu = true
-handler.help = ['ver (responder a una imagen)']
+hanlder.menu = true
+handler.help = ['ver (responder a view once)']
 
 export default handler
