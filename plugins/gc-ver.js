@@ -1,86 +1,58 @@
-import { downloadContentFromMessage } from '@whiskeysockets/baileys'
+import fs from 'fs'
+
+const VO_DB = './data/viewonce.json'
+
+function getVO () {
+  if (!fs.existsSync('./data')) fs.mkdirSync('./data', { recursive: true })
+  if (!fs.existsSync(VO_DB)) fs.writeFileSync(VO_DB, JSON.stringify({}))
+  return JSON.parse(fs.readFileSync(VO_DB))
+}
+
+function saveVO (db) {
+  fs.writeFileSync(VO_DB, JSON.stringify(db, null, 2))
+}
 
 export const handler = async (m, {
   sock,
+  from,
   isGroup,
   sender,
   reply
 }) => {
+
+  // 🚫 SOLO GRUPOS
   if (!isGroup) return
 
-  const from = m.chat
+  /* ───── DB GROUP ───── */
+  if (!global.db?.groups) return
+  const groupData = global.db.groups[from] || {}
 
-  /* ───── DB SAFE ───── */
-  if (!global.db) global.db = {}
-  if (!global.db.groups) global.db.groups = {}
-  if (!global.db.groups[from]) {
-    global.db.groups[from] = {
-      modoadmin: false
-    }
-  }
-
-  const groupData = global.db.groups[from]
-
-  /* ───── 🔒 MODO ADMIN ───── */
+  /* ───── MODO ADMIN ───── */
   if (groupData.modoadmin) {
-    const metadata = await sock.groupMetadata(from)
-    const isAdmin = metadata.participants.some(
-      p =>
-        p.id === sender &&
-        (p.admin === 'admin' || p.admin === 'superadmin')
+    const meta = await sock.groupMetadata(from)
+    const isAdmin = meta.participants.some(
+      p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
     )
-
-    // 🚫 bloqueo silencioso
-    if (!isAdmin) return
+    if (!isAdmin) return // bloqueo silencioso
   }
 
-  /* ───── MENSAJE RESPONDIDO ───── */
-  const q = m.quoted
-  if (!q) {
-    return reply('⚠️ Responde a una foto o video de *ver una sola vez*')
+  const db = getVO()
+  const data = db[from]
+
+  // ❌ NO HAY VIEWONCE
+  if (!data) {
+    if (groupData.modoadmin) return
+    return reply('⚠️ No hay ninguna foto o video de una sola vista guardado')
   }
 
-  /* ───── EXTRAER VIEW ONCE (TODOS LOS CASOS) ───── */
-  const msg =
-    q.message?.viewOnceMessageV2?.message ||
-    q.message?.viewOnceMessageV2Extension?.message ||
-    q.message?.viewOnceMessage?.message
-
-  if (!msg) {
-    return reply('❌ Ese mensaje no es *ver una sola vez*')
-  }
-
-  /* ───── TIPO ───── */
-  const type = Object.keys(msg)[0]
-  const media = msg[type]
-  if (!media) return
-
-  /* ───── DESCARGAR ───── */
-  const stream = await downloadContentFromMessage(
-    media,
-    type.replace('Message', '')
-  )
-
-  let buffer = Buffer.from([])
-  for await (const chunk of stream) {
-    buffer = Buffer.concat([buffer, chunk])
-  }
-
-  /* ───── ENVIAR (SIN AVISO) ───── */
-  if (type === 'imageMessage') {
-    await sock.sendMessage(from, { image: buffer }, { quoted: m })
-  }
-
-  if (type === 'videoMessage') {
-    await sock.sendMessage(from, { video: buffer }, { quoted: m })
-  }
+  // 📤 ENVIAR MEDIA (SIN TEXTO)
+  await sock.sendMessage(from, data.media, { quoted: m })
 }
 
 /* ───── CONFIG ───── */
 handler.command = ['ver']
-handler.tags = ['group']
 handler.group = true
+handler.tags = ['group']
 handler.menu = true
-handler.help = ['ver (responder a ver una vez)']
 
 export default handler
