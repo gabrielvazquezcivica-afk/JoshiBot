@@ -29,7 +29,7 @@ export const handler = async (m, {
     juegos: '🎮',
     ff: '🔫',
     descargas: '🎵',
-    search: '🔍',
+    buscador: '🔍',
     tools: '🧰',
     stickers: '🖼️',
     owner: '👤'
@@ -64,7 +64,7 @@ export const handler = async (m, {
     'juegos',
     'ff',
     'descargas',
-    'search',
+    'buscador',
     'tools',
     'stickers',
     'owner'
