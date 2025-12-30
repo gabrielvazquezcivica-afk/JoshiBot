@@ -7,7 +7,6 @@ const obtenerPerfilMollygram = async (usuario) => {
     {
       headers: {
         'accept': '*/*',
-        'accept-encoding': 'gzip, deflate, br',
         'accept-language': 'es-ES,es;q=0.9',
         'origin': 'https://mollygram.com',
         'referer': 'https://mollygram.com/',
@@ -18,75 +17,65 @@ const obtenerPerfilMollygram = async (usuario) => {
   )
 
   const html = data.html
+  const get = (r) => html.match(r)?.[1]?.trim() || '❌ No disponible'
 
-  const extraerDato = (regex) =>
-    html.match(regex)?.[1]?.trim() || '❌ No disponible'
-
-  const fotoPerfil =
-    html.match(/<img[^>]*class="[^"]*rounded-circle[^"]*"[^>]*src="([^"]+)"/i)?.[1] ||
-    html.match(/<img[^>]*src="([^"]+)"[^>]*class="[^"]*rounded-circle[^"]*"/i)?.[1] ||
-    null
+  const foto =
+    html.match(/rounded-circle[^>]*src="([^"]+)"/i)?.[1] || null
 
   return {
-    usuario: extraerDato(/<h4 class="mb-0">([^<]+)<\/h4>/),
-    nombreCompleto: extraerDato(/<p class="text-muted">([^<]+)<\/p>/),
-    biografia: extraerDato(/<p class="text-dark"[^>]*>([^<]+)<\/p>/),
-    fotoPerfil,
-    publicaciones: extraerDato(/posts<\/div>\s*<\/div>\s*<span[^>]*>([^<]+)</i),
-    seguidores: extraerDato(/followers<\/div>\s*<\/div>\s*<span[^>]*>([^<]+)</i),
-    siguiendo: extraerDato(/following<\/div>\s*<\/div>\s*<span[^>]*>([^<]+)</i)
+    usuario: get(/<h4 class="mb-0">([^<]+)</),
+    nombre: get(/<p class="text-muted">([^<]+)</),
+    bio: get(/<p class="text-dark"[^>]*>([^<]+)</),
+    posts: get(/posts<\/div>[\s\S]*?<span[^>]*>([^<]+)/i),
+    seguidores: get(/followers<\/div>[\s\S]*?<span[^>]*>([^<]+)/i),
+    siguiendo: get(/following<\/div>[\s\S]*?<span[^>]*>([^<]+)/i),
+    foto
   }
 }
 
-// 🧩 COMANDO IG STALK
-export const handler = async (m, { sock, conn, args }) => {
+// 🧩 COMANDO
+export const handler = async (m, { sock, args, reply }) => {
   if (!args[0]) {
-    return m.reply('📌 *Uso correcto:* `.igstalk usuario` 🔍')
+    return reply('📌 *Uso:* `.igstalk usuario` 🕵️‍♂️')
   }
 
   await sock.sendMessage(m.chat, {
     react: { text: '🕵️‍♂️', key: m.key }
   })
 
-  let perfil
+  let p
   try {
-    perfil = await obtenerPerfilMollygram(args[0])
+    p = await obtenerPerfilMollygram(args[0])
   } catch {
-    return m.reply('❌ Error al espiar el perfil 💀')
+    return reply('❌ No pude espiar ese perfil 💀')
   }
 
-  const mensaje = `
-╭───〔 📸✨ INSTAGRAM STALK ✨📸 〕───╮
-│ 👤 Usuario: @${perfil.usuario}
-│ 📛 Nombre: ${perfil.nombreCompleto}
+  const texto = `
+╭──〔 📸 IG STALK 📸 〕──╮
+│ 👤 Usuario: @${p.usuario}
+│ 📛 Nombre: ${p.nombre}
 │ 📝 Bio:
-│ ${perfil.biografia}
+│ ${p.bio}
 │
-│ 📊 Estadísticas:
-│ 📸 Posts: ${perfil.publicaciones}
-│ 👥 Seguidores: ${perfil.seguidores}
-│ 🧑‍🤝‍🧑 Siguiendo: ${perfil.siguiendo}
-╰──〔 🤖 JOSHI-BOT ⚡ 〕──╯
+│ 📊 Stats:
+│ 📸 Posts: ${p.posts}
+│ 👥 Seguidores: ${p.seguidores}
+│ 🧑‍🤝‍🧑 Siguiendo: ${p.siguiendo}
+╰──〔 🤖 JOSHI-BOT 〕──╯
 `.trim()
 
-  if (perfil.fotoPerfil) {
+  if (p.foto) {
     await sock.sendMessage(
       m.chat,
-      {
-        image: { url: perfil.fotoPerfil },
-        caption: mensaje
-      },
+      { image: { url: p.foto }, caption: texto },
       { quoted: m }
     )
   } else {
-    await m.reply(mensaje)
+    await reply(texto)
   }
 }
 
-// 📋 CONFIG MENÚ
 handler.command = ['igstalk']
 handler.tags = ['tools']
 handler.menu = true
 handler.group = false
-
-export default handler
