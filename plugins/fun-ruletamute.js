@@ -1,5 +1,18 @@
-// fun-ruletamote.js 🎰😈
+import fs from 'fs'
 
+const dbDir = './database'
+const dbFile = './database/mutes.json'
+
+if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true })
+if (!fs.existsSync(dbFile)) fs.writeFileSync(dbFile, '{}')
+
+// ───── UTIL ─────
+const getDb = () => JSON.parse(fs.readFileSync(dbFile))
+const saveDb = db => fs.writeFileSync(dbFile, JSON.stringify(db, null, 2))
+
+const now = () => Date.now()
+
+// ───── RULETA ─────
 export const handler = async (m, {
   sock,
   from,
@@ -9,143 +22,145 @@ export const handler = async (m, {
   owner
 }) => {
 
-  if (!isGroup) {
-    return reply('🚫 Esto solo funciona en grupos, campeón')
-  }
+  if (!isGroup) return reply('🚫 Solo funciona en grupos')
 
-  /* ───── 👑 MODO ADMIN ───── */
+  /* ───── 👑 MODO ADMIN (SILENCIOSO) ───── */
   if (!global.db) global.db = {}
   if (!global.db.groups) global.db.groups = {}
   if (!global.db.groups[from]) {
-    global.db.groups[from] = { modoadmin: false, muted: {} }
+    global.db.groups[from] = { modoadmin: false }
   }
 
-  const groupData = global.db.groups[from]
-
-  if (groupData.modoadmin) {
-    const metadata = await sock.groupMetadata(from)
-    const admins = metadata.participants
+  if (global.db.groups[from].modoadmin) {
+    const meta = await sock.groupMetadata(from)
+    const admins = meta.participants
       .filter(p => p.admin)
       .map(p => p.id)
 
     const ownerJids = owner?.jid || []
-
-    if (!admins.includes(sender) && !ownerJids.includes(sender)) {
-      return // bloqueo silencioso
-    }
+    if (!admins.includes(sender) && !ownerJids.includes(sender)) return
   }
-  /* ───────────────────────── */
+  /* ─────────────────────────────────── */
 
-  const metadata = await sock.groupMetadata(from)
+  const meta = await sock.groupMetadata(from)
   const botJid = sock.user.id
 
-  const users = metadata.participants
+  const users = meta.participants
     .map(p => p.id)
     .filter(id => id !== botJid)
 
   if (users.length < 2) {
-    return reply('🤡 No hay suficientes víctimas')
+    return reply('❌ No hay suficientes víctimas')
   }
 
-  // 🎯 Elegir víctima
-  const target = users[Math.floor(Math.random() * users.length)]
-
-  if (groupData.muted[target]) {
-    return reply('😴 Ya estaba castigado, no abuses')
-  }
-
-  // ⏱️ Tiempo de mute (segundos)
-  const muteTime = 60 // 1 minuto
-  const adminIds = metadata.participants
-    .filter(p => p.admin)
-    .map(p => p.id)
-
-  const esAdmin = adminIds.includes(target)
-
-  // 💣 Reacción
+  // 🎰 Reacción
   await sock.sendMessage(from, {
     react: { text: '🎰', key: m.key }
   })
 
-  // 🔇 MUTEAR
-  await sock.groupParticipantsUpdate(from, [target], 'mute')
-  groupData.muted[target] = true
+  // 🎯 Elegir víctima
+  const target = users[Math.floor(Math.random() * users.length)]
+
+  const tiempoMin = [1, 3, 5, 10] // minutos
+  const minutos = tiempoMin[Math.floor(Math.random() * tiempoMin.length)]
+  const duracion = minutos * 60 * 1000
+
+  const db = getDb()
+  if (!db[from]) db[from] = {}
+
+  db[from][target] = {
+    until: now() + duracion
+  }
+
+  saveDb(db)
 
   const texto = `
 🎰 *RULETA DEL MOTE* 😈
 
-🎯 Víctima:
-👉 @${target.split('@')[0]}
+🎯 Víctima seleccionada:
+🤐 @${target.split('@')[0]}
 
-${esAdmin ? '👑 Cayó ADMIN 😬' : '😈 Usuario común y corriente'}
+⏳ Castigo:
+🧼 Mensajes borrados por *${minutos} minutos*
 
-🔇 Castigo:
-Muteado por *${muteTime} segundos*
+⚠️ Si habla… se borra 😎
 
-🆘 Salvación:
-Escribe *.desmute* para rescatarlo
-
-🤖 JoshiBot manda
+🛑 Admins pueden liberar:
+.desmute @user
 `.trim()
 
-  await sock.sendMessage(from, {
-    text: texto,
-    mentions: [target]
-  })
-
-  // ⏳ Auto desmute
-  setTimeout(async () => {
-    if (!groupData.muted[target]) return
-
-    await sock.groupParticipantsUpdate(from, [target], 'unmute')
-    delete groupData.muted[target]
-
-    await sock.sendMessage(from, {
-      text: `⏰ Tiempo cumplido @${target.split('@')[0]}, ya puedes hablar otra vez 🗣️`,
+  await sock.sendMessage(
+    from,
+    {
+      text: texto,
       mentions: [target]
-    })
-  }, muteTime * 1000)
+    },
+    { quoted: m }
+  )
 }
 
-/* ───── COMANDO DESMUTE ───── */
-export const desmute = async (m, {
-  sock,
-  from,
-  isGroup,
-  reply
-}) => {
-
-  if (!isGroup) return
-
-  if (!global.db?.groups?.[from]) {
-    return reply('🤨 Aquí nadie estaba castigado')
-  }
-
-  const muted = global.db.groups[from].muted
-  const targets = Object.keys(muted)
-
-  if (targets.length === 0) {
-    return reply('😇 No hay nadie muteado')
-  }
-
-  const target = targets[0]
-
-  await sock.groupParticipantsUpdate(from, [target], 'unmute')
-  delete muted[target]
-
-  await sock.sendMessage(from, {
-    text: `🆘 *RESCATE EXITOSO*\n@${target.split('@')[0]} fue liberado 😌`,
-    mentions: [target]
-  })
-}
-
-handler.command = ['ruletamote']
+handler.command = ['ruletadelmote', 'mote']
 handler.tags = ['juegos']
 handler.group = true
 handler.menu = true
 
-desmute.command = ['desmute']
-desmute.tags = ['group']
-desmute.group = true
+// ───── DESMUTE ─────
+export const desmute = async (m, {
+  sock,
+  from,
+  isGroup,
+  reply,
+  sender
+}) => {
 
-export default handler
+  if (!isGroup) return reply('🚫 Solo en grupos')
+
+  const meta = await sock.groupMetadata(from)
+  const admins = meta.participants
+    .filter(p => p.admin)
+    .map(p => p.id)
+
+  if (!admins.includes(sender)) {
+    return reply('⛔ Solo admins pueden desmutear')
+  }
+
+  const mention = m.mentionedJid?.[0]
+  if (!mention) return reply('⚠️ Menciona a alguien')
+
+  const db = getDb()
+  if (db[from]?.[mention]) {
+    delete db[from][mention]
+    saveDb(db)
+    return reply('🔓 Castigo cancelado, ya puede hablar 🗣️')
+  }
+
+  reply('🤨 Ese usuario no estaba muteado')
+}
+
+desmute.command = ['desmute']
+desmute.group = true
+desmute.admin = true
+
+// ───── BORRADO AUTOMÁTICO ─────
+export async function muteWatcher (sock, m) {
+  if (!m.key?.remoteJid || !m.key?.participant) return
+  if (m.key.fromMe) return
+
+  const from = m.key.remoteJid
+  const user = m.key.participant
+
+  const db = getDb()
+  const mute = db[from]?.[user]
+  if (!mute) return
+
+  if (now() > mute.until) {
+    delete db[from][user]
+    saveDb(db)
+    return
+  }
+
+  // 🧼 BORRAR MENSAJE
+  await sock.sendMessage(from, {
+    delete: m.key
+  })
+}
