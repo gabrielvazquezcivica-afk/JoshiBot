@@ -19,9 +19,6 @@ const obtenerPerfilMollygram = async (usuario) => {
   const html = data.html
   const get = (r) => html.match(r)?.[1]?.trim() || '❌ No disponible'
 
-  const foto =
-    html.match(/rounded-circle[^>]*src="([^"]+)"/i)?.[1] || null
-
   return {
     usuario: get(/<h4 class="mb-0">([^<]+)</),
     nombre: get(/<p class="text-muted">([^<]+)</),
@@ -29,17 +26,19 @@ const obtenerPerfilMollygram = async (usuario) => {
     posts: get(/posts<\/div>[\s\S]*?<span[^>]*>([^<]+)/i),
     seguidores: get(/followers<\/div>[\s\S]*?<span[^>]*>([^<]+)/i),
     siguiendo: get(/following<\/div>[\s\S]*?<span[^>]*>([^<]+)/i),
-    foto
+    foto:
+      html.match(/rounded-circle[^>]*src="([^"]+)"/i)?.[1] || null
   }
 }
 
-// 🧩 COMANDO
-export const handler = async (m, { sock, args, reply }) => {
+// 🧩 COMANDO IGSTALK
+export const handler = async (m, { sock, from, args, reply }) => {
   if (!args[0]) {
-    return reply('📌 *Uso:* `.igstalk usuario` 🕵️‍♂️')
+    return reply('📌 *Uso correcto:* `.igstalk usuario` 🕵️‍♂️')
   }
 
-  await sock.sendMessage(m.chat, {
+  // ⚡ reacción
+  await sock.sendMessage(from, {
     react: { text: '🕵️‍♂️', key: m.key }
   })
 
@@ -66,8 +65,11 @@ export const handler = async (m, { sock, args, reply }) => {
 
   if (p.foto) {
     await sock.sendMessage(
-      m.chat,
-      { image: { url: p.foto }, caption: texto },
+      from,
+      {
+        image: { url: p.foto },
+        caption: texto
+      },
       { quoted: m }
     )
   } else {
@@ -75,6 +77,7 @@ export const handler = async (m, { sock, args, reply }) => {
   }
 }
 
+// 📋 CONFIG MENÚ
 handler.command = ['igstalk']
 handler.tags = ['tools']
 handler.menu = true
