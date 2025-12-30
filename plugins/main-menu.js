@@ -16,7 +16,6 @@ export const handler = async (m, {
     react: { text: '⚡', key: m.key }
   })
 
-  const uptime = clockString(process.uptime() * 1000)
   const botName = 'JoshiBot'
   const dev = 'SoyGabo'
   const saludo = getGreeting()
@@ -40,23 +39,23 @@ export const handler = async (m, {
 
   // 📂 Agrupar comandos
   const categories = {}
+  let totalCommands = 0
 
   for (const plugin of plugins) {
     if (!plugin?.handler) continue
     const h = plugin.handler
     if (!h.command || !h.tags) continue
-
-    // 🚫 OCULTAR NSFW DEL MENÚ PRINCIPAL
     if (h.nsfw) continue
 
     for (const tag of h.tags) {
-      if (tag === 'nsfw') continue // doble seguridad
+      if (tag === 'nsfw') continue
       if (!categories[tag]) categories[tag] = []
       categories[tag].push(h.command[0])
+      totalCommands++
     }
   }
 
-  // 📌 ORDEN DEL MENÚ (SIN NSFW)
+  // 📌 ORDEN DEL MENÚ
   const orderedTags = [
     'info',
     'main',
@@ -71,42 +70,42 @@ export const handler = async (m, {
     'owner'
   ]
 
-  // 🧠 MENÚ
+  // 🧠 MENÚ (DISEÑO NUEVO)
   let menu = `
-╔═══〔 🤖 JOSHI BOT • AI SYSTEM 〕═══╗
-║ ⚡ Estado: ONLINE
-║ 🧠 Núcleo: ESTABLE
-╚══════════════════════════════════╝
+╭━━━━〔 🤖 JOSHI BOT 〕━━━━╮
+┃ ⚡ Estado     : ONLINE
+┃ 🧠 Núcleo     : ESTABLE
+┃ 🧩 Comandos   : ${totalCommands}
+╰━━━━━━━━━━━━━━━━━━━━━━╯
 
 👋 ${saludo}
-👤 Usuario: ${pushName}
-🤖 Bot: ${botName}
-👨‍💻 Dev: ${dev}
-⏱️ Uptime: ${uptime}
+👤 Usuario : ${pushName}
+🤖 Bot     : ${botName}
+👨‍💻 Dev   : ${dev}
 
-⧉⧉⧉⧉⧉⧉⧉⧉⧉⧉⧉⧉⧉⧉⧉
+══════════════════════
 `
 
   for (const tag of orderedTags) {
     if (!categories[tag]) continue
-
     const emoji = tagEmoji[tag] || defaultEmoji
 
     menu += `
-╭──〔 ${emoji} ${tag.toUpperCase()} 〕──╮
+╔══〔 ${emoji} ${tag.toUpperCase()} 〕══╗
 `
 
     for (const cmd of categories[tag]) {
-      menu += `│ ▸ ${emoji}  .${cmd}\n`
+      menu += `║ ▸ ${emoji}  .${cmd}\n`
     }
 
-    menu += `╰──────────────────────────╯\n`
+    menu += `╚══════════════════════╝\n`
   }
 
   menu += `
-⧉⧉⧉⧉⧉⧉⧉⧉⧉⧉⧉⧉⧉⧉⧉
-⚙️ Sistema activo • Seguridad OK
-🔋 Energía estable • Sin errores
+══════════════════════
+⚙️ Sistema activo
+🛡️ Protección OK
+🚀 Rendimiento óptimo
 `
 
   await sock.sendMessage(
@@ -125,17 +124,9 @@ handler.command = ['menu', 'help', 'comandos']
 handler.tags = ['info']
 handler.group = false
 
-// ⏱️
-function clockString(ms) {
-  let h = Math.floor(ms / 3600000)
-  let m = Math.floor(ms / 60000) % 60
-  let s = Math.floor(ms / 1000) % 60
-  return [h, m, s].map(v => v.toString().padStart(2, '0')).join(':')
-}
-
 function getGreeting() {
   const hour = new Date().getHours()
   if (hour >= 5 && hour < 12) return '☀️ Buenos días'
   if (hour >= 12 && hour < 19) return '🌤️ Buenas tardes'
   return '🌙 Buenas noches'
-                                                  }
+}
