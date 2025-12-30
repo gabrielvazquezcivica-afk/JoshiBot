@@ -1,4 +1,4 @@
-// fun-ruletaprohibida.js 🎰😈💀
+// fun-ruletaprohibida.js ☠️🎰
 
 export const handler = async (m, {
   sock,
@@ -9,9 +9,8 @@ export const handler = async (m, {
   owner
 }) => {
 
-  if (!isGroup) {
-    return reply('❌ Este comando solo funciona en grupos')
-  }
+  // ❌ Solo grupos
+  if (!isGroup) return reply('❌ Solo funciona en grupos')
 
   /* ───── 👑 MODO ADMIN (SILENCIOSO) ───── */
   if (!global.db) global.db = {}
@@ -21,147 +20,106 @@ export const handler = async (m, {
   }
 
   if (global.db.groups[from].modoadmin) {
-    const md = await sock.groupMetadata(from)
-    const parts = md.participants || []
+    const metadata = await sock.groupMetadata(from)
+    const participants = metadata.participants || []
+
     const ownerJids = owner?.jid || []
     if (!ownerJids.includes(sender)) {
-      const isAdmin = parts.some(p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin'))
+      const isAdmin = participants.some(
+        p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
+      )
       if (!isAdmin) return
     }
   }
   /* ─────────────────────────────────── */
 
+  // 📋 Metadata
   let metadata
   try {
     metadata = await sock.groupMetadata(from)
   } catch {
-    return reply('❌ No pude obtener la info del grupo')
+    return reply('❌ Error obteniendo metadata')
   }
 
   const participants = metadata.participants || []
   const botJid = sock.user.id
-  const botIsAdmin = participants.some(
-    p => p.id === botJid && (p.admin === 'admin' || p.admin === 'superadmin')
-  )
 
-  const users = participants.map(p => p.id).filter(id => id !== botJid)
-  if (!users.length) return reply('❌ No hay suficientes víctimas')
+  const users = participants
+    .filter(p => p.id !== botJid)
+    .map(p => ({
+      id: p.id,
+      admin: p.admin === 'admin' || p.admin === 'superadmin'
+    }))
 
-  await sock.sendMessage(from, { react: { text: '🎰', key: m.key } })
+  if (users.length < 2) return reply('❌ No hay suficientes víctimas')
 
-  const elegido = participants[Math.floor(Math.random() * participants.length)]
-  const elegidoJid = elegido.id
-  const isAdminTarget = elegido.admin === 'admin' || elegido.admin === 'superadmin'
+  // 🎰 Reacción
+  await sock.sendMessage(from, {
+    react: { text: '🎰', key: m.key }
+  })
 
-  const retos = [
-    '😏 Di quién del grupo te pone nervioso/a',
-    '🔥 Confiesa algo que nadie aquí sabe',
-    '🤡 Cambia tu nombre por algo humillante 15 min',
-    '🗣️ Manda un audio diciendo “me encanta el chisme”',
-    '🍑 Di algo con doble sentido sin groserías'
+  // 🎯 Elegir víctima
+  const victim = users[Math.floor(Math.random() * users.length)]
+
+  // 🧠 Retos
+  const retosNormal = [
+    'Manda un audio diciendo "estoy bien menso" 🤡',
+    'Etiqueta a tu crush 😏',
+    'Cambia tu nombre a "La decepción del grupo" por 10 min',
+    'Manda una foto de tu galería (sin llorar)',
+    'Confiesa algo vergonzoso 😈'
   ]
 
   const retosAdmin = [
-    '👑 Confiesa si alguna vez abusaste del poder',
-    '🔥 Di a quién expulsarías primero',
-    '😏 Etiqueta a alguien y dile “si no fuera admin…”'
+    'Quita admin a alguien al azar 😈',
+    'Pide perdón públicamente por abusar del poder 👑',
+    'Pon una encuesta humillándote',
+    'Di quién del grupo te cae mal 👀'
   ]
 
-  const reto = isAdminTarget
+  const castigos = [
+    'kick',
+    'remove-admin'
+  ]
+
+  const reto = victim.admin
     ? retosAdmin[Math.floor(Math.random() * retosAdmin.length)]
-    : retos[Math.floor(Math.random() * retos.length)]
+    : retosNormal[Math.floor(Math.random() * retosNormal.length)]
 
-  const timeout = 60000
-  const startTime = Date.now()
-  let cumplio = false
+  const castigo = castigos[Math.floor(Math.random() * castigos.length)]
 
-  await sock.sendMessage(from, {
-    text: `
-🎰 *RULETA PROHIBIDA* 😈🔥
-
-🎯 Elegido:
-😏 @${elegidoJid.split('@')[0]}
-${isAdminTarget ? '👑 *OBJETIVO ADMIN* 👑' : ''}
-
-🔥 *RETO*:
-${reto}
-
-⏱️ Tienes *60 segundos* para responder…
-⚠️ Si no cumples → *CASTIGO REAL*
-`.trim(),
-    mentions: [elegidoJid]
-  }, { quoted: m })
-
-  // 🧠 DETECCIÓN
-  const listener = async msg => {
-    if (msg.key?.remoteJid !== from) return
-    if (msg.key.fromMe) return
-    if (msg.key.participant !== elegidoJid) return
-    if (Date.now() - startTime > timeout) return
-
-    cumplio = true
-    sock.ev.off('messages.upsert', listener)
-
-    await sock.sendMessage(from, {
-      text: `
-✅ *RETO CUMPLIDO* 🎉
-😎 @${elegidoJid.split('@')[0]} se salvó…
-`.trim(),
-      mentions: [elegidoJid]
-    })
+  // 🧾 Guardar estado
+  if (!global.db.ruleta) global.db.ruleta = {}
+  global.db.ruleta[victim.id] = {
+    group: from,
+    castigo,
+    admin: victim.admin,
+    activo: true
   }
 
-  sock.ev.on('messages.upsert', listener)
+  const texto = `
+☠️ *RULETA PROHIBIDA* 🎰
 
-  // ⏰ CASTIGO REAL
-  setTimeout(async () => {
-    sock.ev.off('messages.upsert', listener)
-    if (cumplio) return
+🎯 Víctima:
+@${victim.id.split('@')[0]}
 
-    // 🛡️ Si bot no es admin → fallback
-    if (!botIsAdmin) {
-      return sock.sendMessage(from, {
-        text: `
-⛔ *CASTIGO FALLIDO*
-No soy admin 😒
-😈 @${elegidoJid.split('@')[0]} queda marcado públicamente
-`.trim(),
-        mentions: [elegidoJid]
-      })
-    }
+📜 Reto:
+${reto}
 
-    // 👑 Si es admin → NO expulsar
-    if (isAdminTarget) {
-      return sock.sendMessage(from, {
-        text: `
-👑 *CASTIGO ADMIN*
-😈 @${elegidoJid.split('@')[0]}
-Te salvaste del kick… pero quedas humillado públicamente 🤡
-`.trim(),
-        mentions: [elegidoJid]
-      })
-    }
+⏳ Responde ESTE mensaje con:
+✅ *cumplido*
 
-    // ❌ EXPULSIÓN REAL
-    try {
-      await sock.groupParticipantsUpdate(from, [elegidoJid], 'remove')
-      await sock.sendMessage(from, {
-        text: `
-💀 *CASTIGO EJECUTADO*
-🚪 @${elegidoJid.split('@')[0]} fue expulsado por no cumplir
-`.trim(),
-        mentions: [elegidoJid]
-      })
-    } catch {
-      await sock.sendMessage(from, {
-        text: `
-⚠️ *ERROR DE CASTIGO*
-No pude expulsar a @${elegidoJid.split('@')[0]}
-`.trim(),
-        mentions: [elegidoJid]
-      })
-    }
-  }, timeout)
+⚠️ Si no cumples… castigo automático 😈
+`.trim()
+
+  const sent = await sock.sendMessage(
+    from,
+    { text: texto, mentions: [victim.id] },
+    { quoted: m }
+  )
+
+  // Guardar ID del mensaje
+  global.db.ruleta[victim.id].msgId = sent.key.id
 }
 
 handler.command = ['ruletaprohibida', 'ruleta']
@@ -170,3 +128,62 @@ handler.group = true
 handler.menu = true
 
 export default handler
+
+/* ───── 📩 DETECCIÓN DE RESPUESTA ───── */
+export async function before (m, { sock }) {
+  if (!global.db?.ruleta) return
+  if (!m.quoted) return
+
+  const user = m.sender
+  const data = global.db.ruleta[user]
+  if (!data || !data.activo) return
+
+  // Verificar que respondió al mensaje correcto
+  if (m.quoted.id !== data.msgId) return
+
+  const text =
+    m.message?.conversation ||
+    m.message?.extendedTextMessage?.text ||
+    ''
+
+  if (!/cumplido/i.test(text)) return
+
+  // ✅ Cumplió
+  data.activo = false
+  delete global.db.ruleta[user]
+
+  await sock.sendMessage(data.group, {
+    text: `✅ @${user.split('@')[0]} cumplió el reto.\n😮‍💨 Se salva del castigo.`,
+    mentions: [user]
+  })
+}
+
+/* ───── ⏱️ CASTIGO AUTOMÁTICO ───── */
+setInterval(async () => {
+  if (!global.db?.ruleta) return
+
+  for (const user in global.db.ruleta) {
+    const data = global.db.ruleta[user]
+    if (!data.activo) continue
+
+    const sock = global.sock
+    if (!sock) continue
+
+    try {
+      if (data.castigo === 'kick') {
+        await sock.groupParticipantsUpdate(data.group, [user], 'remove')
+      }
+
+      if (data.castigo === 'remove-admin') {
+        await sock.groupParticipantsUpdate(data.group, [user], 'demote')
+      }
+
+      await sock.sendMessage(data.group, {
+        text: `☠️ @${user.split('@')[0]} NO cumplió.\n💥 Castigo aplicado.`,
+        mentions: [user]
+      })
+    } catch {}
+
+    delete global.db.ruleta[user]
+  }
+}, 60 * 1000)
