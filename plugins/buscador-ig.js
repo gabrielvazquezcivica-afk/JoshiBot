@@ -90,7 +90,7 @@ let handler = async (m, { conn, args }) => {
 handler.help = ['igstalk <usuario>']
 handler.command = ['igstalk']
 handler.tags = ['buscador']
-handler.group = false
+handler.group = true
 handler.menu = true
 
 export default handler
