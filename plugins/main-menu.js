@@ -113,7 +113,7 @@ export const handler = async (m, {
     from,
     {
       image: {
-        url: 'https://i.postimg.cc/W3gbckFb/27969f9eb4afa31ef9ad64f8ede1ad45.jpg'
+        url: 'https://i.postimg.cc/jjYq0Hm2/0519561cff59024a52aa893d49d7af17.jpg'
       },
       caption: menu
     },
