@@ -9,19 +9,21 @@ if (!fs.existsSync(dbFile)) fs.writeFileSync(dbFile, '{}')
 
 // ───── FRASES ─────
 const frasesAdd = [
-  'Nuevo usuario detectado',
-  'Ingreso registrado en el sistema',
-  'Acceso concedido al grupo',
-  'Usuario añadido correctamente',
-  'Actividad detectada: entrada'
+  '🚨 Aguas… acaba de caer otro valiente (o pendejo) 😈',
+  '👀 Entró alguien creyendo que aquí lo iban a respetar 🤡',
+  '🔥 Nuevo integrante detectado, escondan a sus primas 😏',
+  '🚪 Se metió otro, nadie lo pidió pero aquí anda 🤷‍♂️',
+  '💀 Llegó uno más al desmadre, que Dios lo agarre confesado 🙏',
+  '🍑 Bienvenido wey, acomódate que aquí se alburea parejo 😎'
 ]
 
 const frasesRemove = [
-  'Usuario removido del grupo',
-  'Salida registrada en el sistema',
-  'Conexión finalizada',
-  'Usuario desconectado',
-  'Actividad detectada: salida'
+  '🏃‍♂️ Uno ya no aguantó y salió corriendo 😂',
+  '📉 Usuario detectó el nivel y mejor se fue 🫠',
+  '❌ Se fue uno… claramente no dio el ancho 🤏',
+  '🪦 Abandonó el grupo, se nos cayó el soldado 🫡',
+  '😭 Salió del grupo, probablemente llorando 💔',
+  '➖ Uno menos, el grupo sigue rifando igual 😌'
 ]
 
 // ───── NORMALIZAR JID ─────
@@ -59,21 +61,25 @@ function buildMessage (action, user) {
   })
 
   return `
-╭─〔 🚀 SISTEMA JOSHI 〕
+╭─〔 🤖 SISTEMA JOSHI ⚙️ 〕
 │ ${frase}
 ├────────────────
 │ 👤 @${number}
-│ 🔔 ${action === 'add' ? 'ENTRADA REGISTRADA' : 'SALIDA REGISTRADA'}
+│ 🔔 ${
+    action === 'add'
+      ? 'ENTRADA REGISTRADA 💥 (YA VALISTE MADRE)'
+      : 'SALIDA REGISTRADA 🏳️ (SE RAJÓ)'
+  }
 ├────────────────
-│ 🗓 ${fecha}
-╰─〔 🤖 JoshiBot 〕
+│ 🗓 ${fecha} ⏰
+╰─〔 😈 JoshiBot sin piedad 🔥 〕
 `.trim()
 }
 
 // ───── COMANDO .welcome ─────
 export const handler = async (m, { sock, from, sender, isGroup, reply }) => {
   if (!isGroup) {
-    return reply('🚫 Este comando solo funciona en grupos')
+    return reply('🚫 No seas wey 🤦‍♂️ esto solo jala en grupos')
   }
 
   const text =
@@ -88,7 +94,7 @@ export const handler = async (m, { sock, from, sender, isGroup, reply }) => {
   try {
     metadata = await sock.groupMetadata(from)
   } catch {
-    return reply('❌ No pude obtener información del grupo')
+    return reply('❌ El sistema se puso mamón 🤖💢')
   }
 
   const admins = metadata.participants
@@ -96,33 +102,35 @@ export const handler = async (m, { sock, from, sender, isGroup, reply }) => {
     .map(p => normalizeJid(p.id))
 
   if (!admins.includes(sender)) {
-    return reply('⛔ Solo administradores pueden usar este comando')
+    return reply('⛔ No eres admin 👑❌ siéntate y observa 🍿')
   }
 
   const db = JSON.parse(fs.readFileSync(dbFile))
   if (!db[from]) db[from] = false
 
   if (option === 'on') {
-    if (db[from]) return reply('⚠️ Welcome ya está activo')
+    if (db[from]) return reply('⚠️ Ya estaba prendido 🔥 no le muevas')
 
     db[from] = true
     fs.writeFileSync(dbFile, JSON.stringify(db, null, 2))
-    return reply('🟢 Welcome activado correctamente')
+    return reply('🟢 Welcome activado 😈 empieza el desvergue')
   }
 
   if (option === 'off') {
-    if (!db[from]) return reply('⚠️ Welcome ya estaba desactivado')
+    if (!db[from]) return reply('⚠️ Ya estaba apagado 📴 no inventes')
 
     db[from] = false
     fs.writeFileSync(dbFile, JSON.stringify(db, null, 2))
-    return reply('🔴 Welcome desactivado correctamente')
+    return reply('🔴 Welcome desactivado 😴 modo aburrido ON')
   }
 
   reply(`
-⚙️ *WELCOME PANEL*
+⚙️ *WELCOME PANEL* 🤖
 
 Estado actual:
-${db[from] ? '🟢 ACTIVADO' : '🔴 DESACTIVADO'}
+${db[from]
+  ? '🟢 ACTIVO 😈 (modo carrilla mexicana 🇲🇽)'
+  : '🔴 INACTIVO 🧸 (modo sensible)'}
 
 Uso:
 .welcome on
@@ -166,4 +174,4 @@ export async function welcomeEvent (sock, update) {
       })
     }
   }
-}
+                               }
