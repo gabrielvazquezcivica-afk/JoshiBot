@@ -6,9 +6,6 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath, pathToFileURL } from 'url'
 
-// 👁️ VIEWONCE WATCHER
-import { viewonceWatcher } from './lib/viewonceWatcher.js'
-
 // 🔇 Silenciar basura interna
 util.inspect.defaultOptions.depth = 0
 util.inspect.defaultOptions.colors = false
@@ -53,7 +50,6 @@ global.APIs = config.APIs
 global.APIKeys = config.APIKeys
 global.limits = config.limits
 /* ───────────────────────────── */
-
 
 /* =====================================================
    🧠 DB PERSISTENTE (NSFW / MODOADMIN)
@@ -171,13 +167,6 @@ async function start () {
     const m = messages?.[0]
     if (!m?.message || m.key.fromMe) return
     if (isOldMessage(m)) return
-
-    // 👁️ VIEWONCE WATCHER
-    try {
-      await viewonceWatcher(m)
-    } catch (e) {
-      console.error('❌ Error viewonce watcher:', e)
-    }
 
     const from = m.key.remoteJid
     const isGroup = from.endsWith('@g.us')
