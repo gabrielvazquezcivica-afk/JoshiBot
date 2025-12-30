@@ -129,8 +129,8 @@ export const handler = async (m, { sock, from, sender, isGroup, reply }) => {
 
 Estado actual:
 ${db[from]
-  ? '🟢 ACTIVO 😈 (modo carrilla mexicana 🇲🇽)'
-  : '🔴 INACTIVO 🧸 (modo sensible)'}
+  ? '🟢 ACTIVO 😈'
+  : '🔴 INACTIVO 🧸'}
 
 Uso:
 .welcome on
