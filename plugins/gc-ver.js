@@ -1,15 +1,16 @@
 import fs from 'fs'
+import path from 'path'
 
-const VO_DB = './data/viewonce.json'
+const BASE = './data/viewonce'
+const INDEX = path.join(BASE, 'index.json')
 
-function getVO () {
-  if (!fs.existsSync('./data')) fs.mkdirSync('./data', { recursive: true })
-  if (!fs.existsSync(VO_DB)) fs.writeFileSync(VO_DB, JSON.stringify({}))
-  return JSON.parse(fs.readFileSync(VO_DB))
+function getDB() {
+  if (!fs.existsSync(INDEX)) return {}
+  return JSON.parse(fs.readFileSync(INDEX))
 }
 
-function saveVO (db) {
-  fs.writeFileSync(VO_DB, JSON.stringify(db, null, 2))
+function saveDB(db) {
+  fs.writeFileSync(INDEX, JSON.stringify(db, null, 2))
 }
 
 export const handler = async (m, {
@@ -17,39 +18,73 @@ export const handler = async (m, {
   from,
   isGroup,
   sender,
+  owner,
   reply
 }) => {
 
-  // 🚫 SOLO GRUPOS
-  if (!isGroup) return
+  if (!isGroup) return reply('🚫 Solo funciona en grupos')
 
-  /* ───── DB GROUP ───── */
-  if (!global.db?.groups) return
-  const groupData = global.db.groups[from] || {}
-
-  /* ───── MODO ADMIN ───── */
-  if (groupData.modoadmin) {
-    const meta = await sock.groupMetadata(from)
-    const isAdmin = meta.participants.some(
-      p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
-    )
-    if (!isAdmin) return // bloqueo silencioso
+  /* ───── 👑 MODO ADMIN (SILENCIOSO) ───── */
+  if (!global.db) global.db = {}
+  if (!global.db.groups) global.db.groups = {}
+  if (!global.db.groups[from]) {
+    global.db.groups[from] = { modoadmin: false }
   }
 
-  const db = getVO()
-  const data = db[from]
+  if (global.db.groups[from].modoadmin) {
+    const metadata = await sock.groupMetadata(from)
+    const participants = metadata.participants || []
 
-  // ❌ NO HAY VIEWONCE
-  if (!data) {
-    if (groupData.modoadmin) return
-    return reply('⚠️ No hay ninguna foto o video de una sola vista guardado')
+    // 👑 OWNER bypass
+    const ownerJids = owner?.jid || []
+    if (!ownerJids.includes(sender)) {
+      const isAdmin = participants.some(
+        p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
+      )
+      if (!isAdmin) return // 🚫 bloqueo silencioso
+    }
+  }
+  /* ─────────────────────────────────── */
+
+  const db = getDB()
+  const chatDB = db[from]
+
+  if (!chatDB || !Object.keys(chatDB).length) {
+    if (!global.db.groups[from].modoadmin) {
+      return reply('❌ No hay fotos o videos *ver una sola vez*')
+    }
+    return
   }
 
-  // 📤 ENVIAR MEDIA (SIN TEXTO)
-  await sock.sendMessage(from, data.media, { quoted: m })
+  // 📌 último viewonce guardado
+  const lastId = Object.keys(chatDB).pop()
+  const data = chatDB[lastId]
+  const filePath = path.join(BASE, data.file)
+
+  if (!fs.existsSync(filePath)) {
+    delete chatDB[lastId]
+    saveDB(db)
+    return
+  }
+
+  // 📤 enviar media
+  if (data.type === 'image') {
+    await sock.sendMessage(from, {
+      image: fs.readFileSync(filePath)
+    }, { quoted: m })
+  } else {
+    await sock.sendMessage(from, {
+      video: fs.readFileSync(filePath)
+    }, { quoted: m })
+  }
+
+  // 🧹 borrar del bot
+  fs.unlinkSync(filePath)
+  delete chatDB[lastId]
+  if (!Object.keys(chatDB).length) delete db[from]
+  saveDB(db)
 }
 
-/* ───── CONFIG ───── */
 handler.command = ['ver']
 handler.group = true
 handler.tags = ['group']
