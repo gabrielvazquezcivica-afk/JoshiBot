@@ -23,8 +23,9 @@ const obtenerPerfilMollygram = async (usuario) => {
     html.match(regex)?.[1]?.trim() || '❌ No disponible'
 
   const fotoPerfil =
-    extraerDato(/<img[^>]*class="[^"]*rounded-circle[^"]*"[^>]*src="([^"]+)"/i) ||
-    extraerDato(/<img[^>]*src="([^"]+)"[^>]*class="[^"]*rounded-circle[^"]*"/i)
+    html.match(/<img[^>]*class="[^"]*rounded-circle[^"]*"[^>]*src="([^"]+)"/i)?.[1] ||
+    html.match(/<img[^>]*src="([^"]+)"[^>]*class="[^"]*rounded-circle[^"]*"/i)?.[1] ||
+    null
 
   return {
     usuario: extraerDato(/<h4 class="mb-0">([^<]+)<\/h4>/),
@@ -37,13 +38,15 @@ const obtenerPerfilMollygram = async (usuario) => {
   }
 }
 
-// 🧩 Comando del bot
-let handler = async (m, { conn, args }) => {
+// 🧩 COMANDO IG STALK
+export const handler = async (m, { sock, conn, args }) => {
   if (!args[0]) {
-    return m.reply('📌 *Uso:* `.igstalk usuario` 🔍')
+    return m.reply('📌 *Uso correcto:* `.igstalk usuario` 🔍')
   }
 
-  await m.react('🕵️‍♂️')
+  await sock.sendMessage(m.chat, {
+    react: { text: '🕵️‍♂️', key: m.key }
+  })
 
   let perfil
   try {
@@ -54,27 +57,20 @@ let handler = async (m, { conn, args }) => {
 
   const mensaje = `
 ╭───〔 📸✨ INSTAGRAM STALK ✨📸 〕───╮
+│ 👤 Usuario: @${perfil.usuario}
+│ 📛 Nombre: ${perfil.nombreCompleto}
+│ 📝 Bio:
+│ ${perfil.biografia}
 │
-│ 👤📛 *Usuario*
-│ ➤ @${perfil.usuario}
-│
-│ 🧾🙋 *Nombre*
-│ ➤ ${perfil.nombreCompleto}
-│
-│ 📝💬 *Biografía*
-│ ➤ ${perfil.biografia}
-│
-│ 📊🔥 *Estadísticas*
-│ ├ 📸 Posts: ${perfil.publicaciones}
-│ ├ 👥 Seguidores: ${perfil.seguidores}
-│ └ 🧑‍🤝‍🧑 Siguiendo: ${perfil.siguiendo}
-│
-│ 👀⚡ *Stalkeado con éxito*
-╰──〔 🤖💀 JOSHI-BOT 💀🤖 〕──╯
+│ 📊 Estadísticas:
+│ 📸 Posts: ${perfil.publicaciones}
+│ 👥 Seguidores: ${perfil.seguidores}
+│ 🧑‍🤝‍🧑 Siguiendo: ${perfil.siguiendo}
+╰──〔 🤖 JOSHI-BOT ⚡ 〕──╯
 `.trim()
 
-  if (perfil.fotoPerfil && perfil.fotoPerfil !== '❌ No disponible') {
-    await conn.sendMessage(
+  if (perfil.fotoPerfil) {
+    await sock.sendMessage(
       m.chat,
       {
         image: { url: perfil.fotoPerfil },
@@ -87,10 +83,10 @@ let handler = async (m, { conn, args }) => {
   }
 }
 
-handler.help = ['igstalk <usuario>']
+// 📋 CONFIG MENÚ
 handler.command = ['igstalk']
 handler.tags = ['tools']
-handler.group = true
 handler.menu = true
+handler.group = false
 
 export default handler
