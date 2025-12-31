@@ -25,13 +25,7 @@ hacer tu vida más sencilla y automatizar tus tareas.
 /info - Información sobre el bot y el grupo
 /grupo - Comandos para administrar y proteger tu grupo
 │
-💡 Tips de uso:
-✅ Mantén tus grupos organizados usando comandos de administración
-✅ Usa las respuestas automáticas para consultas frecuentes
-✅ Personaliza alertas y mensajes de bienvenida
-✅ Revisa regularmente nuevas funciones y actualizaciones
-│
 📬 Contacto:
-💫 SoyGabo
+💫 [SoyGabo](https://wa.me/523310167470)
 │
 ╰────────────⊰ Joshi BOT ⊱────────────╯
