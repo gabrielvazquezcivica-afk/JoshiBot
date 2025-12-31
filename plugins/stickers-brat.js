@@ -53,7 +53,7 @@ const fetchBratSticker = async (text, attempt = 1) => {
 }
 
 // ───── PLUGIN PRINCIPAL ─────
-export const handler = async (m, { sock, from, isGroup, sender, reply, text, owner }) => {
+export const handler = async (m, { sock, from, isGroup, sender, reply, args, owner }) => {
 
   // ───── MODO ADMIN ─────
   if (isGroup && global.db?.groups?.[from]?.modoadmin) {
@@ -68,6 +68,8 @@ export const handler = async (m, { sock, from, isGroup, sender, reply, text, own
     }
   }
 
+  // ───── DETECTAR TEXTO CORRECTAMENTE ─────
+  const text = args.join(' ').trim()
   if (!text) return reply('❌ Ingresa el texto para crear el sticker. Ejemplo: `.brat Hola mundo`')
 
   try {
