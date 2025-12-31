@@ -1,10 +1,10 @@
 import fetch from 'node-fetch'
 
 // 🗣️ COMANDO TTS (Texto a voz)
-export const handler = async (m, { conn, args, usedPrefix, command }) => {
+export const handler = async (m, { sock, args, usedPrefix, command }) => {
   const texto = args.join(' ')
   if (!texto) {
-    return conn.sendMessage(
+    return sock.sendMessage(
       m.chat,
       {
         text: `✳️ *Uso correcto:*\n${usedPrefix}${command} <texto>\n\n📌 *Ejemplo:*\n${usedPrefix}${command} Hola, ¿cómo estás?`
@@ -14,7 +14,7 @@ export const handler = async (m, { conn, args, usedPrefix, command }) => {
   }
 
   // ⚡ Reacción de inicio
-  await conn.sendMessage(m.chat, { react: { text: '🔊', key: m.key } })
+  await sock.sendMessage(m.chat, { react: { text: '🔊', key: m.key } })
 
   try {
     // Endpoint TTS
@@ -25,8 +25,8 @@ export const handler = async (m, { conn, args, usedPrefix, command }) => {
     const arrayBuffer = await res.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
 
-    // Enviar audio como mensaje normal (no ptt)
-    await conn.sendMessage(
+    // Enviar audio como mensaje normal (no PTT)
+    await sock.sendMessage(
       m.chat,
       {
         audio: buffer,
@@ -37,13 +37,13 @@ export const handler = async (m, { conn, args, usedPrefix, command }) => {
     )
 
     // ✅ Reacción de éxito
-    await conn.sendMessage(m.chat, { react: { text: '🟢', key: m.key } })
+    await sock.sendMessage(m.chat, { react: { text: '🟢', key: m.key } })
 
   } catch (e) {
     console.error(e)
     // ❌ Reacción de error
-    await conn.sendMessage(m.chat, { react: { text: '🔴', key: m.key } })
-    await conn.sendMessage(
+    await sock.sendMessage(m.chat, { react: { text: '🔴', key: m.key } })
+    await sock.sendMessage(
       m.chat,
       { text: '❌ Ocurrió un error al generar el audio.' },
       { quoted: m }
