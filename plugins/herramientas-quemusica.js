@@ -1,35 +1,33 @@
 import fs from 'fs'
 import acrcloud from 'acrcloud'
 
-// 🎧 CONFIG ACRCLOUD
+// 🎧 CONFIGURACIÓN ACRCLOUD
 const acr = new acrcloud({
   host: 'identify-eu-west-1.acrcloud.com',
   access_key: 'c33c767d683f78bd17d4bd4991955d81',
   access_secret: 'bvgaIAEtADBTbLwiPGYlxupWqkNGIjT7J9Ag2vIu'
 })
 
-// 🎵 COMANDO
+// 🎵 COMANDO QUEMUSICA PRO CON LINKS
 export const handler = async (m, { sock, from, reply }) => {
   const q = m.quoted || m
   const mime = (q.msg || q).mimetype || ''
 
-  // ❌ Validar tipo
-  if (!/audio|video/.test(mime)) {
+  // ❌ Validar tipo de archivo
+  if (!mime.startsWith('audio') && !mime.startsWith('video')) {
     return reply(
 `╭─〔 ❗ USO INCORRECTO 〕
-│ Responde a un audio
-│ o video (10–20s)
-╰─〔 🤖 JOSHI-BOT 〕`
+│ Responde a un audio o video (10–20s)
+╰─〔 🎵 JOSHI-BOT 〕`
     )
   }
 
   // ⏱️ Duración máxima
   if ((q.msg || q).seconds > 20) {
     return reply(
-`╭─〔 ⚠️ AUDIO MUY LARGO 〕
-│ Usa un fragmento
-│ de 10 a 20 segundos
-╰─〔 🎵 ACRCloud 〕`
+`╭─〔 ⚠️ ARCHIVO MUY LARGO 〕
+│ Usa un fragmento de 10 a 20 segundos
+╰─〔 🎧 ACRCloud 〕`
     )
   }
 
@@ -40,9 +38,8 @@ export const handler = async (m, { sock, from, reply }) => {
 
   // 📥 Descargar media
   const media = await q.download()
-  const ext = mime.split('/')[1]
+  const ext = mime.split('/')[1].split(';')[0]
   const file = `./tmp/${Date.now()}_${from.split('@')[0]}.${ext}`
-
   fs.writeFileSync(file, media)
 
   let res
@@ -64,31 +61,56 @@ export const handler = async (m, { sock, from, reply }) => {
     artists,
     album,
     genres,
-    release_date
+    release_date,
+    external_metadata
   } = music
 
-  const texto = `
+  // 🎨 Texto base
+  let texto = `
 ╭──〔 🎶 MÚSICA IDENTIFICADA 〕──╮
 │
-│ 🎧 Título:
-│ ➤ ${title || 'No encontrado'}
-│
-│ 👨‍🎤 Artista:
-│ ➤ ${artists ? artists.map(v => v.name).join(', ') : 'No encontrado'}
-│
-│ 💽 Álbum:
-│ ➤ ${album?.name || 'No encontrado'}
-│
-│ 🌐 Género:
-│ ➤ ${genres ? genres.map(v => v.name).join(', ') : 'No encontrado'}
-│
-│ 📆 Lanzamiento:
-│ ➤ ${release_date || 'No encontrado'}
-│
+│ 🎧 Título: ${title || 'No encontrado'}
+│ 👨‍🎤 Artista: ${artists ? artists.map(v => v.name).join(', ') : 'No encontrado'}
+│ 💽 Álbum: ${album?.name || 'No encontrado'}
+│ 🌐 Género: ${genres ? genres.map(v => v.name).join(', ') : 'No encontrado'}
+│ 📆 Lanzamiento: ${release_date || 'No encontrado'}
 ╰──〔 🤖 JOSHI-BOT 🎵 〕──╯
 `.trim()
 
-  await reply(texto)
+  // 📸 Foto de portada si existe
+  if (album?.cover) {
+    await sock.sendMessage(
+      from,
+      {
+        image: { url: album.cover },
+        caption: texto
+      },
+      { quoted: m }
+    )
+  } else {
+    await reply(texto)
+  }
+
+  // 🔗 LINKS DE REPRODUCCIÓN
+  let links = []
+  if (external_metadata?.spotify?.track?.external_urls?.spotify) {
+    links.push(`🎵 Spotify: ${external_metadata.spotify.track.external_urls.spotify}`)
+  }
+  if (external_metadata?.youtube?.vid) {
+    links.push(`🎬 YouTube: https://www.youtube.com/watch?v=${external_metadata.youtube.vid}`)
+  }
+  if (external_metadata?.apple_music?.url) {
+    links.push(`🍎 Apple Music: ${external_metadata.apple_music.url}`)
+  }
+
+  if (links.length > 0) {
+    await reply(
+`╭──〔 🔗 LINKS DE REPRODUCCIÓN 〕──╮
+│
+│ ${links.join('\n│ ')}
+╰──────────────────────────────╯`
+    )
+  }
 }
 
 handler.command = ['quemusica', 'quemusicaes', 'whatmusic']
