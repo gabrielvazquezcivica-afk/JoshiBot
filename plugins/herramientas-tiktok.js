@@ -2,8 +2,29 @@ import fetch from 'node-fetch'
 
 const buscarTikTok = async (query) => {
   const url = `https://api.ryzendesu.vip/api/search/tiktok?query=${encodeURIComponent(query)}`
-  const res = await fetch(url)
-  const json = await res.json()
+
+  const res = await fetch(url, {
+    headers: {
+      'user-agent':
+        'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36',
+      accept: 'application/json'
+    }
+  })
+
+  const text = await res.text()
+
+  // ❌ Si la API devuelve HTML
+  if (text.startsWith('<')) {
+    console.log('❌ API devolvió HTML, no JSON')
+    return null
+  }
+
+  let json
+  try {
+    json = JSON.parse(text)
+  } catch {
+    return null
+  }
 
   if (!json.status || !json.result?.length) return null
   return json.result.slice(0, 3)
@@ -18,7 +39,7 @@ export const handler = async (m, { sock, from, args, reply }) => {
 ║ .tik <búsqueda>
 ║
 ║ ✨ Ejemplo:
-║ .tik anime edit
+║ .tik musica
 ╚════════════════════════════╝
 `)
   }
@@ -27,14 +48,14 @@ export const handler = async (m, { sock, from, args, reply }) => {
 
   const videos = await buscarTikTok(text)
   if (!videos) {
-    return reply('❌ TikTok no devolvió resultados reales.')
+    return reply('❌ TikTok no devolvió resultados (API bloqueada).')
   }
 
   let i = 1
   for (const v of videos) {
     const cap = `
 ╔═══〔 🎬 VIDEO ${i} 〕═══╗
-║ 🧬 ${v.title || 'Sin título'}
+║ 🎵 ${v.title || 'Sin título'}
 ║ 👤 ${v.author || 'Desconocido'}
 ╚════════════════════════════╝
 `
