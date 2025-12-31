@@ -109,10 +109,10 @@ ${resultado}
   }
 }
 
-handler.help = ['cuaca <lugar>']
+handler.help = ['clima <lugar>']
 handler.tags = ['tools']
 handler.menu = true
-handler.command = ['cuaca', 'weather']
+handler.command = ['clima', 'weather']
 handler.group = false
 
 export default handler
