@@ -1,15 +1,25 @@
 import fetch from 'node-fetch'
 
 // 🗣️ COMANDO TTS
-export const handler = async (m, { sock, from, args, usedPrefix }) => {
+export const handler = async (m, { sock, from, args }) => {
   const texto = args.join(' ')
+  
+  // ❌ Si no hay texto
   if (!texto) {
-    return sock.sendMessage(from, {
-      text: `✳️ *Uso correcto:*\n${usedPrefix}tts <texto>\n\n📌 *Ejemplo:*\n${usedPrefix}tts Hola, ¿cómo estás?`
-    }, { quoted: m })
+    return sock.sendMessage(
+      from,
+      {
+        text: `✳️ Uso correcto:
+.tts <texto>
+
+📌 Ejemplo:
+.tts Hola, ¿cómo estás?`
+      },
+      { quoted: m }
+    )
   }
 
-  // ⚡ Reacción inicial
+  // ⚡ Reacción de inicio
   await sock.sendMessage(from, { react: { text: '🔵', key: m.key } })
 
   try {
@@ -35,7 +45,11 @@ export const handler = async (m, { sock, from, args, usedPrefix }) => {
   } catch (e) {
     console.error(e)
     await sock.sendMessage(from, { react: { text: '🔴', key: m.key } })
-    await sock.sendMessage(from, { text: '🔴 Ocurrió un error al generar el audio.', mentions: [m.sender] }, { quoted: m })
+    await sock.sendMessage(
+      from,
+      { text: '🔴 Ocurrió un error al generar el audio.', mentions: [m.sender] },
+      { quoted: m }
+    )
   }
 }
 
