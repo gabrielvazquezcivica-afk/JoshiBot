@@ -1,13 +1,40 @@
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
-import { spawn } from 'child_process'
 import axios from 'axios'
-import { addExif } from '../lib/exif.js' // tu función de exif para stickers
+import webp from 'node-webpmux'
 
+// ───── FUNCIONES EXIF ─────
+async function addExif(media, packname = 'Brat Pack', author = 'JoshiBot') {
+  const tmp = path.join(os.tmpdir(), `${Date.now()}.webp`)
+  const tmpOut = path.join(os.tmpdir(), `${Date.now()}_wm.webp`)
+  fs.writeFileSync(tmp, media)
+  const img = new webp.Image()
+  await img.load(tmp)
+  const json = {
+    'sticker-pack-id': 'joshibot',
+    'sticker-pack-name': packname,
+    'sticker-pack-publisher': author,
+    emojis: []
+  }
+  const exifAttr = Buffer.from([
+    0x49,0x49,0x2A,0x00,0x08,0x00,0x00,0x00,
+    0x01,0x00,0x41,0x57,0x07,0x00,0x00,0x00,
+    0x00,0x00,0x16,0x00,0x00,0x00
+  ])
+  const jsonBuffer = Buffer.from(JSON.stringify(json), 'utf-8')
+  const exif = Buffer.concat([exifAttr, jsonBuffer])
+  img.exif = exif
+  await img.save(tmpOut)
+  const result = fs.readFileSync(tmpOut)
+  fs.unlinkSync(tmp)
+  fs.unlinkSync(tmpOut)
+  return result
+}
+
+// ───── FUNCIONES STICKER ─────
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
 
-// Función para generar sticker desde Brat API
 const fetchBratSticker = async (text, attempt = 1) => {
   try {
     const res = await axios.get('https://kepolu-brat.hf.space/brat', {
@@ -25,55 +52,35 @@ const fetchBratSticker = async (text, attempt = 1) => {
   }
 }
 
+// ───── PLUGIN PRINCIPAL ─────
 export const handler = async (m, { sock, from, isGroup, sender, reply, text, owner }) => {
-  /* ───── 🧠 DB SAFE ───── */
-  if (!global.db) global.db = {}
-  if (!global.db.groups) global.db.groups = {}
-  if (isGroup && !global.db.groups[from]) {
-    global.db.groups[from] = { modoadmin: false }
-  }
 
-  /* ───── 👑 MODO ADMIN (silencioso) ───── */
-  if (isGroup && global.db.groups[from].modoadmin) {
+  // ───── MODO ADMIN ─────
+  if (isGroup && global.db?.groups?.[from]?.modoadmin) {
     const metadata = await sock.groupMetadata(from)
     const participants = metadata.participants || []
     const ownerJids = owner?.jid || []
     if (!ownerJids.includes(sender)) {
-      const isAdmin = participants.some(
-        p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
+      const isAdmin = participants.some(p =>
+        p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
       )
-      if (!isAdmin) return
+      if (!isAdmin) return // 🚫 Silencioso para no admin
     }
   }
 
-  /* ───── ❌ VALIDAR TEXTO ───── */
   if (!text) return reply('❌ Ingresa el texto para crear el sticker. Ejemplo: `.brat Hola mundo`')
 
-  let input, output
   try {
-    /* ───── 📥 DESCARGAR STICKER DESDE API ───── */
     const buffer = await fetchBratSticker(text)
-
-    /* ───── 📂 TEMPORALES ───── */
-    const tmp = os.tmpdir()
-    input = path.join(tmp, `brat_in_${Date.now()}.webp`)
-    output = path.join(tmp, `brat_out_${Date.now()}.webp`)
-    fs.writeFileSync(input, buffer)
-
-    /* ───── 🛠️ AÑADIR EXIF ───── */
     const stickerBuffer = await addExif(buffer, 'Brat Pack', 'JoshiBot')
-    fs.writeFileSync(output, stickerBuffer)
-
-    /* ───── 📤 ENVIAR STICKER ───── */
-    await sock.sendMessage(from, { sticker: fs.readFileSync(output) }, { quoted: m })
+    const tmp = path.join(os.tmpdir(), `brat_out_${Date.now()}.webp`)
+    fs.writeFileSync(tmp, stickerBuffer)
+    await sock.sendMessage(from, { sticker: fs.readFileSync(tmp) }, { quoted: m })
+    fs.unlinkSync(tmp)
 
   } catch (e) {
     console.error('BRAT STICKER ERROR:', e)
     reply('❌ Error al generar el sticker')
-  } finally {
-    /* ───── 🧹 LIMPIEZA ───── */
-    try { if (input) fs.unlinkSync(input) } catch {}
-    try { if (output) fs.unlinkSync(output) } catch {}
   }
 }
 
