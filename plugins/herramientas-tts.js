@@ -1,60 +1,68 @@
 import fetch from 'node-fetch'
 
-// 🗣️ COMANDO TTS
-export const handler = async (m, { sock, from, args }) => {
+// 🗣️ COMANDO TTS (FUNCIONAL WHATSAPP)
+export const handler = async (m, { sock, from, args, reply }) => {
   const texto = args.join(' ')
 
-  // ❌ Si no hay texto
   if (!texto) {
-    return sock.sendMessage(
-      from,
-      {
-        text: `✳️ Uso correcto:
+    return reply(
+`🗣️ *TEXT TO SPEECH*
+
+📌 Uso:
 .tts <texto>
 
-📌 Ejemplo:
-.tts Hola, ¿cómo estás?`
-      },
-      { quoted: m }
+✏️ Ejemplo:
+.tts Hola JoshiBot`
     )
   }
 
-  // ⚡ Reacción de inicio
-  await sock.sendMessage(from, { react: { text: '🔵', key: m.key } })
+  // 🔊 reacción inicio
+  await sock.sendMessage(from, {
+    react: { text: '🔊', key: m.key }
+  })
 
   try {
-    const url = `https://api.siputzx.my.id/api/tools/ttsgoogle?text=${encodeURIComponent(texto)}`
-    const res = await fetch(url)
-    if (!res.ok) throw new Error('Error al obtener el audio.')
+    const url =
+      'https://translate.google.com/translate_tts' +
+      '?ie=UTF-8' +
+      '&q=' + encodeURIComponent(texto) +
+      '&tl=es' +
+      '&client=tw-ob'
+
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0'
+      }
+    })
+
+    if (!res.ok) throw 'Error TTS'
 
     const buffer = Buffer.from(await res.arrayBuffer())
 
-    // ✅ Enviar como PTT
+    // ✅ WhatsApp compatible
     await sock.sendMessage(
       from,
       {
         audio: buffer,
-        mimetype: 'audio/mp4',
+        mimetype: 'audio/mpeg',
         ptt: true
       },
       { quoted: m }
     )
 
-    // ⚡ Reacción de éxito
-    await sock.sendMessage(from, { react: { text: '🟢', key: m.key } })
+    await sock.sendMessage(from, {
+      react: { text: '✅', key: m.key }
+    })
 
   } catch (e) {
     console.error(e)
-    await sock.sendMessage(from, { react: { text: '🔴', key: m.key } })
-    await sock.sendMessage(
-      from,
-      { text: '🔴 Ocurrió un error al generar el audio.', mentions: [m.sender] },
-      { quoted: m }
-    )
+    await sock.sendMessage(from, {
+      react: { text: '❌', key: m.key }
+    })
+    reply('❌ No pude generar el audio')
   }
 }
 
-// 📋 CONFIG MENÚ
 handler.command = ['tts']
 handler.tags = ['tools']
 handler.menu = true
