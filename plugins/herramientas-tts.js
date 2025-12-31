@@ -2,18 +2,20 @@ import fetch from 'node-fetch'
 
 export const handler = async (m, { sock, args, usedPrefix }) => {
   const texto = args.join(' ')
+  const quoted = m && m.key ? m : undefined
+
   if (!texto) {
     return await sock.sendMessage(
       m.chat,
       {
         text: `✳️ Uso correcto:\n${usedPrefix}tts <texto>\n\n📌 Ejemplo:\n${usedPrefix}tts Hola, ¿cómo estás?`
       },
-      { quoted: m && m.key ? m : undefined }
+      { quoted }
     )
   }
 
-  // Reacción inicial
-  if (m && m.key) await sock.sendMessage(m.chat, { react: { text: '🔵', key: m.key } })
+  // Reacción de inicio
+  if (quoted) await sock.sendMessage(m.chat, { react: { text: '🔵', key: m.key } })
 
   try {
     const url = `https://api.siputzx.my.id/api/tools/ttsgoogle?text=${encodeURIComponent(texto)}`
@@ -22,33 +24,27 @@ export const handler = async (m, { sock, args, usedPrefix }) => {
 
     const buffer = Buffer.from(await res.arrayBuffer())
 
-    const caption = `
-╭──〔 🔊 TTS JOSHI-BOT 🔊 〕──╮
-│ Texto: ${texto}
-╰──〔 🤖 JoshiBot 〕──╯
-    `.trim()
-
+    // Enviar audio
     await sock.sendMessage(
       m.chat,
       {
         audio: buffer,
         mimetype: 'audio/mp4',
-        ptt: true,
-        caption
+        ptt: true
       },
-      { quoted: m && m.key ? m : undefined } // <-- Solo citar si es válido
+      { quoted } // <-- solo si hay un mensaje válido
     )
 
     // Reacción de éxito
-    if (m && m.key) await sock.sendMessage(m.chat, { react: { text: '🟢', key: m.key } })
+    if (quoted) await sock.sendMessage(m.chat, { react: { text: '🟢', key: m.key } })
 
   } catch (e) {
     console.error(e)
-    if (m && m.key) await sock.sendMessage(m.chat, { react: { text: '🔴', key: m.key } })
+    if (quoted) await sock.sendMessage(m.chat, { react: { text: '🔴', key: m.key } })
     await sock.sendMessage(
       m.chat,
       { text: '🔴 Ocurrió un error al generar el audio.' },
-      { quoted: m && m.key ? m : undefined }
+      { quoted }
     )
   }
 }
