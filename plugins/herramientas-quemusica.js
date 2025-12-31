@@ -8,16 +8,26 @@ const acr = new acrcloud({
   access_secret: 'bvgaIAEtADBTbLwiPGYlxupWqkNGIjT7J9Ag2vIu'
 })
 
-// 🎵 COMANDO QUEMUSICA PRO CON LINKS
+// 🎵 COMANDO QUEMUSICA PRO
 export const handler = async (m, { sock, from, reply }) => {
-  const q = m.quoted || m
-  const mime = (q.msg || q).mimetype || ''
 
-  // ❌ Validar tipo de archivo
-  if (!mime.startsWith('audio') && !mime.startsWith('video')) {
+  let q, mime
+
+  // 1️⃣ Audio/video citado
+  if (m.quoted && (m.quoted.msg?.audio || m.quoted.msg?.video)) {
+    q = m.quoted
+    mime = q.msg.mimetype
+  } 
+  // 2️⃣ Audio/video directo
+  else if (m.msg?.audio || m.msg?.video) {
+    q = m
+    mime = q.msg.mimetype
+  } 
+  // ❌ No es audio/video
+  else {
     return reply(
 `╭─〔 ❗ USO INCORRECTO 〕
-│ Responde a un audio o video (10–20s)
+│ Envía o responde a un audio o video (10–20s)
 ╰─〔 🎵 JOSHI-BOT 〕`
     )
   }
