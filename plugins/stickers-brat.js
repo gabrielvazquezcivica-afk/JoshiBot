@@ -1,6 +1,3 @@
-import fs from 'fs'
-import path from 'path'
-import os from 'os'
 import axios from 'axios'
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
@@ -11,6 +8,13 @@ const fetchBratSticker = async (text, attempt = 1) => {
       params: { q: text },
       responseType: 'arraybuffer'
     })
+    if (!res.data || res.data.byteLength === 0) {
+      if (attempt < 3) {
+        await delay(2000)
+        return fetchBratSticker(text, attempt + 1)
+      }
+      throw new Error('La API no devolvió sticker válido')
+    }
     return res.data
   } catch (err) {
     if (err.response?.status === 429 && attempt <= 3) {
@@ -22,7 +26,7 @@ const fetchBratSticker = async (text, attempt = 1) => {
   }
 }
 
-export const handler = async (m, { sock, from, isGroup, sender, reply, args, owner }) => {
+let handler = async (m, { sock, from, isGroup, sender, reply, args, owner }) => {
 
   // ───── MODO ADMIN ─────
   if (isGroup && global.db?.groups?.[from]?.modoadmin) {
@@ -42,11 +46,15 @@ export const handler = async (m, { sock, from, isGroup, sender, reply, args, own
 
   try {
     const buffer = await fetchBratSticker(text)
+    if (!buffer || buffer.byteLength === 0) {
+      return reply('❌ La API no pudo generar el sticker. Intenta con otro texto más corto o simple.')
+    }
+
     await sock.sendMessage(from, { sticker: buffer }, { quoted: m })
 
   } catch (e) {
     console.error('BRAT STICKER ERROR:', e)
-    reply('❌ Error al generar el sticker. La API pudo devolver un formato no compatible.')
+    reply('❌ Error al generar el sticker. La API pudo devolver un formato no válido o estar saturada.')
   }
 }
 
