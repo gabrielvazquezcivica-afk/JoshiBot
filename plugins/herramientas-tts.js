@@ -1,47 +1,46 @@
 import fetch from 'node-fetch'
 
-let handler = async (m, { sock, args, usedPrefix, command }) => {
+// 🗣️ COMANDO TTS
+export const handler = async (m, { sock, from, args, usedPrefix, command }) => {
   const texto = args.join(' ')
-  const chatId = m.chat || m.from || m.key?.remoteJid
-
   if (!texto) {
-    return sock.sendMessage(
-      chatId,
-      {
-        text: `✳️ Uso correcto:\n${usedPrefix}${command} <texto>\n\n📌 Ejemplo:\n${usedPrefix}${command} Hola, ¿cómo estás?`
-      }
-    )
+    return sock.sendMessage(from, {
+      text: `✳️ *Uso correcto:*\n${usedPrefix + command} <texto>\n\n📌 *Ejemplo:*\n${usedPrefix + command} Hola, ¿cómo estás?`
+    }, { quoted: m })
   }
 
-  try {
-    // Reacción inicial segura
-    if (chatId) await sock.sendMessage(chatId, { react: { text: '🔵', key: m.key } }).catch(() => {})
+  // ⚡ Reacción inicial
+  await sock.sendMessage(from, { react: { text: '🔵', key: m.key } })
 
+  try {
     const url = `https://api.siputzx.my.id/api/tools/ttsgoogle?text=${encodeURIComponent(texto)}`
     const res = await fetch(url)
     if (!res.ok) throw new Error('Error al obtener el audio.')
+
     const buffer = Buffer.from(await res.arrayBuffer())
 
-    // Enviar audio seguro
     await sock.sendMessage(
-      chatId,
-      { audio: buffer, mimetype: 'audio/mp4', ptt: true }
+      from,
+      {
+        audio: buffer,
+        mimetype: 'audio/mp4',
+        ptt: true
+      },
+      { quoted: m }
     )
 
-    // Reacción de éxito segura
-    if (chatId) await sock.sendMessage(chatId, { react: { text: '🟢', key: m.key } }).catch(() => {})
+    // ⚡ Reacción de éxito
+    await sock.sendMessage(from, { react: { text: '🟢', key: m.key } })
 
   } catch (e) {
     console.error(e)
-    if (chatId) await sock.sendMessage(chatId, { react: { text: '🔴', key: m.key } }).catch(() => {})
-    await sock.sendMessage(chatId, { text: '🔴 Ocurrió un error al generar el audio.' })
+    await sock.sendMessage(from, { react: { text: '🔴', key: m.key } })
+    await sock.sendMessage(from, { text: '🔴 Ocurrió un error al generar el audio.', mentions: [m.sender] }, { quoted: m })
   }
 }
 
-handler.help = ['tts <texto-voz>']
+// 📋 CONFIG MENÚ
+handler.command = ['tts']
 handler.tags = ['tools']
 handler.menu = true
-handler.command = ['tts']
 handler.group = false
-
-export default handler
