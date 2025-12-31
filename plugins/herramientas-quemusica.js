@@ -1,7 +1,6 @@
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-import { spawn } from 'child_process'
 import acrcloud from 'acrcloud'
 import { downloadContentFromMessage } from '@whiskeysockets/baileys'
 
@@ -12,33 +11,43 @@ const acr = new acrcloud({
   access_secret: 'bvgaIAEtADBTbLwiPGYlxupWqkNGIjT7J9Ag2vIu'
 })
 
+// ───── HANDLER ─────
 export const handler = async (m, { sock, from, reply }) => {
   let msg
 
-  // ───── DETECTAR AUDIO O VIDEO ─────
-  const q = m.quoted?.message
-  msg = m.message?.audioMessage || m.message?.videoMessage || q?.audioMessage || q?.videoMessage
+  // 1️⃣ Audio/video directo
+  msg = m.message?.audioMessage || m.message?.videoMessage
 
-  if (!msg) {
-    return reply('❌ Envía un audio o video (10–20s) para identificar')
+  // 2️⃣ Audio/video citado o forward
+  if (!msg && m.quoted?.message) {
+    msg = m.quoted.message.audioMessage || m.quoted.message.videoMessage
   }
 
+  // ❌ Si no hay audio/video
+  if (!msg) {
+    return await sock.sendMessage(from, {
+      text: '❌ Envía un audio o video (10–20s) para identificar',
+      mentions: [m.sender]
+    })
+  }
+
+  // ⏱️ Duración máxima
   const duration = msg.seconds || 0
   if (duration > 20) {
     return reply('❌ El archivo debe durar máximo 20 segundos')
   }
 
+  // ⏳ Reacción
   await sock.sendMessage(from, { react: { text: '🎧', key: m.key } })
 
   // ───── DESCARGAR MEDIA ─────
-  const streamType = msg.audio || msg.video ? (msg.audio ? 'audio' : 'video') : 'audio'
-  const stream = await downloadContentFromMessage(msg, streamType)
-
+  const type = msg.audioMessage ? 'audio' : 'video'
+  const stream = await downloadContentFromMessage(msg, type)
   let buffer = Buffer.alloc(0)
   for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk])
 
   const tmp = os.tmpdir()
-  const file = path.join(tmp, `quemusica_${Date.now()}.${streamType === 'video' ? 'mp4' : 'mp3'}`)
+  const file = path.join(tmp, `quemusica_${Date.now()}.${type === 'video' ? 'mp4' : 'mp3'}`)
   fs.writeFileSync(file, buffer)
 
   let res
