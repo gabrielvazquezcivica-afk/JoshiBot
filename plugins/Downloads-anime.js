@@ -64,6 +64,7 @@ export const handler = async (m, { sock, from, args, reply }) => {
 }
 
 handler.command = ['animedl', 'animeflvdl', 'anidl']
+handler.help = ['animedl <anime-id> <ep>']
 handler.tags = ['downloader']
 handler.menu = true
 handler.group = true
