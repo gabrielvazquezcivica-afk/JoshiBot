@@ -58,10 +58,11 @@ let handler = async (m, { sock, from, isGroup, sender, reply, args, owner }) => 
   }
 }
 
-handler.help = ['brat *<texto>*']
-handler.tags = ['stickers']
+// ───── CONFIG MENÚ ─────
 handler.command = ['brat']
+handler.tags = ['stickers']
 handler.menu = true
 handler.group = false
+handler.help = ['brat *<texto>*']
 
 export default handler
