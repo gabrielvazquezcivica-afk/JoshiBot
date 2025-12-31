@@ -49,7 +49,7 @@ export const handler = async (m, { sock, args, usedPrefix, command, reply, from 
 handler.help = ['tts <texto-voz>']
 handler.tags = ['tools']
 handler.menu = true
-handler.command = [/^tts$/i]
+handler.command = ['tts']
 handler.group = false
 
 export default handler
