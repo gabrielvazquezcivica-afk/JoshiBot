@@ -1,15 +1,15 @@
 import fetch from 'node-fetch'
 
-export const handler = async (m, { sock, args, usedPrefix, command, reply, from }) => {
+export const handler = async (m, { sock, args, usedPrefix }) => {
   const texto = args.join(' ')
   if (!texto) {
-    return reply(
-      `✳️ *Uso correcto:*\n${usedPrefix + command} <texto>\n\n📌 *Ejemplo:*\n${usedPrefix + command} Hola, ¿cómo estás?`
-    )
+    return sock.sendMessage(m.chat, {
+      text: `✳️ Uso correcto:\n${usedPrefix}tts <texto>\n\n📌 Ejemplo:\n${usedPrefix}tts Hola, ¿cómo estás?`
+    }, { quoted: m })
   }
 
   // Reacción inicial
-  await sock.sendMessage(from, { react: { text: '🔵', key: m.key } })
+  await sock.sendMessage(m.chat, { react: { text: '🔵', key: m.key } })
 
   try {
     const url = `https://api.siputzx.my.id/api/tools/ttsgoogle?text=${encodeURIComponent(texto)}`
@@ -17,32 +17,33 @@ export const handler = async (m, { sock, args, usedPrefix, command, reply, from 
 
     if (!res.ok) throw new Error('Error al obtener el audio.')
 
-    const buffer = await res.arrayBuffer()
+    const buffer = Buffer.from(await res.arrayBuffer())
 
-    const mensaje = `
+    // Mensaje con diseño JoshiBot
+    const caption = `
 ╭──〔 🔊 TTS JOSHI-BOT 🔊 〕──╮
 │ Texto: ${texto}
 ╰──〔 🤖 JoshiBot 〕──╯
     `.trim()
 
     await sock.sendMessage(
-      from,
+      m.chat,
       {
-        audio: Buffer.from(buffer),
+        audio: buffer,
         mimetype: 'audio/mp4',
         ptt: true,
-        caption: mensaje
+        caption
       },
       { quoted: m }
     )
 
     // Reacción de éxito
-    await sock.sendMessage(from, { react: { text: '🟢', key: m.key } })
+    await sock.sendMessage(m.chat, { react: { text: '🟢', key: m.key } })
 
   } catch (e) {
     console.error(e)
-    await sock.sendMessage(from, { react: { text: '🔴', key: m.key } })
-    reply('🔴 Ocurrió un error al generar el audio.', m)
+    await sock.sendMessage(m.chat, { react: { text: '🔴', key: m.key } })
+    await sock.sendMessage(m.chat, { text: '🔴 Ocurrió un error al generar el audio.', quoted: m })
   }
 }
 
