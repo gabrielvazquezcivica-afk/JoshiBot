@@ -121,7 +121,7 @@ let handler = async (m, { conn, args }) => {
 }
 
 handler.help = ['cuaca <lugar>']
-handler.tags = ['herramientas']
+handler.tags = ['tools']
 handler.command = ['cuaca', 'weather']
 handler.menu = true
 
