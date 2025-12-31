@@ -13,17 +13,15 @@ export const handler = async (m, { sock, from, reply }) => {
 
   let q, mime
 
-  // 1️⃣ Detectar audio/video citado
-  if (m.quoted) {
-    if (m.quoted.message?.audioMessage) {
-      q = m.quoted
-      mime = 'audio/mp4'
-    } else if (m.quoted.message?.videoMessage) {
-      q = m.quoted
-      mime = 'video/mp4'
-    }
-  }
-  // 2️⃣ Detectar audio/video directo
+  // 1️⃣ Audio/video citado o forward
+  if (m.quoted?.message?.audioMessage) {
+    q = m.quoted
+    mime = 'audio/mp4'
+  } else if (m.quoted?.message?.videoMessage) {
+    q = m.quoted
+    mime = 'video/mp4'
+  } 
+  // 2️⃣ Audio/video directo
   else if (m.message?.audioMessage) {
     q = m
     mime = 'audio/mp4'
