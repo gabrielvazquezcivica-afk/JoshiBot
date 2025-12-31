@@ -13,27 +13,34 @@ export const handler = async (m, { sock, from, reply }) => {
 
   let q, mime
 
-  // 1️⃣ Audio/video citado
-  if (m.quoted && (m.quoted.msg?.audio || m.quoted.msg?.video)) {
-    q = m.quoted
-    mime = q.msg.mimetype
-  } 
-  // 2️⃣ Audio/video directo
-  else if (m.msg?.audio || m.msg?.video) {
+  // 1️⃣ Detectar audio/video citado
+  if (m.quoted) {
+    if (m.quoted.message?.audioMessage) {
+      q = m.quoted
+      mime = 'audio/mp4'
+    } else if (m.quoted.message?.videoMessage) {
+      q = m.quoted
+      mime = 'video/mp4'
+    }
+  }
+  // 2️⃣ Detectar audio/video directo
+  else if (m.message?.audioMessage) {
     q = m
-    mime = q.msg.mimetype
+    mime = 'audio/mp4'
+  } else if (m.message?.videoMessage) {
+    q = m
+    mime = 'video/mp4'
   } 
   // ❌ No es audio/video
   else {
-    return reply(
-`╭─〔 ❗ USO INCORRECTO 〕
-│ Envía o responde a un audio o video (10–20s)
-╰─〔 🎵 JOSHI-BOT 〕`
-    )
+    return await sock.sendMessage(from, {
+      text: '❌ Envía un audio o video (10–20s) para identificar',
+      mentions: [m.sender]
+    })
   }
 
   // ⏱️ Duración máxima
-  if ((q.msg || q).seconds > 20) {
+  if ((q.message?.seconds || 0) > 20) {
     return reply(
 `╭─〔 ⚠️ ARCHIVO MUY LARGO 〕
 │ Usa un fragmento de 10 a 20 segundos
@@ -46,10 +53,9 @@ export const handler = async (m, { sock, from, reply }) => {
     react: { text: '🎧', key: m.key }
   })
 
-  // 📥 Descargar media
+  // 📥 Guardar temporalmente
   const media = await q.download()
-  const ext = mime.split('/')[1].split(';')[0]
-  const file = `./tmp/${Date.now()}_${from.split('@')[0]}.${ext}`
+  const file = `./tmp/${Date.now()}_${from.split('@')[0]}.mp4`
   fs.writeFileSync(file, media)
 
   let res
@@ -87,7 +93,7 @@ export const handler = async (m, { sock, from, reply }) => {
 ╰──〔 🤖 JOSHI-BOT 🎵 〕──╯
 `.trim()
 
-  // 📸 Foto de portada si existe
+  // 📸 Portada si existe
   if (album?.cover) {
     await sock.sendMessage(
       from,
@@ -123,6 +129,7 @@ export const handler = async (m, { sock, from, reply }) => {
   }
 }
 
+// 📋 MENÚ
 handler.command = ['quemusica', 'quemusicaes', 'whatmusic']
 handler.tags = ['tools']
 handler.menu = true
