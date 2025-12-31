@@ -29,13 +29,13 @@ export const handler = async (m, { sock, from, args }) => {
 
     const buffer = Buffer.from(await res.arrayBuffer())
 
-    // ✅ Enviar audio correctamente
+    // ✅ Enviar como PTT
     await sock.sendMessage(
       from,
       {
         audio: buffer,
         mimetype: 'audio/mp4',
-        ptt: false
+        ptt: true
       },
       { quoted: m }
     )
@@ -59,3 +59,5 @@ handler.command = ['tts']
 handler.tags = ['tools']
 handler.menu = true
 handler.group = false
+
+export default handler
