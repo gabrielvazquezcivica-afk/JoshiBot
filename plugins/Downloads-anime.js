@@ -1,6 +1,4 @@
-import { File } from 'megajs'
 import fetch from 'node-fetch'
-import path from 'path'
 
 export const handler = async (m, { sock, from, args, reply }) => {
   if (!args[0]) {
@@ -10,17 +8,14 @@ export const handler = async (m, { sock, from, args, reply }) => {
 │ .animedl <anime-id> <ep>
 │
 │ 🧪 Ejemplo:
-│ .animedl to-love-ru-ova 1
-│
-│ 🔍 Tip:
-│ Usa .animeflvsearch
+│ .animedl naruto-shippuden 1
 ╰──〔 🤖 JOSHI-BOT 〕──╯
 `.trim())
   }
 
-  const animeId = args[0]
-  const episode = args[1] || 1
-  const apiUrl = `https://animeflvapi.vercel.app/download/anime/${animeId}/${episode}`
+  const anime = args[0]
+  const ep = args[1] || 1
+  const api = `https://animeflvapi.vercel.app/download/anime/${anime}/${ep}`
 
   await sock.sendMessage(from, {
     react: { text: '⏳', key: m.key }
@@ -28,48 +23,36 @@ export const handler = async (m, { sock, from, args, reply }) => {
 
   let json
   try {
-    const res = await fetch(apiUrl)
+    const res = await fetch(api)
     json = await res.json()
   } catch {
     return reply('❌ Error al consultar AnimeFLV')
   }
 
-  if (!json?.servers?.[0]) {
-    return reply('❌ No hay servidores disponibles')
-  }
+  const servers = json?.servers?.[0]
+  if (!servers) return reply('❌ Episodio no disponible')
 
-  const megaServer = json.servers[0].find(v => v.server === 'mega')
-  if (!megaServer) {
-    return reply('❌ Este episodio no está disponible en MEGA')
-  }
+  const video =
+    servers.find(v => v.server === 'streamsb') ||
+    servers.find(v => v.server === 'okru') ||
+    servers.find(v => v.server === 'mp4upload')
 
-  const file = File.fromURL(megaServer.url)
-  await file.loadAttributes()
-
-  if (file.size > 300 * 1024 * 1024) {
-    return reply('❌ El archivo supera los 300MB')
+  if (!video) {
+    return reply('❌ No hay servidores compatibles')
   }
 
   const caption = `
-╭──〔 🎬 ANIME DESCARGA 〕──╮
-│ 📺 Anime: ${animeId}
-│ 🎞️ Episodio: ${episode}
-│ 📦 Tamaño: ${formatBytes(file.size)}
+╭──〔 🎬 ANIMEFLV 〕──╮
+│ 📺 Anime: ${anime}
+│ 🎞️ Episodio: ${ep}
+│ 🌐 Servidor: ${video.server}
 ╰──〔 🤖 JOSHI-BOT 〕──╯
 `.trim()
-
-  const buffer = await file.downloadBuffer()
-  const ext = path.extname(file.name).toLowerCase()
-
-  const mime =
-    ext === '.mp4' ? 'video/mp4' : 'application/octet-stream'
 
   await sock.sendMessage(
     from,
     {
-      document: buffer,
-      fileName: file.name,
-      mimetype: mime,
+      video: { url: video.url },
       caption
     },
     { quoted: m }
@@ -86,10 +69,3 @@ handler.menu = true
 handler.group = true
 
 export default handler
-
-function formatBytes(bytes) {
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  if (bytes === 0) return '0 B'
-  const i = Math.floor(Math.log(bytes) / Math.log(1024))
-  return (bytes / Math.pow(1024, i)).toFixed(2) + ' ' + sizes[i]
-    }
