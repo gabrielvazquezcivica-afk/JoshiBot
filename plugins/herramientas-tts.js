@@ -3,7 +3,7 @@ import fetch from 'node-fetch'
 // 🗣️ COMANDO TTS
 export const handler = async (m, { sock, from, args }) => {
   const texto = args.join(' ')
-  
+
   // ❌ Si no hay texto
   if (!texto) {
     return sock.sendMessage(
@@ -29,18 +29,13 @@ export const handler = async (m, { sock, from, args }) => {
 
     const buffer = Buffer.from(await res.arrayBuffer())
 
+    // ✅ Enviar audio correctamente
     await sock.sendMessage(
       from,
       {
-        await sock.sendMessage(
-  from,
-  {
-    audio: buffer,
-    mimetype: 'audio/mp4',
-    ptt: false
-  },
-  { quoted: m }
-)
+        audio: buffer,
+        mimetype: 'audio/mp4',
+        ptt: false
       },
       { quoted: m }
     )
