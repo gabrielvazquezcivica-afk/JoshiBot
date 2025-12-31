@@ -1,60 +1,55 @@
-
 import fetch from 'node-fetch'
 
-// 🌌 CYBER SEARCH TIKTOK
+// ⚡ OBTENER TIKTOK (FIX REAL)
 const obtenerTikTok = async (query) => {
   try {
-    const apiUrl = `https://api.siputzx.my.id/api/s/tiktok?query=${encodeURIComponent(query)}`
-    const res = await fetch(apiUrl)
+    const url = `https://api.siputzx.my.id/api/s/tiktok?query=${encodeURIComponent(query)}`
+    const res = await fetch(url)
     const json = await res.json()
 
-    if (json.status && Array.isArray(json.data) && json.data.length) {
-      return json.data.slice(0, 3)
-    }
-    return null
+    // 🔥 FIX AQUÍ
+    const videos = json?.result?.videos
+    if (!Array.isArray(videos) || !videos.length) return null
+
+    return videos.slice(0, 3)
   } catch (e) {
-    console.error('❌ TikTok Error:', e)
+    console.error('❌ TikTok API Error:', e)
     return null
   }
 }
 
-// ⚡ COMANDO TIKTOK FUTURISTA
+// 🤖 COMANDO
 export const handler = async (m, { sock, from, args, reply }) => {
   const text = args.join(' ')
 
   if (!text) {
     return reply(`
 ╔═══〔 🤖 JOSHI • TIKTOK AI 〕═══╗
-║
-║ 🔎 Uso:
-║   .tik <búsqueda>
+║ 🔍 Uso:
+║ .tik <búsqueda>
 ║
 ║ ✨ Ejemplo:
-║   .tik edits anime
-║
+║ .tik anime edits
 ╚══════════════════════════════╝
 `)
   }
 
-  // ⚡ reacción inicial
-  await sock.sendMessage(from, {
-    react: { text: '⚡', key: m.key }
-  })
+  await sock.sendMessage(from, { react: { text: '📱', key: m.key } })
 
   const resultados = await obtenerTikTok(text)
 
   if (!resultados) {
     return reply(`
-╔═══〔 ❌ SCAN FAILED 〕═══╗
-║ No se encontraron datos
+╔═══〔 ❌ SIN RESULTADOS 〕═══╗
+║ La API no devolvió datos
 ║ Intenta otra búsqueda
 ╚══════════════════════════╝
 `)
   }
 
   await reply(`
-╔═══〔 🧠 SCAN COMPLETED 〕═══╗
-║ Videos encontrados: ${resultados.length}
+╔═══〔 🧠 SCAN OK 〕═══╗
+║ Videos: ${resultados.length}
 ╚════════════════════════════╝
 `)
 
@@ -62,38 +57,26 @@ export const handler = async (m, { sock, from, args, reply }) => {
   for (const v of resultados) {
     const caption = `
 ╔═══〔 🎬 VIDEO ${i} 〕═══╗
-║ 🧬 Título:
-║ ${v.title || 'Desconocido'}
+║ 🧬 ${v.title || 'Sin título'}
 ║
-║ 👤 Autor:
-║ • ${v.author?.nickname || 'N/A'}
-║ • @${v.author?.unique_id || 'N/A'}
-║
-║ ⚙️ Sistema: JOSHI-BOT
+║ 👤 ${v.author?.nickname || 'N/A'}
+║ 🔗 @${v.author?.unique_id || 'N/A'}
 ╚════════════════════════════╝
 `.trim()
 
-    try {
-      await sock.sendMessage(
-        from,
-        {
-          video: { url: v.play },
-          caption
-        },
-        { quoted: m }
-      )
-    } catch (e) {
-      console.error('❌ Error enviando video:', e)
-      await reply('⚠️ Error al transmitir uno de los archivos.')
-    }
+    await sock.sendMessage(
+      from,
+      {
+        video: { url: v.play },
+        caption
+      },
+      { quoted: m }
+    )
 
     i++
   }
 
-  // ✅ reacción final
-  await sock.sendMessage(from, {
-    react: { text: '✅', key: m.key }
-  })
+  await sock.sendMessage(from, { react: { text: '✅', key: m.key } })
 }
 
 handler.command = ['tik', 'tiktok']
