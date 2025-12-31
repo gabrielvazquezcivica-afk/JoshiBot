@@ -1,47 +1,40 @@
 import fetch from 'node-fetch'
 
-export const handler = async (m, { sock, args, usedPrefix }) => {
+let handler = async (m, { sock, args, usedPrefix, command }) => {
   const texto = args.join(' ')
+  const chatId = m.chat || m.from || m.key?.remoteJid
 
-  // Validamos si hay texto
   if (!texto) {
-    return await sock.sendMessage(
-      m.chat,
+    return sock.sendMessage(
+      chatId,
       {
-        text: `✳️ Uso correcto:\n${usedPrefix}tts <texto>\n\n📌 Ejemplo:\n${usedPrefix}tts Hola, ¿cómo estás?`
-      },
-      { quoted: m?.key ? m : undefined } // solo cita si es un mensaje válido
+        text: `✳️ Uso correcto:\n${usedPrefix}${command} <texto>\n\n📌 Ejemplo:\n${usedPrefix}${command} Hola, ¿cómo estás?`
+      }
     )
   }
 
-  // Reacción de inicio (solo si es un mensaje válido)
-  if (m?.key) await sock.sendMessage(m.chat, { react: { text: '🔵', key: m.key } })
-
   try {
+    // Reacción inicial segura
+    if (chatId) await sock.sendMessage(chatId, { react: { text: '🔵', key: m.key } }).catch(() => {})
+
     const url = `https://api.siputzx.my.id/api/tools/ttsgoogle?text=${encodeURIComponent(texto)}`
     const res = await fetch(url)
     if (!res.ok) throw new Error('Error al obtener el audio.')
-
     const buffer = Buffer.from(await res.arrayBuffer())
 
-    // Enviar audio (solo cita si mensaje válido)
+    // Enviar audio seguro
     await sock.sendMessage(
-      m.chat,
-      { audio: buffer, mimetype: 'audio/mp4', ptt: true },
-      { quoted: m?.key ? m : undefined }
+      chatId,
+      { audio: buffer, mimetype: 'audio/mp4', ptt: true }
     )
 
-    // Reacción de éxito
-    if (m?.key) await sock.sendMessage(m.chat, { react: { text: '🟢', key: m.key } })
+    // Reacción de éxito segura
+    if (chatId) await sock.sendMessage(chatId, { react: { text: '🟢', key: m.key } }).catch(() => {})
 
   } catch (e) {
     console.error(e)
-    if (m?.key) await sock.sendMessage(m.chat, { react: { text: '🔴', key: m.key } })
-    await sock.sendMessage(
-      m.chat,
-      { text: '🔴 Ocurrió un error al generar el audio.' },
-      { quoted: m?.key ? m : undefined }
-    )
+    if (chatId) await sock.sendMessage(chatId, { react: { text: '🔴', key: m.key } }).catch(() => {})
+    await sock.sendMessage(chatId, { text: '🔴 Ocurrió un error al generar el audio.' })
   }
 }
 
