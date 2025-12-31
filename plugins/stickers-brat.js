@@ -1,8 +1,12 @@
+import fs from 'fs'
+import path from 'path'
+import os from 'os'
+import { spawn } from 'child_process'
 import axios from 'axios'
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
 
-// Función para obtener el sticker de Brat
+// ───── Función para obtener sticker de Brat ─────
 const fetchBratSticker = async (text, attempt = 1) => {
   try {
     const res = await axios.get('https://kepolu-brat.hf.space/brat', {
@@ -27,10 +31,17 @@ const fetchBratSticker = async (text, attempt = 1) => {
   }
 }
 
-let handler = async (m, { sock, from, isGroup, sender, reply, args, owner }) => {
+export const handler = async (m, { sock, from, isGroup, sender, reply, args, owner }) => {
 
-  // ───── MODO ADMIN ─────
-  if (isGroup && global.db?.groups?.[from]?.modoadmin) {
+  /* ───── 🧠 DB SAFE ───── */
+  if (!global.db) global.db = {}
+  if (!global.db.groups) global.db.groups = {}
+  if (isGroup && !global.db.groups[from]) {
+    global.db.groups[from] = { modoadmin: false }
+  }
+
+  /* ───── 👑 MODO ADMIN (silencioso) ───── */
+  if (isGroup && global.db.groups[from].modoadmin) {
     const metadata = await sock.groupMetadata(from)
     const participants = metadata.participants || []
     const ownerJids = owner?.jid || []
@@ -42,15 +53,15 @@ let handler = async (m, { sock, from, isGroup, sender, reply, args, owner }) => 
     }
   }
 
+  /* ───── 🔎 VALIDAR TEXTO ───── */
   const text = args.join(' ').trim()
   if (!text) return reply('❌ Por favor ingresa el texto para crear el sticker.\nEjemplo: `.brat Hola mundo`')
 
   try {
+    /* ───── 📥 OBTENER STICKER ───── */
     const buffer = await fetchBratSticker(text)
-    if (!buffer || buffer.byteLength === 0) {
-      return reply('❌ La API no pudo generar el sticker. Intenta con otro texto.')
-    }
 
+    /* ───── 📤 ENVIAR STICKER ───── */
     await sock.sendMessage(from, { sticker: buffer }, { quoted: m })
 
   } catch (e) {
@@ -59,6 +70,7 @@ let handler = async (m, { sock, from, isGroup, sender, reply, args, owner }) => 
   }
 }
 
+/* ───── CONFIG MENÚ ───── */
 handler.command = ['brat']
 handler.tags = ['stickers']
 handler.menu = true
