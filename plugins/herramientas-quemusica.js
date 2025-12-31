@@ -1,5 +1,9 @@
 import fs from 'fs'
+import os from 'os'
+import path from 'path'
+import { spawn } from 'child_process'
 import acrcloud from 'acrcloud'
+import { downloadContentFromMessage } from '@whiskeysockets/baileys'
 
 // 🎧 CONFIGURACIÓN ACRCLOUD
 const acr = new acrcloud({
@@ -8,78 +12,52 @@ const acr = new acrcloud({
   access_secret: 'bvgaIAEtADBTbLwiPGYlxupWqkNGIjT7J9Ag2vIu'
 })
 
-// 🎵 COMANDO QUEMUSICA PRO
 export const handler = async (m, { sock, from, reply }) => {
+  let msg
 
-  let q, mime
+  // ───── DETECTAR AUDIO O VIDEO ─────
+  const q = m.quoted?.message
+  msg = m.message?.audioMessage || m.message?.videoMessage || q?.audioMessage || q?.videoMessage
 
-  // 1️⃣ Audio/video citado o forward
-  if (m.quoted?.message?.audioMessage) {
-    q = m.quoted
-    mime = 'audio/mp4'
-  } else if (m.quoted?.message?.videoMessage) {
-    q = m.quoted
-    mime = 'video/mp4'
-  } 
-  // 2️⃣ Audio/video directo
-  else if (m.message?.audioMessage) {
-    q = m
-    mime = 'audio/mp4'
-  } else if (m.message?.videoMessage) {
-    q = m
-    mime = 'video/mp4'
-  } 
-  // ❌ No es audio/video
-  else {
-    return await sock.sendMessage(from, {
-      text: '❌ Envía un audio o video (10–20s) para identificar',
-      mentions: [m.sender]
-    })
+  if (!msg) {
+    return reply('❌ Envía un audio o video (10–20s) para identificar')
   }
 
-  // ⏱️ Duración máxima
-  if ((q.message?.seconds || 0) > 20) {
-    return reply(
-`╭─〔 ⚠️ ARCHIVO MUY LARGO 〕
-│ Usa un fragmento de 10 a 20 segundos
-╰─〔 🎧 ACRCloud 〕`
-    )
+  const duration = msg.seconds || 0
+  if (duration > 20) {
+    return reply('❌ El archivo debe durar máximo 20 segundos')
   }
 
-  // ⏳ Reacción
-  await sock.sendMessage(from, {
-    react: { text: '🎧', key: m.key }
-  })
+  await sock.sendMessage(from, { react: { text: '🎧', key: m.key } })
 
-  // 📥 Guardar temporalmente
-  const media = await q.download()
-  const file = `./tmp/${Date.now()}_${from.split('@')[0]}.mp4`
-  fs.writeFileSync(file, media)
+  // ───── DESCARGAR MEDIA ─────
+  const streamType = msg.audio || msg.video ? (msg.audio ? 'audio' : 'video') : 'audio'
+  const stream = await downloadContentFromMessage(msg, streamType)
+
+  let buffer = Buffer.alloc(0)
+  for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk])
+
+  const tmp = os.tmpdir()
+  const file = path.join(tmp, `quemusica_${Date.now()}.${streamType === 'video' ? 'mp4' : 'mp3'}`)
+  fs.writeFileSync(file, buffer)
 
   let res
   try {
     res = await acr.identify(fs.readFileSync(file))
-  } catch {
+  } catch (e) {
     fs.unlinkSync(file)
     return reply('❌ Error al identificar la música')
   }
 
   fs.unlinkSync(file)
 
-  const { code, msg } = res.status
-  if (code !== 0) return reply(`❌ ${msg}`)
+  const { code, msg: statusMsg } = res.status
+  if (code !== 0) return reply(`❌ ${statusMsg}`)
 
   const music = res.metadata.music[0]
-  const {
-    title,
-    artists,
-    album,
-    genres,
-    release_date,
-    external_metadata
-  } = music
+  const { title, artists, album, genres, release_date, external_metadata } = music
 
-  // 🎨 Texto base
+  // ───── TEXTO DE RESULTADO ─────
   let texto = `
 ╭──〔 🎶 MÚSICA IDENTIFICADA 〕──╮
 │
@@ -91,31 +69,17 @@ export const handler = async (m, { sock, from, reply }) => {
 ╰──〔 🤖 JOSHI-BOT 🎵 〕──╯
 `.trim()
 
-  // 📸 Portada si existe
   if (album?.cover) {
-    await sock.sendMessage(
-      from,
-      {
-        image: { url: album.cover },
-        caption: texto
-      },
-      { quoted: m }
-    )
+    await sock.sendMessage(from, { image: { url: album.cover }, caption: texto }, { quoted: m })
   } else {
     await reply(texto)
   }
 
-  // 🔗 LINKS DE REPRODUCCIÓN
+  // ───── LINKS DE REPRODUCCIÓN ─────
   let links = []
-  if (external_metadata?.spotify?.track?.external_urls?.spotify) {
-    links.push(`🎵 Spotify: ${external_metadata.spotify.track.external_urls.spotify}`)
-  }
-  if (external_metadata?.youtube?.vid) {
-    links.push(`🎬 YouTube: https://www.youtube.com/watch?v=${external_metadata.youtube.vid}`)
-  }
-  if (external_metadata?.apple_music?.url) {
-    links.push(`🍎 Apple Music: ${external_metadata.apple_music.url}`)
-  }
+  if (external_metadata?.spotify?.track?.external_urls?.spotify) links.push(`🎵 Spotify: ${external_metadata.spotify.track.external_urls.spotify}`)
+  if (external_metadata?.youtube?.vid) links.push(`🎬 YouTube: https://www.youtube.com/watch?v=${external_metadata.youtube.vid}`)
+  if (external_metadata?.apple_music?.url) links.push(`🍎 Apple Music: ${external_metadata.apple_music.url}`)
 
   if (links.length > 0) {
     await reply(
@@ -127,7 +91,6 @@ export const handler = async (m, { sock, from, reply }) => {
   }
 }
 
-// 📋 MENÚ
 handler.command = ['quemusica', 'quemusicaes', 'whatmusic']
 handler.tags = ['tools']
 handler.menu = true
