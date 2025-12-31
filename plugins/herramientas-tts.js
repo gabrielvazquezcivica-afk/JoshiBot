@@ -1,11 +1,11 @@
 import fetch from 'node-fetch'
 
 // 🗣️ COMANDO TTS
-export const handler = async (m, { sock, from, args, usedPrefix, command }) => {
+export const handler = async (m, { sock, from, args, usedPrefix }) => {
   const texto = args.join(' ')
   if (!texto) {
     return sock.sendMessage(from, {
-      text: `✳️ *Uso correcto:*\n${usedPrefix + command} <texto>\n\n📌 *Ejemplo:*\n${usedPrefix + command} Hola, ¿cómo estás?`
+      text: `✳️ *Uso correcto:*\n${usedPrefix}tts <texto>\n\n📌 *Ejemplo:*\n${usedPrefix}tts Hola, ¿cómo estás?`
     }, { quoted: m })
   }
 
@@ -39,7 +39,6 @@ export const handler = async (m, { sock, from, args, usedPrefix, command }) => {
   }
 }
 
-// 📋 CONFIG MENÚ
 handler.command = ['tts']
 handler.tags = ['tools']
 handler.menu = true
