@@ -2,6 +2,7 @@ import axios from 'axios'
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
 
+// Función para obtener el sticker de Brat
 const fetchBratSticker = async (text, attempt = 1) => {
   try {
     const res = await axios.get('https://kepolu-brat.hf.space/brat', {
@@ -42,12 +43,12 @@ let handler = async (m, { sock, from, isGroup, sender, reply, args, owner }) => 
   }
 
   const text = args.join(' ').trim()
-  if (!text) return reply('❌ Ingresa el texto para crear el sticker. Ejemplo: `.brat Hola mundo`')
+  if (!text) return reply('❌ Por favor ingresa el texto para crear el sticker.\nEjemplo: `.brat Hola mundo`')
 
   try {
     const buffer = await fetchBratSticker(text)
     if (!buffer || buffer.byteLength === 0) {
-      return reply('❌ La API no pudo generar el sticker. Intenta con otro texto más corto o simple.')
+      return reply('❌ La API no pudo generar el sticker. Intenta con otro texto.')
     }
 
     await sock.sendMessage(from, { sticker: buffer }, { quoted: m })
@@ -58,7 +59,6 @@ let handler = async (m, { sock, from, isGroup, sender, reply, args, owner }) => 
   }
 }
 
-// ───── CONFIG MENÚ ─────
 handler.command = ['brat']
 handler.tags = ['stickers']
 handler.menu = true
