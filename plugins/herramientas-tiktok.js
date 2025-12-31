@@ -1,8 +1,7 @@
 import fetch from 'node-fetch'
 
-const buscarTikTok = async (query) => {
-  const url = `https://api.ryzendesu.vip/api/search/tiktok?query=${encodeURIComponent(query)}`
-
+const descargarTikTok = async (link) => {
+  const url = `https://api.ryzendesu.vip/api/downloader/tiktok?url=${encodeURIComponent(link)}`
   const res = await fetch(url, {
     headers: {
       'user-agent':
@@ -13,69 +12,70 @@ const buscarTikTok = async (query) => {
 
   const text = await res.text()
 
-  // ❌ Si la API devuelve HTML
-  if (text.startsWith('<')) {
-    console.log('❌ API devolvió HTML, no JSON')
-    return null
-  }
+  // ⚠️ Si la API responde HTML
+  if (text.startsWith('<')) return null
 
-  let json
-  try {
-    json = JSON.parse(text)
-  } catch {
-    return null
-  }
+  const json = JSON.parse(text)
+  if (!json.status) return null
 
-  if (!json.status || !json.result?.length) return null
-  return json.result.slice(0, 3)
+  return json.data
 }
 
 export const handler = async (m, { sock, from, args, reply }) => {
-  const text = args.join(' ')
-  if (!text) {
+  if (!args[0]) {
     return reply(`
-╔═══〔 🤖 JOSHI • TIKTOK 〕═══╗
-║ 🔍 Uso:
-║ .tik <búsqueda>
+╔═══〔 🎵 TIKTOK DOWNLOADER 〕═══╗
+║ 📌 Uso correcto:
+║ .tiktok <link>
 ║
-║ ✨ Ejemplo:
-║ .tik musica
-╚════════════════════════════╝
-`)
+║ 🔗 Ejemplo:
+║ .tiktok https://vm.tiktok.com/xxxx
+╚══════════════════════════════╝
+`.trim())
   }
 
-  await sock.sendMessage(from, { react: { text: '⚡', key: m.key } })
-
-  const videos = await buscarTikTok(text)
-  if (!videos) {
-    return reply('❌ TikTok no devolvió resultados (API bloqueada).')
+  const link = args[0]
+  if (!/tiktok\.com|vm\.tiktok\.com/.test(link)) {
+    return reply('❌ El link no parece ser de TikTok')
   }
 
-  let i = 1
-  for (const v of videos) {
-    const cap = `
-╔═══〔 🎬 VIDEO ${i} 〕═══╗
-║ 🎵 ${v.title || 'Sin título'}
-║ 👤 ${v.author || 'Desconocido'}
-╚════════════════════════════╝
-`
+  // ⚡ reacción
+  await sock.sendMessage(from, {
+    react: { text: '⏳', key: m.key }
+  })
 
-    await sock.sendMessage(
-      from,
-      {
-        video: { url: v.url },
-        caption: cap
-      },
-      { quoted: m }
-    )
-    i++
+  const data = await descargarTikTok(link)
+  if (!data) {
+    return reply('❌ No se pudo descargar el video (API bloqueada)')
   }
 
-  await sock.sendMessage(from, { react: { text: '✅', key: m.key } })
+  const caption = `
+╭──〔 🎬 TIKTOK 〕──╮
+│ 🎵 ${data.title || 'Sin título'}
+│ 👤 @${data.author?.nickname || 'Desconocido'}
+│ ❤️ ${data.stats?.likeCount || 0} Likes
+│ 💬 ${data.stats?.commentCount || 0} Comentarios
+│ 🔁 ${data.stats?.shareCount || 0} Shares
+╰──〔 🤖 JOSHI-BOT 〕──╯
+`.trim()
+
+  await sock.sendMessage(
+    from,
+    {
+      video: { url: data.play },
+      caption
+    },
+    { quoted: m }
+  )
+
+  await sock.sendMessage(from, {
+    react: { text: '✅', key: m.key }
+  })
 }
 
-handler.command = ['tik']
-handler.tags = ['tools']
+handler.command = ['tiktok', 'tt']
+handler.tags = ['descargas']
 handler.menu = true
-handler.group = true
+handler.group = false
+
 export default handler
