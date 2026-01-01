@@ -6,7 +6,6 @@ export const handler = async (m, {
   reply,
   owner
 }) => {
-  // 🚫 Solo grupos
   if (!isGroup) return reply('🚫 Este comando solo funciona en grupos')
 
   /* ───── 🧠 DB INICIAL ───── */
@@ -33,7 +32,6 @@ export const handler = async (m, {
       if (!isAdmin) return
     }
   }
-  /* ─────────────────────────────────── */
 
   // 👤 TARGET
   let target
@@ -46,53 +44,52 @@ export const handler = async (m, {
     target = sender
   }
 
-  // 🎲 Random porcentaje
   const percent = Math.floor(Math.random() * 101)
 
-  // 💌 FRASES SEGÚN PORCENTAJE
+  // 🔥 FRASES ULTRA HOT
   let phrases = []
 
   if (percent < 15) {
     phrases = [
-      '😐 Ni se lo imagina',
-      '🤨 Dudoso… muy dudoso',
-      '💀 Casi nada',
-      '🧍‍♀️ NPC heterosexual'
+      '😳 Apenas se atreve a tocarse…',
+      '🙈 Solo mira de lejos y se sonroja',
+      '💦 Secretitos calientes bajo la mesa',
+      '👀 Le tiemblan las manos de emoción'
     ]
   } else if (percent < 35) {
     phrases = [
-      '😏 Se le nota poquito',
-      '👀 Sospechoso desde lejos',
-      '🤏 Solo cuando nadie ve',
-      '📸 En cámara no, en privado tal vez'
+      '😏 Coquetea con descaro 🔥',
+      '💃 Se mueve con intención traviesa',
+      '🍑 Se le nota demasiado el deseo',
+      '👄 Sus labios delatan sus pensamientos'
     ]
   } else if (percent < 55) {
     phrases = [
-      '💅 Ya no lo niegues',
-      '🫦 Se le nota la inclinación',
-      '😈 El closet tiembla',
-      '📦 A medio salir del closet'
+      '💖 Ya no puede ocultar su pasión',
+      '🔥 Casi se le sale el deseo por los ojos',
+      '😈 Toda mirada es un piropo sexual',
+      '🍒 Está jugando peligrosamente'
     ]
   } else if (percent < 75) {
     phrases = [
-      '🏳️‍🌈 Confirmado por la NASA',
-      '🔥 Camina y se nota',
-      '💃 Orgullosa aunque lo niegue',
-      '📢 Grita “soy lesbiana” sin hablar'
+      '🌈 No puede parar, traviesa y ardiente',
+      '💋 Cada gesto es pura tentación',
+      '💦 Suspiros que delatan placer',
+      '🍑 Todo el grupo lo percibe, provocadora'
     ]
   } else {
     phrases = [
-      '🏳️‍🌈✨ Ícono LGBT internacional',
-      '💄 Más lesbiana que el arcoíris',
-      '🔥 El closet ya no existe',
-      '👑 Presidente del orgullo'
+      '👑 Maestra del placer y la seducción',
+      '💫 Experta en juegos calientes 🔥',
+      '🍓 Nivel experto en travesuras sexuales',
+      '💄 La fantasía más atrevida hecha realidad'
     ]
   }
 
   const phrase = phrases[Math.floor(Math.random() * phrases.length)]
 
   const text = `
-💖 *Lesbianaómetro Supremo*
+💖 *Lesbianaómetro EXTREMO 🔥*
 
 👤 Usuario: @${target.split('@')[0]}
 📊 Porcentaje: *${percent}%*
@@ -105,7 +102,7 @@ export const handler = async (m, {
   }, { quoted: m })
 }
 
-handler.command = ['lesbiana', 'lesbo']
+handler.command = ['lesbiana', 'lesbohot']
 handler.group = true
 handler.tags = ['juegos']
 handler.menu = true
