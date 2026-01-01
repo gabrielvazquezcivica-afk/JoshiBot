@@ -1,73 +1,70 @@
-// dl-youtube.js ▶️ | JOSHI-BOT (App compatible)
+// Downloads-youtube.js ▶️ | JOSHI-BOT FIX
 
 import fetch from 'node-fetch'
 
-// 🔧 Normalizar links de YouTube (app, shorts, music, etc)
-const normalizarYT = (url) => {
-  try {
-    // Shorts
-    if (url.includes('youtube.com/shorts/')) {
-      const id = url.split('/shorts/')[1].split(/[?&]/)[0]
-      return `https://www.youtube.com/watch?v=${id}`
-    }
+// 🔧 Normalizar links YouTube (app, shorts, music)
+const normalizeYT = (url) => {
+  if (!url) return null
 
-    // youtu.be
-    if (url.includes('youtu.be/')) {
-      const id = url.split('youtu.be/')[1].split(/[?&]/)[0]
-      return `https://www.youtube.com/watch?v=${id}`
-    }
-
-    // music.youtube
-    if (url.includes('music.youtube.com')) {
-      return url.replace('music.youtube.com', 'www.youtube.com')
-    }
-
-    // normal
-    return url
-  } catch {
-    return null
+  if (url.includes('youtube.com/shorts/')) {
+    const id = url.split('/shorts/')[1].split(/[?&]/)[0]
+    return `https://www.youtube.com/watch?v=${id}`
   }
+
+  if (url.includes('youtu.be/')) {
+    const id = url.split('youtu.be/')[1].split(/[?&]/)[0]
+    return `https://www.youtube.com/watch?v=${id}`
+  }
+
+  if (url.includes('music.youtube.com')) {
+    return url.replace('music.youtube.com', 'www.youtube.com')
+  }
+
+  return url
 }
 
-export const handler = async (m, {
-  sock,
-  from,
-  args,
-  reply
-}) => {
+export const handler = async (m, { sock, from, args, reply }) => {
 
-  // ❌ Sin link
   if (!args[0]) {
     return reply(
-`📌 *Uso correcto*
-.yt <link de YouTube>
-
-📱 *Funciona con links copiados desde la app*`
+`╭──〔 ▶️ YOUTUBE DL 〕──╮
+│ 📌 Uso:
+│ .yt <link>
+│
+│ 📱 Funciona con links
+│ copiados desde la app
+╰──〔 🤖 JOSHI-BOT 〕──╯`
     )
   }
 
-  let link = normalizarYT(args[0])
+  const url = normalizeYT(args[0])
 
-  if (!link || !/youtube\.com/.test(link)) {
+  if (!url || !url.includes('youtube.com')) {
     return reply('❌ Link de YouTube inválido')
   }
 
   try {
-    // ⏳ Cargando
     await sock.sendMessage(from, {
       react: { text: '⏳', key: m.key }
     })
 
-    // 🔗 API
-    const api = `https://api.siputzx.my.id/api/d/ytmp4?url=${encodeURIComponent(link)}`
+    // ✅ API MÁS ESTABLE
+    const api = `https://api.yanzbotz.my.id/api/downloader/youtube?url=${encodeURIComponent(url)}`
     const res = await fetch(api)
-    const json = await res.json()
+    const text = await res.text()
 
-    if (!json.status || !json.data?.dl) {
-      throw 'Sin datos'
+    // ❌ Si no es JSON
+    if (!text.startsWith('{')) {
+      throw 'API bloqueada'
     }
 
-    const { title, duration, views, dl } = json.data
+    const json = JSON.parse(text)
+
+    if (!json.status || !json.result?.video) {
+      throw 'Sin resultados'
+    }
+
+    const { title, duration, views, video } = json.result
 
     const caption = `
 ╭──〔 ▶️ YOUTUBE DL 〕──╮
@@ -77,17 +74,15 @@ export const handler = async (m, {
 ╰──〔 🤖 JOSHI-BOT 〕──╯
 `.trim()
 
-    // 📤 Enviar video
     await sock.sendMessage(
       from,
       {
-        video: { url: dl },
+        video: { url: video },
         caption
       },
       { quoted: m }
     )
 
-    // ✅ Éxito
     await sock.sendMessage(from, {
       react: { text: '✅', key: m.key }
     })
@@ -99,7 +94,7 @@ export const handler = async (m, {
       react: { text: '❌', key: m.key }
     })
 
-    reply('❌ Error al descargar el video')
+    reply('❌ No se pudo descargar el video (API caída o bloqueada)')
   }
 }
 
