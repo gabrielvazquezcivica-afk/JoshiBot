@@ -1,4 +1,4 @@
-// anime-info.js 🎌 | JOSHI-BOT
+// veranime.js 🎌 | JOSHI-BOT
 import fetch from 'node-fetch'
 
 export const handler = async (m, {
@@ -10,89 +10,70 @@ export const handler = async (m, {
 
   if (!args[0]) {
     return reply(`
-╭──〔 🎌 ANIME INFO 〕──╮
+╭──〔 🎌 VER ANIME 〕──╮
 │ 📌 Uso:
-│ .anime <nombre del anime>
+│ .veranime <nombre> <capítulo>
 │
 │ 🧪 Ejemplo:
-│ .anime naruto shippuden
+│ .veranime naruto 1
+│ .veranime one piece 1070
 ╰──〔 🤖 JOSHI-BOT 〕──╯
 `.trim())
   }
 
-  const query = args.join(' ')
+  // 🧠 Parseo
+  let cap = args[args.length - 1]
+  let nombre = args.slice(0, -1).join(' ')
 
-  await sock.sendMessage(from, {
-    react: { text: '🔍', key: m.key }
-  })
-
-  let data
-  try {
-    const res = await fetch(
-      `https://api.jikan.moe/v4/anime?q=${encodeURIComponent(query)}&limit=1`
-    )
-    const json = await res.json()
-    data = json.data?.[0]
-    if (!data) throw 'No encontrado'
-  } catch {
-    return reply('❌ No encontré información para ese anime')
+  // Si no ponen capítulo
+  if (isNaN(cap)) {
+    cap = '1'
+    nombre = args.join(' ')
   }
 
-  const titulo = data.title
-  const tituloJap = data.title_japanese || 'No disponible'
-  const episodios = data.episodes || '¿?'
-  const estado = data.status
-  const score = data.score || 'N/A'
-  const año = data.year || 'Desconocido'
-  const sinopsis = data.synopsis
-    ? data.synopsis.substring(0, 400) + '...'
-    : 'Sin descripción'
+  // 🔍 Reacción buscando
+  await sock.sendMessage(from, {
+    react: { text: '🔎', key: m.key }
+  })
 
-  const malLink = data.url
-  const animeflvLink = `https://www3.animeflv.net/browse?q=${encodeURIComponent(titulo)}`
+  // 🔗 Links reales de YouTube
+  const ytCap = `https://www.youtube.com/results?search_query=${encodeURIComponent(
+    `${nombre} capitulo ${cap} español`
+  )}`
+
+  const ytLista = `https://www.youtube.com/results?search_query=${encodeURIComponent(
+    `${nombre} anime español`
+  )}`
 
   const texto = `
-╭──〔 🎬 ANIME INFO 〕──╮
-│ 📺 Título: ${titulo}
-│ 🇯🇵 Japonés: ${tituloJap}
-│ 🎞️ Episodios: ${episodios}
-│ 📡 Estado: ${estado}
-│ ⭐ Puntuación: ${score}
-│ 📅 Año: ${año}
+╭──〔 🎬 VER ANIME 〕──╮
+│ 📺 Anime: ${nombre}
+│ 🎞️ Capítulo: ${cap}
 │
-│ 📝 Sinopsis:
-│ ${sinopsis}
+│ ▶️ Ver en YouTube:
+│ 🔹 Capítulo ${cap}:
+│ ${ytCap}
 │
-│ 🔗 Dónde verlo:
-│ ▶️ AnimeFLV:
-│ ${animeflvLink}
-│
-│ 📚 MyAnimeList:
-│ ${malLink}
+│ 🔹 Más episodios:
+│ ${ytLista}
 ╰──〔 🤖 JOSHI-BOT 〕──╯
 `.trim()
 
-  if (data.images?.jpg?.large_image_url) {
-    await sock.sendMessage(
-      from,
-      {
-        image: { url: data.images.jpg.large_image_url },
-        caption: texto
-      },
-      { quoted: m }
-    )
-  } else {
-    await reply(texto)
-  }
+  await sock.sendMessage(
+    from,
+    { text: texto },
+    { quoted: m }
+  )
 
+  // ✅ Reacción final
   await sock.sendMessage(from, {
     react: { text: '✅', key: m.key }
   })
 }
 
-// 📋 MENÚ
-handler.command = ['anime', 'animeinfo']
-handler.help = ['anime <nombre>']
+// 📋 CONFIG MENÚ
+handler.command = ['veranime']
+handler.help = ['veranime <nombre> <cap>']
 handler.tags = ['descargas']
 handler.menu = true
 handler.group = true
