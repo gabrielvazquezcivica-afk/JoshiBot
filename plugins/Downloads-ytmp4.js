@@ -1,127 +1,63 @@
+import ytdl from 'ytdl-core'
 import fetch from 'node-fetch'
 
-// ⚙️ Configuración
-const MAX_FILE_SIZE = 280 * 1024 * 1024 // 280MB
-const VIDEO_THRESHOLD = 70 * 1024 * 1024 // 70MB
-
-// ✅ Validar URL de YouTube (app, youtu.be, music, shorts)
-const isYouTubeUrl = (url) =>
-  /^(https?:\/\/)?(www\.|m\.|music\.)?(youtube\.com|youtu\.be)\//i.test(url)
-
-// 🎯 Obtener ID
-const getVideoId = (url) => {
-  const match = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/)
-  return match ? match[1] : null
-}
-
-// 📥 Obtener link MP4 (mirror estable)
-async function getYTVideo(url) {
-  const api = `https://api.cobalt.tools/api/json`
-
-  const res = await fetch(api, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    },
-    body: JSON.stringify({
-      url,
-      vCodec: 'h264',
-      vQuality: '720',
-      aCodec: 'aac',
-      filenamePattern: 'classic'
-    })
-  })
-
-  if (!res.ok) throw new Error('No se pudo obtener el video')
-
-  const json = await res.json()
-
-  if (!json || !json.url) {
-    throw new Error('Respuesta inválida del servidor')
-  }
-
-  return {
-    url: json.url,
-    title: json.filename || 'youtube-video'
-  }
-}
-
-export const handler = async (m, { sock, from, args, reply }) => {
-
+export const handler = async (m, { sock, from, args, reply, usedPrefix, command }) => {
   if (!args[0]) {
-    return reply(
-      '📥 *DESCARGA YOUTUBE*\n\n' +
-      '📌 Uso:\n' +
-      '.yt <link>\n\n' +
-      '🧪 Ejemplo:\n' +
-      '.yt https://youtu.be/HeA3-bOMqGc'
-    )
+    return reply(`
+╭──〔 🎬 YOUTUBE DOWNLOAD 〕──╮
+│ 📌 Uso:
+│ ${usedPrefix}${command} <link de YouTube>
+│
+│ 🧪 Ejemplo:
+│ ${usedPrefix}${command} https://youtu.be/HeA3-bOMqGc
+╰──〔 🤖 JOSHI-BOT 〕──╯
+`.trim())
   }
 
   const url = args[0]
 
-  if (!isYouTubeUrl(url)) {
-    return reply('❌ Link de YouTube inválido')
+  if (!ytdl.validateURL(url)) {
+    return reply('🚫 URL de YouTube inválida')
   }
 
-  await sock.sendMessage(from, {
-    react: { text: '⏳', key: m.key }
-  })
+  await sock.sendMessage(from, { react: { text: '⏳', key: m.key } })
 
   try {
-    // 📡 Obtener link directo
-    const { url: videoUrl, title } = await getYTVideo(url)
+    const info = await ytdl.getInfo(url)
+    const format = ytdl.chooseFormat(info.formats, { quality: 'highestvideo' })
+    const size = parseInt(format.contentLength) || 0
 
-    // 📦 Descargar a buffer (SIN HEAD)
-    const res = await fetch(videoUrl)
-    const buffer = await res.buffer()
-    const size = buffer.length
+    let text = `
+╭──〔 🎬 YOUTUBE VIDEO 〕──╮
+📌 Título: ${info.videoDetails.title}
+👤 Canal: ${info.videoDetails.author.name}
+⏱ Duración: ${info.videoDetails.lengthSeconds} segundos
+👀 Vistas: ${parseInt(info.videoDetails.viewCount).toLocaleString()}
+🔗 Link: ${url}
+╰──〔 🤖 JOSHI-BOT 〕──╯
+`.trim()
 
-    if (size > MAX_FILE_SIZE) {
-      throw new Error('❌ El archivo supera el límite de WhatsApp')
+    await reply(text)
+
+    if (size && size < 100 * 1024 * 1024) { // <100MB enviar directo
+      const stream = ytdl(url, { quality: 'highestvideo' })
+      await sock.sendMessage(from, {
+        video: stream,
+        caption: `🎥 ${info.videoDetails.title}`,
+      }, { quoted: m })
+    } else {
+      await reply('⚠️ El archivo es muy grande para enviar por WhatsApp. Usa el link para descargarlo manualmente.')
     }
 
-    const caption =
-      `╭──〔 🎬 YOUTUBE 〕──╮\n` +
-      `│ 📌 Título: ${title}\n` +
-      `│ ⚖️ Peso: ${(size / 1024 / 1024).toFixed(2)} MB\n` +
-      `╰──〔 🤖 JOSHI-BOT 〕──╯`
-
-    // 🎥 Video o Documento
-    const isVideo = size <= VIDEO_THRESHOLD
-
-    await sock.sendMessage(
-      from,
-      isVideo
-        ? {
-            video: buffer,
-            caption,
-            mimetype: 'video/mp4'
-          }
-        : {
-            document: buffer,
-            mimetype: 'video/mp4',
-            fileName: `${title}.mp4`,
-            caption
-          },
-      { quoted: m }
-    )
-
-    await sock.sendMessage(from, {
-      react: { text: '✅', key: m.key }
-    })
-
+    await sock.sendMessage(from, { react: { text: '✅', key: m.key } })
   } catch (e) {
-    await sock.sendMessage(from, {
-      react: { text: '❌', key: m.key }
-    })
-
-    reply(`❌ Error: ${e.message}`)
+    console.error(e)
+    await reply('❌ Ocurrió un error al procesar el video')
+    await sock.sendMessage(from, { react: { text: '❌', key: m.key } })
   }
 }
 
-handler.command = ['yt', 'ytdl']
+handler.command = ['yt', 'ytdownload']
 handler.tags = ['descargas']
 handler.help = ['yt <link>']
 handler.menu = true
