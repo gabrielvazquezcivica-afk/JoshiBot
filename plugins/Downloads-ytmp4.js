@@ -1,150 +1,129 @@
 import fetch from 'node-fetch'
-import axios from 'axios'
 
-// ─── CONSTANTES ─────────────────────────────────────
-const MAX_FILE_SIZE = 280 * 1024 * 1024
-const VIDEO_THRESHOLD = 70 * 1024 * 1024
-const HEAVY_FILE_THRESHOLD = 100 * 1024 * 1024
-const REQUEST_LIMIT = 3
-const REQUEST_WINDOW_MS = 10000
-const COOLDOWN_MS = 120000
+// ⚙️ Configuración
+const MAX_FILE_SIZE = 280 * 1024 * 1024 // 280MB
+const VIDEO_THRESHOLD = 70 * 1024 * 1024 // 70MB
 
-// ─── ESTADO ─────────────────────────────────────────
-const requestTimestamps = []
-let isCooldown = false
-let isProcessingHeavy = false
+// ✅ Validar URL de YouTube (app, youtu.be, music, shorts)
+const isYouTubeUrl = (url) =>
+  /^(https?:\/\/)?(www\.|m\.|music\.)?(youtube\.com|youtu\.be)\//i.test(url)
 
-// ─── VALIDAR URL ────────────────────────────────────
-const isValidYouTubeUrl = (url) =>
-  /^(?:https?:\/\/)?(?:www\.|m\.|music\.)?youtu\.?be(?:\.com)?\/?.*(?:watch|embed)?(?:.*v=|v\/|\/)([\w\-_]+)\&?/.test(url)
-
-// ─── FORMATO DE TAMAÑO ──────────────────────────────
-function formatSize(bytes) {
-  if (!bytes || isNaN(bytes)) return 'Desconocido'
-  const units = ['B', 'KB', 'MB', 'GB', 'TB']
-  let i = 0
-  while (bytes >= 1024 && i < units.length - 1) {
-    bytes /= 1024
-    i++
-  }
-  return `${bytes.toFixed(2)} ${units[i]}`
+// 🎯 Obtener ID
+const getVideoId = (url) => {
+  const match = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/)
+  return match ? match[1] : null
 }
 
-// ─── OBTENER PESO ───────────────────────────────────
-async function getSize(url) {
-  const res = await axios.head(url, { timeout: 10000 })
-  const size = parseInt(res.headers['content-length'], 10)
-  if (!size) throw new Error('No se pudo obtener el tamaño')
-  return size
+// 📥 Obtener link MP4 (mirror estable)
+async function getYTVideo(url) {
+  const api = `https://api.cobalt.tools/api/json`
+
+  const res = await fetch(api, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify({
+      url,
+      vCodec: 'h264',
+      vQuality: '720',
+      aCodec: 'aac',
+      filenamePattern: 'classic'
+    })
+  })
+
+  if (!res.ok) throw new Error('No se pudo obtener el video')
+
+  const json = await res.json()
+
+  if (!json || !json.url) {
+    throw new Error('Respuesta inválida del servidor')
+  }
+
+  return {
+    url: json.url,
+    title: json.filename || 'youtube-video'
+  }
 }
 
-// ─── YTDL ───────────────────────────────────────────
-async function ytdl(url) {
-  const headers = {
-    accept: '*/*',
-    referer: 'https://id.ytmp3.mobi/',
-    'referrer-policy': 'strict-origin-when-cross-origin'
-  }
-
-  const initRes = await fetch(`https://d.ymcdn.org/api/v1/init?p=y&_=${Date.now()}`, { headers })
-  if (!initRes.ok) throw new Error('Fallo al inicializar')
-
-  const init = await initRes.json()
-  const videoId = url.match(/(?:youtu\.be\/|youtube\.com\/(?:.*v=|.*\/|.*embed\/))([^&?/]+)/)?.[1]
-  if (!videoId) throw new Error('ID no encontrado')
-
-  const convertRes = await fetch(`${init.convertURL}&v=${videoId}&f=mp4&_=${Date.now()}`, { headers })
-  if (!convertRes.ok) throw new Error('Error al convertir')
-
-  const convert = await convertRes.json()
-
-  let info
-  for (let i = 0; i < 3; i++) {
-    const progressRes = await fetch(convert.progressURL, { headers })
-    info = await progressRes.json()
-    if (info.progress === 3) break
-    await new Promise(r => setTimeout(r, 1000))
-  }
-
-  if (!convert.downloadURL) throw new Error('No se obtuvo enlace')
-  return { url: convert.downloadURL, title: info?.title || 'YouTube Video' }
-}
-
-// ─── RATE LIMIT ─────────────────────────────────────
-const checkRequestLimit = () => {
-  const now = Date.now()
-  requestTimestamps.push(now)
-
-  while (requestTimestamps.length && now - requestTimestamps[0] > REQUEST_WINDOW_MS) {
-    requestTimestamps.shift()
-  }
-
-  if (requestTimestamps.length >= REQUEST_LIMIT) {
-    isCooldown = true
-    setTimeout(() => {
-      isCooldown = false
-      requestTimestamps.length = 0
-    }, COOLDOWN_MS)
-    return false
-  }
-  return true
-}
-
-// ─── HANDLER JOSHI ──────────────────────────────────
 export const handler = async (m, { sock, from, args, reply }) => {
-  const text = args.join(' ')
-  if (!text) return reply('👉 Uso: .ytmp4 <link>')
 
-  if (!isValidYouTubeUrl(text)) {
-    await sock.sendMessage(from, { react: { text: '🔴', key: m.key } })
-    return reply('🚫 Enlace de YouTube inválido')
+  if (!args[0]) {
+    return reply(
+      '📥 *DESCARGA YOUTUBE*\n\n' +
+      '📌 Uso:\n' +
+      '.yt <link>\n\n' +
+      '🧪 Ejemplo:\n' +
+      '.yt https://youtu.be/HeA3-bOMqGc'
+    )
   }
 
-  if (isCooldown || !checkRequestLimit()) {
-    return reply('⏳ Demasiadas solicitudes, espera 2 minutos')
+  const url = args[0]
+
+  if (!isYouTubeUrl(url)) {
+    return reply('❌ Link de YouTube inválido')
   }
 
-  if (isProcessingHeavy) {
-    return reply('⏳ Estoy procesando un archivo pesado')
-  }
-
-  await sock.sendMessage(from, { react: { text: '📀', key: m.key } })
+  await sock.sendMessage(from, {
+    react: { text: '⏳', key: m.key }
+  })
 
   try {
-    const { url, title } = await ytdl(text)
-    const size = await getSize(url)
+    // 📡 Obtener link directo
+    const { url: videoUrl, title } = await getYTVideo(url)
+
+    // 📦 Descargar a buffer (SIN HEAD)
+    const res = await fetch(videoUrl)
+    const buffer = await res.buffer()
+    const size = buffer.length
 
     if (size > MAX_FILE_SIZE) {
-      throw new Error('El archivo supera el límite permitido')
+      throw new Error('❌ El archivo supera el límite de WhatsApp')
     }
 
-    if (size > HEAVY_FILE_THRESHOLD) {
-      isProcessingHeavy = true
-      await reply('🤨 Archivo pesado, espera un momento…')
-    }
+    const caption =
+      `╭──〔 🎬 YOUTUBE 〕──╮\n` +
+      `│ 📌 Título: ${title}\n` +
+      `│ ⚖️ Peso: ${(size / 1024 / 1024).toFixed(2)} MB\n` +
+      `╰──〔 🤖 JOSHI-BOT 〕──╯`
 
-    const buffer = await (await fetch(url)).buffer()
-    const caption = `🎬 *${title}*\n⚖️ Peso: ${formatSize(size)}`
+    // 🎥 Video o Documento
+    const isVideo = size <= VIDEO_THRESHOLD
+
+    await sock.sendMessage(
+      from,
+      isVideo
+        ? {
+            video: buffer,
+            caption,
+            mimetype: 'video/mp4'
+          }
+        : {
+            document: buffer,
+            mimetype: 'video/mp4',
+            fileName: `${title}.mp4`,
+            caption
+          },
+      { quoted: m }
+    )
 
     await sock.sendMessage(from, {
-      video: buffer,
-      caption,
-      mimetype: 'video/mp4'
+      react: { text: '✅', key: m.key }
     })
 
-    await sock.sendMessage(from, { react: { text: '🟢', key: m.key } })
-    isProcessingHeavy = false
-
   } catch (e) {
-    isProcessingHeavy = false
-    await sock.sendMessage(from, { react: { text: '🔴', key: m.key } })
+    await sock.sendMessage(from, {
+      react: { text: '❌', key: m.key }
+    })
+
     reply(`❌ Error: ${e.message}`)
   }
 }
 
-handler.command = ['ytmp4']
+handler.command = ['yt', 'ytdl']
 handler.tags = ['descargas']
-handler.help = ['ytmp4 <link>']
+handler.help = ['yt <link>']
 handler.menu = true
 handler.group = true
 
