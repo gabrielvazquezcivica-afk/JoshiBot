@@ -90,7 +90,7 @@ export const handler = async (m, { sock, from, args, reply }) => {
 }
 
 handler.command = ['veranime', 'animever']
-handler.tags = ['anime']
+handler.tags = ['descargas']
 handler.help = ['veranime <nombre>']
 handler.menu = true
 handler.group = false
