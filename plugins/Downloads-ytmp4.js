@@ -6,10 +6,10 @@ export const handler = async (m, { sock, from, args, reply, usedPrefix, command 
     return reply(`
 ╭──〔 🎬 YOUTUBE DOWNLOAD 〕──╮
 │ 📌 Uso:
-│ ${usedPrefix}${command} <link de YouTube>
+│ .yt <link de YouTube>
 │
 │ 🧪 Ejemplo:
-│ ${usedPrefix}${command} https://youtu.be/HeA3-bOMqGc
+│ .yt https://youtu.be/HeA3-bOMqGc
 ╰──〔 🤖 JOSHI-BOT 〕──╯
 `.trim())
   }
