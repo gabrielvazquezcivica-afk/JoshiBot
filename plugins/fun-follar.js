@@ -1,4 +1,4 @@
-// ───── COMANDO FOLLAR (NO EXPLÍCITO) ─────
+// ───── COMANDO FOLLAR (ULTRA HOT) ─────
 export const handler = async (m, {
   sock,
   from,
@@ -40,45 +40,22 @@ export const handler = async (m, {
     return reply('⚠️ Menciona a alguien o responde a un mensaje')
   }
 
-  // 😈 FRASES (NO EXPLÍCITAS)
-  const frases = [
-    '💥 Lo dejó caminando raro',
-    '😈 Salió con traumas emocionales',
-    '🔥 Fue ilegal en 37 países',
-    '🫠 No estaba preparado para eso',
-    '💀 No volvió a ser el mismo',
-    '😏 Se le olvidó hasta su nombre',
-    '⚠️ Actividad peligrosa detectada',
-    '🥵 Exceso de contacto humano',
-    '🫣 Nadie habló del tema después',
-    '😈 Demasiada intensidad para un solo día',
-    '🔥 Choque brutal de energías',
-    '💥 Quedó desconfigurado',
-    '😏 Se arrepintió… pero solo un poco',
-    '🧠 Daño psicológico leve',
-    '☠️ Murió pero revivió',
-    '🚨 Esto no estaba en el plan',
-    '😳 Se le subió la presión',
-    '💣 Impacto directo al orgullo',
-    '🔥 Nivel de locura innecesario',
-    '🫠 Todavía está procesándolo'
-  ]
-
-  const frase = frases[Math.floor(Math.random() * frases.length)]
-
+  const text = '@' + target.split('@')[0]
   const user1 = '@' + sender.split('@')[0]
-  const user2 = '@' + target.split('@')[0]
 
-  // 📤 MENSAJE FINAL
+  // 📤 MENSAJE FINAL ULTRA HOT
   await sock.sendMessage(
     from,
     {
-      text:
-`😈 *ACCIÓN DETECTADA*
-━━━━━━━━━━━━━━━
-${user1} *se folló a* ${user2}
-${frase}
-━━━━━━━━━━━━━━━`,
+      text: `
+🤤👅🥵 *𝐀𝐂𝐀𝐁𝐀𝐒 𝐃𝐄 𝐅𝐎𝐋𝐋𝐀𝐑𝐓𝐄𝐋@!* 🥵👅🤤
+
+*𝙏𝙚 𝙖𝙘𝙖𝙗𝙖𝙨 𝙙𝙚 𝙛𝙤𝙡𝙡𝙖𝙧 𝙖 𝙡𝙖 𝙥𝙚𝙧𝙧𝙖 𝙙𝙚* *${text}* ⁩
+*𝙖 𝟰 𝙥𝙖𝙩𝙖𝙨 𝙢𝙞𝙚𝙣𝙩𝙧𝙖𝙨 𝙩𝙚 𝙜𝙚𝙢𝙞𝙖 𝙘𝙤𝙢𝙤 𝙪𝙣𝙖 𝙢𝙖𝙡𝙙𝙞𝙩𝙖 𝙥𝙚𝙧𝙧𝙖 "𝐀𝐚𝐚𝐡.., 𝐀𝐚𝐚𝐡𝐡, 𝐬𝐢𝐠𝐮𝐞, 𝐧𝐨 𝐩𝐚𝐫𝐞𝐬, 𝐧𝐨 𝐩𝐚𝐫𝐞𝐬.." 𝙮 𝙡𝙖 𝙝𝙖𝙨 𝙙𝙚𝙟𝙖𝙙𝙤 𝙩𝙖𝙣 𝙧𝙚𝙫𝙚𝙣𝙩𝙖𝙙𝙖 𝙦𝙪𝙚 𝙣𝙤 𝙥𝙪𝙚𝙙𝙚 𝙨𝙤𝙨𝙩𝙚𝙣𝙚𝙧 𝙣𝙞 𝙨𝙪 𝙥𝙧𝙤𝙥𝙞𝙤 𝙘𝙪𝙚𝙧𝙥𝙤 𝙡𝙖 𝙢𝙖𝙡𝙙𝙞𝙩𝙖 𝙯𝙤𝙧𝙧𝙖!*
+
+*${text}* 
+🤤🥵 *¡𝐘𝐀 𝐓𝐄 𝐇𝐀𝐍 𝐅𝐎𝐋𝐋𝐀𝐃𝐎!* 🥵🤤
+      `,
       mentions: [sender, target]
     },
     { quoted: m }
