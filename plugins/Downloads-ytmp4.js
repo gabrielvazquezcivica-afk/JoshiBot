@@ -1,15 +1,15 @@
 import ytdl from 'ytdl-core'
 import fetch from 'node-fetch'
 
+// Validar link de YouTube
+const isYouTubeUrl = (url) =>
+  /^(https?:\/\/)?(www\.youtube\.com\/watch\?v=|youtu\.be\/)[\w-]+/.test(url)
+
 export const handler = async (m, { conn, text, reply }) => {
   if (!text) return reply('❌ Ingresa un link de YouTube válido.\nEjemplo: .yt https://youtu.be/l9an3AiReAA')
 
   const url = text.trim()
-
-  // Validar URL de YouTube
-  if (!ytdl.validateURL(url)) {
-    return reply('🚫 URL inválida de YouTube')
-  }
+  if (!isYouTubeUrl(url)) return reply('🚫 URL inválida de YouTube')
 
   await m.react('⏳') // Reacción de inicio
 
@@ -17,13 +17,13 @@ export const handler = async (m, { conn, text, reply }) => {
   try {
     info = await ytdl.getInfo(url)
   } catch (e) {
-    console.error(e)
-    return reply('❌ No se pudo obtener información del video. Posiblemente YouTube bloqueó el enlace temporalmente.')
+    console.log(e)
+    // Fallback: solo mandar el link y título si no se puede extraer info
+    return reply(`⚠ No se pudo extraer el video directamente.\nPuedes verlo aquí: ${url}`)
   }
 
   const { title, lengthSeconds, author, viewCount } = info.videoDetails
   const duration = new Date(lengthSeconds * 1000).toISOString().substr(11, 8)
-
   const caption = `
 🎬 *${title}*
 ⏱️ Duración: ${duration}
@@ -32,9 +32,9 @@ export const handler = async (m, { conn, text, reply }) => {
 🔗 Link: ${url}
   `.trim()
 
-  // Intentar obtener un formato MP4 de buena calidad
+  // Elegir formato MP4
   let format = ytdl.chooseFormat(info.formats, { quality: 'highest', filter: 'audioandvideo' })
-  if (!format || !format.url) return reply('❌ No se pudo obtener un formato de video válido.')
+  if (!format || !format.url) return reply(`⚠ No se pudo descargar el video.\nPuedes verlo aquí: ${url}`)
 
   try {
     const res = await fetch(format.url)
@@ -50,11 +50,11 @@ export const handler = async (m, { conn, text, reply }) => {
       { quoted: m }
     )
 
-    await m.react('✅') // Reacción de éxito
+    await m.react('✅')
   } catch (e) {
-    console.error(e)
+    console.log(e)
     await m.react('❌')
-    return reply('❌ No se pudo enviar el video. Puede ser demasiado grande para WhatsApp.')
+    return reply(`⚠ No se pudo enviar el video (probablemente demasiado grande).\nPuedes verlo aquí: ${url}`)
   }
 }
 
