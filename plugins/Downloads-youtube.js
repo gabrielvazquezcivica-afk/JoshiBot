@@ -1,30 +1,32 @@
-// dl-youtube.js ▶️ | JOSHI-BOT
+// dl-youtube.js ▶️ | JOSHI-BOT (App compatible)
 
 import fetch from 'node-fetch'
 
-// 🔧 Normalizar cualquier link de YouTube
+// 🔧 Normalizar links de YouTube (app, shorts, music, etc)
 const normalizarYT = (url) => {
-  if (!url) return null
+  try {
+    // Shorts
+    if (url.includes('youtube.com/shorts/')) {
+      const id = url.split('/shorts/')[1].split(/[?&]/)[0]
+      return `https://www.youtube.com/watch?v=${id}`
+    }
 
-  // Shorts → watch
-  if (url.includes('/shorts/')) {
-    const id = url.split('/shorts/')[1].split(/[?&]/)[0]
-    return `https://www.youtube.com/watch?v=${id}`
+    // youtu.be
+    if (url.includes('youtu.be/')) {
+      const id = url.split('youtu.be/')[1].split(/[?&]/)[0]
+      return `https://www.youtube.com/watch?v=${id}`
+    }
+
+    // music.youtube
+    if (url.includes('music.youtube.com')) {
+      return url.replace('music.youtube.com', 'www.youtube.com')
+    }
+
+    // normal
+    return url
+  } catch {
+    return null
   }
-
-  // youtu.be
-  if (url.includes('youtu.be/')) {
-    const id = url.split('youtu.be/')[1].split(/[?&]/)[0]
-    return `https://www.youtube.com/watch?v=${id}`
-  }
-
-  // watch?v=
-  if (url.includes('watch?v=')) {
-    const id = new URL(url).searchParams.get('v')
-    return `https://www.youtube.com/watch?v=${id}`
-  }
-
-  return null
 }
 
 export const handler = async (m, {
@@ -34,21 +36,20 @@ export const handler = async (m, {
   reply
 }) => {
 
+  // ❌ Sin link
   if (!args[0]) {
     return reply(
-`📌 Uso correcto:
+`📌 *Uso correcto*
 .yt <link de YouTube>
 
-Ejemplo:
-.yt https://youtu.be/dQw4w9WgXcQ`
+📱 *Funciona con links copiados desde la app*`
     )
   }
 
-  const rawLink = args[0]
-  const link = normalizarYT(rawLink)
+  let link = normalizarYT(args[0])
 
-  if (!link) {
-    return reply('❌ Link de YouTube no válido')
+  if (!link || !/youtube\.com/.test(link)) {
+    return reply('❌ Link de YouTube inválido')
   }
 
   try {
@@ -57,29 +58,26 @@ Ejemplo:
       react: { text: '⏳', key: m.key }
     })
 
+    // 🔗 API
     const api = `https://api.siputzx.my.id/api/d/ytmp4?url=${encodeURIComponent(link)}`
     const res = await fetch(api)
     const json = await res.json()
 
     if (!json.status || !json.data?.dl) {
-      throw new Error('API sin datos')
+      throw 'Sin datos'
     }
 
-    const {
-      title,
-      duration,
-      views,
-      dl
-    } = json.data
+    const { title, duration, views, dl } = json.data
 
     const caption = `
-╭──〔 ▶️ YOUTUBE 〕──╮
-│ 🎬 ${title}
-│ ⏱️ ${duration}
-│ 👁️ ${views} vistas
+╭──〔 ▶️ YOUTUBE DL 〕──╮
+│ 🎬 Título: ${title}
+│ ⏱️ Duración: ${duration}
+│ 👁️ Vistas: ${views}
 ╰──〔 🤖 JOSHI-BOT 〕──╯
 `.trim()
 
+    // 📤 Enviar video
     await sock.sendMessage(
       from,
       {
@@ -89,7 +87,7 @@ Ejemplo:
       { quoted: m }
     )
 
-    // ✅ OK
+    // ✅ Éxito
     await sock.sendMessage(from, {
       react: { text: '✅', key: m.key }
     })
@@ -101,7 +99,7 @@ Ejemplo:
       react: { text: '❌', key: m.key }
     })
 
-    reply('❌ Error al procesar el video de YouTube')
+    reply('❌ Error al descargar el video')
   }
 }
 
