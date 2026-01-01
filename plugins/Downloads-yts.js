@@ -72,9 +72,9 @@ ${i + 1}️⃣ ${v.title}
 }
 
 handler.command = ['yts', 'ytsearch']
-handler.tags = ['tools']
+handler.tags = ['descargas']
 handler.help = ['yts <texto>']
 handler.menu = true
-handler.group = true
+handler.group = false
 
 export default handler
