@@ -75,7 +75,7 @@ export const handler = async (m, {
   }
 }
 
-handler.command = ['promote', 'admin']
+handler.command = ['promote', 'pornote']
 handler.tags = ['group']
 handler.group = true
 handler.admin = true
