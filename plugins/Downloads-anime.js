@@ -93,7 +93,7 @@ export const handler = async (m, {
 // 📋 MENÚ
 handler.command = ['anime', 'animeinfo']
 handler.help = ['anime <nombre>']
-handler.tags = ['anime']
+handler.tags = ['descargas']
 handler.menu = true
 handler.group = true
 
