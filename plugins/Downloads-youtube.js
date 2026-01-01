@@ -1,9 +1,10 @@
-// Downloads-youtube.js ▶️ | JOSHI-BOT (ESTABLE)
+// Downloads-youtube.js ▶️ | JOSHI-BOT (YT-DLP ESTABLE)
 
-import ytdl from '@distube/ytdl-core'
+import { exec } from 'child_process'
+import fs from 'fs'
+import path from 'path'
 
 export const handler = async (m, { sock, from, args, reply }) => {
-
   if (!args[0]) {
     return reply(
 `╭──〔 ▶️ YOUTUBE DL 〕──╮
@@ -17,50 +18,42 @@ export const handler = async (m, { sock, from, args, reply }) => {
   }
 
   const url = args[0]
+  const out = `/tmp/yt_${Date.now()}.mp4`
 
-  if (!ytdl.validateURL(url)) {
-    return reply('❌ Link de YouTube inválido')
-  }
+  await sock.sendMessage(from, {
+    react: { text: '⏳', key: m.key }
+  })
 
-  try {
-    await sock.sendMessage(from, {
-      react: { text: '⏳', key: m.key }
-    })
+  exec(
+    `yt-dlp -f mp4 -o "${out}" "${url}"`,
+    async (err) => {
+      if (err || !fs.existsSync(out)) {
+        console.error(err)
+        await sock.sendMessage(from, {
+          react: { text: '❌', key: m.key }
+        })
+        return reply('❌ Error al descargar el video')
+      }
 
-    const info = await ytdl.getInfo(url)
-    const title = info.videoDetails.title
+      await sock.sendMessage(
+        from,
+        {
+          video: fs.readFileSync(out),
+          caption: '▶️ Video descargado desde YouTube\n🤖 JoshiBot'
+        },
+        { quoted: m }
+      )
 
-    const stream = ytdl(url, {
-      quality: 'highestvideo',
-      filter: 'audioandvideo'
-    })
+      fs.unlinkSync(out)
 
-    await sock.sendMessage(
-      from,
-      {
-        video: stream,
-        caption:
-`╭──〔 ▶️ YOUTUBE DL 〕──╮
-│ 🎬 ${title}
-╰──〔 🤖 JOSHI-BOT 〕──╯`
-      },
-      { quoted: m }
-    )
-
-    await sock.sendMessage(from, {
-      react: { text: '✅', key: m.key }
-    })
-
-  } catch (e) {
-    console.error(e)
-    await sock.sendMessage(from, {
-      react: { text: '❌', key: m.key }
-    })
-    reply('❌ Error al descargar el video')
-  }
+      await sock.sendMessage(from, {
+        react: { text: '✅', key: m.key }
+      })
+    }
+  )
 }
 
-handler.command = ['yt', 'ytdl', 'youtube']
+handler.command = ['yt', 'youtube']
 handler.tags = ['descargas']
 handler.help = ['yt <link>']
 handler.menu = true
