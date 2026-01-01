@@ -1,71 +1,56 @@
-// Buscador-youtube.js 🔎 | JOSHI-BOT
+import yts from 'yt-search'
 
-import ytsr from 'ytsr'
-
-export const handler = async (m, {
-  sock,
-  from,
-  args,
-  reply
-}) => {
-
+export const handler = async (m, { sock, from, args, reply }) => {
   if (!args.length) {
     return reply(`
 ╭──〔 🔎 YOUTUBE SEARCH 〕──╮
 │ 📌 Uso:
-│ .yts <texto a buscar>
+│ .yts <búsqueda>
 │
 │ 🧪 Ejemplo:
-│ .yts dragon ball z capitulo 4 español
+│ .yts one piece opening
 ╰──〔 🤖 JOSHI-BOT 〕──╯
 `.trim())
   }
 
   const query = args.join(' ')
 
-  // ⏳ reacción
   await sock.sendMessage(from, {
     react: { text: '🔎', key: m.key }
   })
 
   let res
   try {
-    res = await ytsr(query, { limit: 5 })
+    res = await yts(query)
   } catch (e) {
+    console.error(e)
     return reply('❌ Error buscando en YouTube')
   }
 
-  const videos = res.items.filter(v => v.type === 'video')
-
-  if (!videos.length) {
-    return reply('❌ No se encontraron resultados')
-  }
+  const videos = res.videos.slice(0, 5)
+  if (!videos.length) return reply('❌ No se encontraron resultados')
 
   let text = `
 ╭──〔 🎬 RESULTADOS YOUTUBE 〕──╮
-│ 🔍 Búsqueda:
-│ ${query}
-╰──────────────────────────╯
-`
+🔍 Búsqueda: *${query}*
+`.trim()
 
-  videos.forEach((v, i) => {
+  for (let i = 0; i < videos.length; i++) {
+    const v = videos[i]
     text += `
-${i + 1}️⃣ ${v.title}
-⏱️ ${v.duration || 'N/A'}
-👁️ ${v.views || 'N/A'}
-🔗 ${v.url}
+
+${i + 1}. 🎥 *${v.title}*
+⏱️ Duración: ${v.timestamp}
+👤 Canal: ${v.author.name}
+👀 Vistas: ${v.views.toLocaleString()}
+🔗 Link: ${v.url}
 `
-  })
+  }
 
-  await sock.sendMessage(
-    from,
-    {
-      text: text.trim()
-    },
-    { quoted: m }
-  )
+  text += `\n╰──〔 🤖 JOSHI-BOT 〕──╯`
 
-  // ✅ reacción
+  await reply(text)
+
   await sock.sendMessage(from, {
     react: { text: '✅', key: m.key }
   })
@@ -75,6 +60,6 @@ handler.command = ['yts', 'ytsearch']
 handler.tags = ['descargas']
 handler.help = ['yts <texto>']
 handler.menu = true
-handler.group = false
+handler.group = true
 
 export default handler
