@@ -1,7 +1,6 @@
 import ytdl from 'ytdl-core'
-import fetch from 'node-fetch'
 
-export const handler = async (m, { sock, from, args, reply, usedPrefix, command }) => {
+export const handler = async (m, { sock, from, args, reply }) => {
   if (!args[0]) {
     return reply(`
 ╭──〔 🎬 YOUTUBE DOWNLOAD 〕──╮
