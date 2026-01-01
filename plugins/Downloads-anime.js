@@ -1,45 +1,99 @@
 // anime-info.js 🎌 | JOSHI-BOT
+import fetch from 'node-fetch'
 
-export const handler = async (m, { sock, from, args, reply, isGroup }) => {
+export const handler = async (m, {
+  sock,
+  from,
+  args,
+  reply
+}) => {
 
-  const anime = args[0] || 'naruto'
-  const episodio = args[1] || '1'
+  if (!args[0]) {
+    return reply(`
+╭──〔 🎌 ANIME INFO 〕──╮
+│ 📌 Uso:
+│ .anime <nombre del anime>
+│
+│ 🧪 Ejemplo:
+│ .anime naruto shippuden
+╰──〔 🤖 JOSHI-BOT 〕──╯
+`.trim())
+  }
+
+  const query = args.join(' ')
+
+  await sock.sendMessage(from, {
+    react: { text: '🔍', key: m.key }
+  })
+
+  let data
+  try {
+    const res = await fetch(
+      `https://api.jikan.moe/v4/anime?q=${encodeURIComponent(query)}&limit=1`
+    )
+    const json = await res.json()
+    data = json.data?.[0]
+    if (!data) throw 'No encontrado'
+  } catch {
+    return reply('❌ No encontré información para ese anime')
+  }
+
+  const titulo = data.title
+  const tituloJap = data.title_japanese || 'No disponible'
+  const episodios = data.episodes || '¿?'
+  const estado = data.status
+  const score = data.score || 'N/A'
+  const año = data.year || 'Desconocido'
+  const sinopsis = data.synopsis
+    ? data.synopsis.substring(0, 400) + '...'
+    : 'Sin descripción'
+
+  const malLink = data.url
+  const animeflvLink = `https://www3.animeflv.net/browse?q=${encodeURIComponent(titulo)}`
 
   const texto = `
 ╭──〔 🎬 ANIME INFO 〕──╮
-│ 🎌 Anime: ${anime}
-│ 📺 Episodio: ${episodio}
-│ 🌐 Fuente: AnimeFLV
-│ ⭐ Calidad: HD
+│ 📺 Título: ${titulo}
+│ 🇯🇵 Japonés: ${tituloJap}
+│ 🎞️ Episodios: ${episodios}
+│ 📡 Estado: ${estado}
+│ ⭐ Puntuación: ${score}
+│ 📅 Año: ${año}
+│
+│ 📝 Sinopsis:
+│ ${sinopsis}
+│
+│ 🔗 Dónde verlo:
+│ ▶️ AnimeFLV:
+│ ${animeflvLink}
+│
+│ 📚 MyAnimeList:
+│ ${malLink}
 ╰──〔 🤖 JOSHI-BOT 〕──╯
 `.trim()
 
-  await sock.sendMessage(
-    from,
-    {
-      text: texto,
-      footer: 'Selecciona una opción 👇',
-      buttons: [
-        {
-          buttonId: `.veranime ${anime} ${episodio}`,
-          buttonText: { displayText: '▶️ Ver Video' },
-          type: 1
-        },
-        {
-          buttonId: `.animelink ${anime} ${episodio}`,
-          buttonText: { displayText: '🔗 Ver Link' },
-          type: 1
-        }
-      ],
-      headerType: 1
-    },
-    { quoted: m }
-  )
+  if (data.images?.jpg?.large_image_url) {
+    await sock.sendMessage(
+      from,
+      {
+        image: { url: data.images.jpg.large_image_url },
+        caption: texto
+      },
+      { quoted: m }
+    )
+  } else {
+    await reply(texto)
+  }
+
+  await sock.sendMessage(from, {
+    react: { text: '✅', key: m.key }
+  })
 }
 
-handler.command = ['animeinfo', 'veranimeinfo']
-handler.help = ['animeinfo <anime> <episodio>']
-handler.tags = ['descargas']
+// 📋 MENÚ
+handler.command = ['anime', 'animeinfo']
+handler.help = ['anime <nombre>']
+handler.tags = ['anime']
 handler.menu = true
 handler.group = true
 
