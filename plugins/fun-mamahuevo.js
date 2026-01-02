@@ -23,22 +23,32 @@ export const handler = async (m, {
     const metadata = await sock.groupMetadata(from)
     const participants = metadata.participants || []
 
-    // 👑 OWNER bypass
     const ownerJids = owner?.jid || []
     if (!ownerJids.includes(sender)) {
       const isAdmin = participants.some(
         p => p.id === sender &&
         (p.admin === 'admin' || p.admin === 'superadmin')
       )
-      if (!isAdmin) return // 🚫 bloqueo silencioso
+      if (!isAdmin) return
     }
   }
   /* ─────────────────────────────────── */
 
-  const porcentaje = Math.floor(Math.random() * 101)
-  const name = sender.split('@')[0]
+  let target
 
-  // 😈 Reacción
+  // 🎯 Prioridad: mención > reply
+  if (m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.length) {
+    target = m.message.extendedTextMessage.contextInfo.mentionedJid[0]
+  } else if (m.message?.extendedTextMessage?.contextInfo?.participant) {
+    target = m.message.extendedTextMessage.contextInfo.participant
+  } else {
+    return reply('❌ Menciona o responde a alguien')
+  }
+
+  const porcentaje = Math.floor(Math.random() * 101)
+  const name = target.split('@')[0]
+
+  // 🧮 Reacción
   await sock.sendMessage(from, {
     react: { text: '🧮', key: m.key }
   })
@@ -58,7 +68,7 @@ export const handler = async (m, {
     from,
     {
       text: mensaje,
-      mentions: [sender]
+      mentions: [target]
     },
     { quoted: m }
   )
