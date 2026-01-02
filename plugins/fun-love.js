@@ -68,7 +68,7 @@ export const handler = async (m, {
 }
 
 handler.command = ['love']
-handler.tags = ['fun']
+handler.tags = ['juegos']
 handler.menu = true
 handler.group = true
 
