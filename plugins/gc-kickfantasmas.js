@@ -16,28 +16,14 @@ export const handler = async (m, {
   const metadata = await sock.groupMetadata(from)
   const participants = metadata.participants || []
 
-  // 👮 Admins humanos
-  const admins = participants
-    .filter(p => p.admin)
-    .map(p => p.id)
+  // 👮 admins humanos
+  const admins = participants.filter(p => p.admin).map(p => p.id)
 
   if (!admins.includes(sender)) {
     return reply('⛔ Solo administradores pueden usar este comando')
   }
 
-  // 🤖 
-  const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net'
-  const botParticipant = participants.find(p => p.id === botId)
-
-  const botIsAdmin =
-    botParticipant &&
-    (botParticipant.admin === 'admin' || botParticipant.admin === 'superadmin')
-
-  if (!botIsAdmin) {
-    return reply('🤖 El bot necesita ser *administrador* para expulsar fantasmas')
-  }
-
-  // 👻 Buscar fantasmas
+  // 👻 detectar fantasmas
   const fantasmas = []
 
   for (const p of participants) {
@@ -52,6 +38,7 @@ export const handler = async (m, {
   }
 
   try {
+    // 🔥 
     await sock.groupParticipantsUpdate(from, fantasmas, 'remove')
 
     await sock.sendMessage(from, {
@@ -71,7 +58,8 @@ export const handler = async (m, {
     }, { quoted: m })
 
   } catch (e) {
-    reply('❌ Error al expulsar fantasmas')
+    // ❌ 
+    return reply('🤖 El bot necesita ser *administrador* para expulsar fantasmas')
   }
 }
 
