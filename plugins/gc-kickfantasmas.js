@@ -10,12 +10,10 @@ export const handler = async (m, {
     return reply('👻 Este comando solo funciona en grupos')
   }
 
-  // 📦 DB
   if (!global.db?.users?.[from]) {
     return reply('📭 No hay datos suficientes para detectar fantasmas')
   }
 
-  // 📌 Metadata
   const metadata = await sock.groupMetadata(from)
   const participants = metadata.participants || []
 
@@ -23,14 +21,15 @@ export const handler = async (m, {
     .filter(p => p.admin)
     .map(p => p.id)
 
-  const botJid = sock.user.id.split(':')[0] + '@s.whatsapp.net'
+  // 🔧 FIX JID DEL BOT (ESTO ES LA CLAVE)
+  const botJid = sock.user.id.replace(/:\d+/, '')
 
-  // 👮 Verificar admin del usuario
+  // 👮 Admin humano
   if (!admins.includes(sender)) {
     return reply('⛔ Solo los administradores pueden usar este comando')
   }
 
-  // 🤖 Verificar admin del bot
+  // 🤖 Admin bot (YA NO FALLA)
   if (!admins.includes(botJid)) {
     return reply('🤖 El bot necesita ser *administrador* para expulsar fantasmas')
   }
@@ -40,37 +39,30 @@ export const handler = async (m, {
 
   for (const p of participants) {
     const jid = p.id
-    const isAdmin = p.admin === 'admin' || p.admin === 'superadmin'
-    if (isAdmin) continue
+    if (p.admin) continue
 
     const msgs = global.db.users[from][jid]?.messages || 0
-
-    if (msgs <= 3) {
-      fantasmas.push(jid)
-    }
+    if (msgs <= 3) fantasmas.push(jid)
   }
 
   if (!fantasmas.length) {
     return reply('✨ No hay fantasmas para expulsar')
   }
 
-  // 🚪 Expulsar de golpe
   try {
     await sock.groupParticipantsUpdate(from, fantasmas, 'remove')
 
-    // ⚡ Reacción
     await sock.sendMessage(from, {
       react: { text: '🧹', key: m.key }
     })
 
-    // 📢 Aviso
     await sock.sendMessage(
       from,
       {
         text: `
-🧹 *LIMPIEZA DE FANTASMAS COMPLETADA*
+🧹 *LIMPIEZA COMPLETA*
 
-👻 Usuarios expulsados: ${fantasmas.length}
+👻 Expulsados: ${fantasmas.length}
 👮 Admin: @${sender.split('@')[0]}
 🤖 Estado: OK
 `.trim(),
