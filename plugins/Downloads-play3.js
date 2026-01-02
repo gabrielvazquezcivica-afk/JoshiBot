@@ -41,7 +41,7 @@ const ddownr = {
 export const handler = async (m, {
   sock,
   from,
-  command,
+  sender,
   reply,
   isGroup,
   owner
@@ -59,15 +59,14 @@ export const handler = async (m, {
       if (global.db.groups[from].modoadmin) {
         const metadata = await sock.groupMetadata(from)
         const participants = metadata.participants || []
-        const sender = m.key.participant || m.key.remoteJid
 
-        // 👑 OWNER SIEMPRE PASA
+        // 👑 OWNER bypass
         const ownerJids = owner?.jid || []
         if (!ownerJids.includes(sender)) {
           const isAdmin = participants.some(
-            p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
+            p => p.id === sender &&
+              (p.admin === 'admin' || p.admin === 'superadmin')
           )
-
           if (!isAdmin) return // 🚫 bloqueo silencioso
         }
       }
@@ -96,7 +95,7 @@ export const handler = async (m, {
       react: { text: '📁', key: m.key }
     })
 
-    // 🧾 Mensaje futurista
+    // 🧾 Mensaje
     const msg = `
 ╭─〔 📁 AUDIO DOCUMENTO 〕
 │ 🎵 ${title}
@@ -125,7 +124,7 @@ export const handler = async (m, {
       dl = api.data.dl
     }
 
-    // 📁 Enviar como DOCUMENTO
+    // 📁 Enviar como documento
     await sock.sendMessage(from, {
       document: { url: dl },
       mimetype: 'audio/mpeg',
