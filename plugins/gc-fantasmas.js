@@ -51,7 +51,7 @@ export const handler = async (m, {
 
 handler.command = ['fantasmas']
 handler.group = true
-handler.tags = ['gruop']
+handler.tags = ['group']
 handler.menu = true
 
 export default handler
