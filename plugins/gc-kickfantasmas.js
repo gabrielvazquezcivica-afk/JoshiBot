@@ -1,14 +1,13 @@
 export const handler = async (m, {
   sock,
-  from,
   isGroup,
   sender,
   reply
 }) => {
 
-  if (!isGroup) {
-    return reply('👻 Este comando solo funciona en grupos')
-  }
+  if (!isGroup) return reply('👻 Solo funciona en grupos')
+
+  const from = m.key.remoteJid
 
   if (!global.db?.users?.[from]) {
     return reply('📭 No hay datos suficientes para detectar fantasmas')
@@ -17,32 +16,35 @@ export const handler = async (m, {
   const metadata = await sock.groupMetadata(from)
   const participants = metadata.participants || []
 
+  // 👮 Admins humanos
   const admins = participants
     .filter(p => p.admin)
     .map(p => p.id)
 
-  // 🔧 
-  const botJid = sock.user.id.replace(/:\d+/, '')
-
-  // 👮 Admin 
   if (!admins.includes(sender)) {
-    return reply('⛔ Solo los administradores pueden usar este comando')
+    return reply('⛔ Solo administradores pueden usar este comando')
   }
 
-  // 🤖 Admin
-  if (!admins.includes(botJid)) {
+  // 🤖 
+  const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net'
+  const botParticipant = participants.find(p => p.id === botId)
+
+  const botIsAdmin =
+    botParticipant &&
+    (botParticipant.admin === 'admin' || botParticipant.admin === 'superadmin')
+
+  if (!botIsAdmin) {
     return reply('🤖 El bot necesita ser *administrador* para expulsar fantasmas')
   }
 
-  // 👻 Detectar fantasmas
-  let fantasmas = []
+  // 👻 Buscar fantasmas
+  const fantasmas = []
 
   for (const p of participants) {
-    const jid = p.id
     if (p.admin) continue
 
-    const msgs = global.db.users[from][jid]?.messages || 0
-    if (msgs <= 3) fantasmas.push(jid)
+    const msgs = global.db.users[from][p.id]?.messages || 0
+    if (msgs <= 3) fantasmas.push(p.id)
   }
 
   if (!fantasmas.length) {
@@ -56,20 +58,17 @@ export const handler = async (m, {
       react: { text: '🧹', key: m.key }
     })
 
-    await sock.sendMessage(
-      from,
-      {
-        text: `
-🧹 *LIMPIEZA COMPLETA*
-
+    await sock.sendMessage(from, {
+      text: `
+🧹 *LIMPIEZA DE FANTASMAS*
+━━━━━━━━━━━━━━
 👻 Expulsados: ${fantasmas.length}
 👮 Admin: @${sender.split('@')[0]}
 🤖 Estado: OK
+━━━━━━━━━━━━━━
 `.trim(),
-        mentions: [sender]
-      },
-      { quoted: m }
-    )
+      mentions: [sender]
+    }, { quoted: m })
 
   } catch (e) {
     reply('❌ Error al expulsar fantasmas')
