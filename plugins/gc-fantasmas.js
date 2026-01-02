@@ -5,10 +5,10 @@ export const handler = async (m, {
   reply
 }) => {
 
-  if (!isGroup) return reply('👻 Este comando solo funciona en grupos')
+  if (!isGroup) return reply('👻 Solo funciona en grupos')
 
-  if (!global.db?.users?.[from]) {
-    return reply('📭 Aún no hay datos suficientes en este grupo')
+  if (!global.db.users?.[from]) {
+    return reply('📭 Aún no hay mensajes registrados en este grupo')
   }
 
   const metadata = await sock.groupMetadata(from)
@@ -20,16 +20,12 @@ export const handler = async (m, {
     const jid = p.id
     const isAdmin = p.admin === 'admin' || p.admin === 'superadmin'
 
-    // ⛔ Ignorar admins
     if (isAdmin) continue
 
     const msgs = global.db.users[from][jid]?.messages || 0
 
     if (msgs <= 3) {
-      fantasmas.push({
-        jid,
-        msgs
-      })
+      fantasmas.push({ jid, msgs })
     }
   }
 
@@ -37,13 +33,13 @@ export const handler = async (m, {
     return reply('✨ No hay fantasmas en este grupo')
   }
 
-  fantasmas.sort((a, b) => a.msgs - b.msgs)
-
   let texto = `👻 *FANTASMAS DEL GRUPO*\n━━━━━━━━━━━━━━━\n`
 
-  fantasmas.forEach((u, i) => {
-    texto += `${i + 1}. @${u.jid.split('@')[0]} — ${u.msgs} mensajes\n`
-  })
+  fantasmas
+    .sort((a, b) => a.msgs - b.msgs)
+    .forEach((u, i) => {
+      texto += `${i + 1}. @${u.jid.split('@')[0]} — ${u.msgs} mensajes\n`
+    })
 
   texto += `━━━━━━━━━━━━━━━\n💀 Total: ${fantasmas.length}`
 
@@ -55,8 +51,7 @@ export const handler = async (m, {
 
 handler.command = ['fantasmas']
 handler.group = true
-handler.tags = ['group']
+handler.tags = ['gruop']
 handler.menu = true
-handler.help = ['fantasmas']
 
 export default handler
