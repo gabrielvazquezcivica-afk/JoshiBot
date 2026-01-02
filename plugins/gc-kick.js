@@ -15,6 +15,9 @@ export const handler = async (m, {
     .filter(p => p.admin)
     .map(p => p.id)
 
+  const groupOwner = metadata.owner // 👑 creador del grupo
+  const botOwners = global.owner?.jid || [] // 👑 owner del bot
+
   // ❌ Verificar admin
   if (!admins.includes(sender)) {
     return reply('⛔ Solo los administradores pueden usar este comando')
@@ -33,6 +36,20 @@ export const handler = async (m, {
       '.kick @usuario'
     )
   }
+
+  /* ───── 🔐 PROTECCIONES ───── */
+
+  // 👑 No expulsar owner del bot
+  if (botOwners.includes(user)) {
+    return reply('👑 No puedes expulsar al *OWNER del bot*')
+  }
+
+  // 👑 No expulsar creador del grupo
+  if (user === groupOwner) {
+    return reply('🛡 No puedes expulsar al *creador del grupo*')
+  }
+
+  /* ───────────────────────── */
 
   try {
     // 🚪 Expulsar usuario
