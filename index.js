@@ -174,15 +174,15 @@ async function start () {
     const pushName = m.pushName || 'Sin nombre'
     const text = getText(m)
 
-    // 👻 CONTADOR DE MENSAJES (FANTASMAS)
+    // 👻 CONTADOR DE MENSAJES POR GRUPO
 if (!global.db.users) global.db.users = {}
+if (!global.db.users[from]) global.db.users[from] = {}
 
-if (!global.db.users[sender]) {
-  global.db.users[sender] = {
-    messages: 0
-  }
+if (!global.db.users[from][sender]) {
+  global.db.users[from][sender] = { messages: 0 }
 }
-global.db.users[sender].messages++
+
+global.db.users[from][sender].messages++
 
     // 🔇 WATCHER DE MUTE
     try {
