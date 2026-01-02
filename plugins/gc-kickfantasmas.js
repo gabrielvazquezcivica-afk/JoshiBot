@@ -6,39 +6,48 @@ export const handler = async (m, {
   reply
 }) => {
 
-  if (!isGroup) return reply('👻 Solo funciona en grupos')
+  // ❌ Solo grupos
+  if (!isGroup) return reply('👻 Este comando solo funciona en grupos')
 
-  // 📌 Metadata
+  // ❌ Sin datos
+  if (!global.db.users?.[from]) {
+    return reply('📭 No hay datos suficientes en este grupo')
+  }
+
+  // 📌 Metadata del grupo
   const metadata = await sock.groupMetadata(from)
   const participants = metadata.participants || []
 
-  // 👮 Admins
+  // 👮 Admins del grupo
   const admins = participants
-    .filter(p => p.admin)
+    .filter(p => p.admin === 'admin' || p.admin === 'superadmin')
     .map(p => p.id)
 
-  // 🤖 Bot admin
-  const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net'
-  const botIsAdmin = admins.includes(botId)
+  // 🚫 Solo admins
+  if (!admins.includes(sender)) {
+    return // bloqueo silencioso
+  }
+
+  // 🤖
+  const botParticipant = participants.find(
+    p => p.id === sock.user.id || p.id.includes(sock.user.id.split(':')[0])
+  )
+
+  const botIsAdmin =
+    botParticipant?.admin === 'admin' ||
+    botParticipant?.admin === 'superadmin'
 
   if (!botIsAdmin) {
     return reply('🤖❌ El bot necesita ser *administrador* para expulsar fantasmas')
   }
 
-  // 🚫 Solo admins
-  if (!admins.includes(sender)) {
-    return reply('⛔ Solo administradores pueden usar este comando')
-  }
-
-  if (!global.db.users?.[from]) {
-    return reply('📭 Aún no hay mensajes registrados en este grupo')
-  }
-
+  // 👻 Buscar fantasmas
   let fantasmas = []
 
   for (const p of participants) {
     const jid = p.id
     const isAdmin = p.admin === 'admin' || p.admin === 'superadmin'
+
     if (isAdmin) continue
 
     const msgs = global.db.users[from][jid]?.messages || 0
@@ -52,19 +61,23 @@ export const handler = async (m, {
     return reply('✨ No hay fantasmas para expulsar')
   }
 
-  // 📢 Aviso
-  await sock.sendMessage(from, {
-    text: `👻💀 *KICK DE FANTASMAS*\n\nExpulsando ${fantasmas.length} usuarios inactivos...`,
-    mentions: fantasmas
-  }, { quoted: m })
+  // 💥 Kick masivo
+  await sock.groupParticipantsUpdate(from, fantasmas, 'remove')
 
-  // 💣 Kick en bloque (de golpe)
-  try {
-    await sock.groupParticipantsUpdate(from, fantasmas, 'remove')
-  } catch (e) {
-    console.error(e)
-    reply('❌ Error al expulsar fantasmas')
-  }
+  // 📢 Aviso
+  await sock.sendMessage(
+    from,
+    {
+      text:
+`👻 *LIMPIEZA DE FANTASMAS*
+━━━━━━━━━━━━━━━
+💀 Usuarios expulsados: ${fantasmas.length}
+🛡 Acción ejecutada por admin
+━━━━━━━━━━━━━━━`,
+      mentions: fantasmas
+    },
+    { quoted: m }
+  )
 }
 
 handler.command = ['kickfantasmas']
