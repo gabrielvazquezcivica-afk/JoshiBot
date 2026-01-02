@@ -21,15 +21,15 @@ export const handler = async (m, {
     .filter(p => p.admin)
     .map(p => p.id)
 
-  // 🔧 FIX JID DEL BOT (ESTO ES LA CLAVE)
+  // 🔧 
   const botJid = sock.user.id.replace(/:\d+/, '')
 
-  // 👮 Admin humano
+  // 👮 Admin 
   if (!admins.includes(sender)) {
     return reply('⛔ Solo los administradores pueden usar este comando')
   }
 
-  // 🤖 Admin bot (YA NO FALLA)
+  // 🤖 Admin
   if (!admins.includes(botJid)) {
     return reply('🤖 El bot necesita ser *administrador* para expulsar fantasmas')
   }
