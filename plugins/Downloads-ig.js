@@ -6,8 +6,35 @@ export const handler = async (m, {
   sock,
   from,
   args,
-  reply
+  reply,
+  sender,
+  isGroup,
+  owner
 }) => {
+
+  /* ───── 👑 MODO ADMIN (SILENCIOSO) ───── */
+  if (isGroup) {
+    if (!global.db) global.db = {}
+    if (!global.db.groups) global.db.groups = {}
+    if (!global.db.groups[from]) {
+      global.db.groups[from] = { modoadmin: false }
+    }
+
+    if (global.db.groups[from].modoadmin) {
+      const metadata = await sock.groupMetadata(from)
+      const participants = metadata.participants || []
+
+      // 👑 OWNER bypass
+      const ownerJids = owner?.jid || []
+      if (!ownerJids.includes(sender)) {
+        const isAdmin = participants.some(
+          p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
+        )
+        if (!isAdmin) return // 🚫 bloqueo silencioso
+      }
+    }
+  }
+  /* ─────────────────────────────────── */
 
   // ❌ Sin link
   if (!args[0]) {
