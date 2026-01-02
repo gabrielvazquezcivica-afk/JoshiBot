@@ -32,18 +32,20 @@ export const handler = async (m, {
   }
   /* ─────────────────────────────────── */
 
-  const text = args.join(' ').trim()
-
-  if (!text) {
+  if (!args.length || !m.mentionedJid?.length) {
     return reply('❤️ Usa el comando así:\n.love @usuario')
   }
 
+  const target = m.mentionedJid[0]
   const porcentaje = Math.floor(Math.random() * 100)
+
+  const nameSender = sender.split('@')[0]
+  const nameTarget = target.split('@')[0]
 
   const love = `
 *❤️❤️ MEDIDOR DE AMOR ❤️❤️*
 
-*El amor de ${text} por ti es de*
+*El amor de @${nameTarget} por @${nameSender} es de*
 *${porcentaje}% de un 100%* 💘
 
 *¿Deberías pedirle que sea tu novia/o?* 😳
@@ -53,7 +55,7 @@ export const handler = async (m, {
     from,
     {
       text: love,
-      mentions: m.mentionedJid
+      mentions: [sender, target]
     },
     { quoted: m }
   )
@@ -62,6 +64,6 @@ export const handler = async (m, {
 handler.command = ['love']
 handler.tags = ['juegos']
 handler.menu = true
-handler.group = false
+handler.group = true
 
 export default handler
