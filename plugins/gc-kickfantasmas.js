@@ -86,8 +86,6 @@ export const handler = async (m, {
 
 handler.command = ['kickfantasmas']
 handler.group = true
-handler.admin = true
-handler.botAdmin = true
 handler.tags = ['group']
 handler.menu = true
 
