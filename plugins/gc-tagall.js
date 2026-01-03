@@ -14,46 +14,40 @@ export const handler = async (m, { sock, from, isGroup, reply }) => {
     return reply('⛔ *Solo administradores pueden usar este comando*')
   }
 
+  // 🔔 Reacción
   await sock.sendMessage(from, {
     react: { text: '🔔', key: m.key }
   })
 
-  /* 🌍 SOLO BANDERAS IMPORTANTES */
-  const countryCodes = {
-    '52': 'MX', // México
-    '54': 'AR', // Argentina
-    '55': 'BR', // Brasil
-    '57': 'CO', // Colombia
-    '58': 'VE', // Venezuela
-    '51': 'PE', // Perú
-    '56': 'CL', // Chile
-    '593': 'EC', // Ecuador
-    '1': 'US',  // USA
-    '34': 'ES'  // España
-  }
+  /* 🎲 EMOJIS RANDOM */
+  const emojis = [
+    // 🔥 Fuego / Poder
+    '🔥','⚡','💥','🚀','☄️','🌋','🧨','💣','🩸',
 
-  function isoToFlag(iso) {
-    return iso
-      .toUpperCase()
-      .replace(/./g, c =>
-        String.fromCodePoint(127397 + c.charCodeAt())
-      )
-  }
+    // 👑 Dominio
+    '👑','😈','☠️','🦂','🕷️','🦴','🗡️','⚔️',
 
-  function getFlag(jid) {
-    const num = jid.replace(/\D/g, '')
-    for (const prefix of Object.keys(countryCodes).sort((a, b) => b.length - a.length)) {
-      if (num.startsWith(prefix)) {
-        return isoToFlag(countryCodes[prefix])
-      }
-    }
-    return '' // ❌ sin bandera si no coincide
-  }
+    // 🤖 Tech / Futuro
+    '🤖','👾','🧠','🧬','💻','📡','🛰️','📀',
 
-  /* 🎨 DISEÑO */
+    // 🎯 Acción
+    '🎯','🚨','📣','🔔','🔊','📢','📍',
+
+    // 🧩 Random
+    '😎','🥶','🤡','👀','🙃','😏','🤯',
+    '🫠','🥵','😵‍💫','🤨','😼',
+
+    // 🌪️ Extra
+    '🌪️','❄️','🌊','🌑','🌒','⭐','✨'
+  ]
+
+  const randomEmoji = () =>
+    emojis[Math.floor(Math.random() * emojis.length)]
+
+  /* 🎨 MENSAJE */
   let text = `
 ╭───────────────╮
-│ 📛 ${groupName}
+│ 🔔 ${groupName}
 │ 👥 Miembros: ${participants.length}
 ╰───────────────╯
 `.trim()
@@ -61,8 +55,8 @@ export const handler = async (m, { sock, from, isGroup, reply }) => {
   const mentions = []
 
   for (const p of participants) {
-    const flag = getFlag(p.id)
-    text += `\n${flag ? flag + ' ' : ''}@${p.id.split('@')[0]}`
+    const emoji = randomEmoji()
+    text += `\n${emoji} @${p.id.split('@')[0]}`
     mentions.push(p.id)
   }
 
@@ -77,3 +71,5 @@ handler.command = ['tagall', 'todos']
 handler.tags = ['group']
 handler.group = true
 handler.admin = true
+
+export default handler
