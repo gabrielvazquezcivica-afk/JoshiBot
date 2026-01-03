@@ -24,19 +24,18 @@ export const handler = async (m, {
   if (isGroup && global.db.groups[from].modoadmin) {
     const metadata = await sock.groupMetadata(from)
     const participants = metadata.participants || []
-
     const ownerJids = owner?.jid || []
+
     if (!ownerJids.includes(sender)) {
       const isAdmin = participants.some(
         p => p.id === sender &&
         (p.admin === 'admin' || p.admin === 'superadmin')
       )
-      if (!isAdmin) return // 🚫 bloqueo silencioso
+      if (!isAdmin) return
     }
   }
-  /* ─────────────────────────────────── */
 
-  /* ───── 🔎 DETECTAR MEDIA (FIX REAL) ───── */
+  /* ───── 🔎 DETECTAR MEDIA (ROBUSTO) ───── */
   const quoted =
     m.message?.extendedTextMessage?.contextInfo ||
     m.message?.imageMessage?.contextInfo ||
@@ -52,9 +51,7 @@ export const handler = async (m, {
     qmsg?.viewOnceMessageV2?.message?.imageMessage ||
     qmsg?.viewOnceMessageV2?.message?.videoMessage
 
-  if (!msg) {
-    return reply('❌ Responde a una imagen o video')
-  }
+  if (!msg) return reply('❌ Responde a una imagen o video')
 
   const isVideo = !!msg.seconds
   if (isVideo && msg.seconds > 10) {
@@ -73,28 +70,32 @@ export const handler = async (m, {
       buffer = Buffer.concat([buffer, chunk])
     }
 
-    /* ───── 📂 ARCHIVOS TEMPORALES ───── */
     const tmp = os.tmpdir()
     input = path.join(tmp, `stk_in_${Date.now()}.${isVideo ? 'mp4' : 'jpg'}`)
     output = path.join(tmp, `stk_out_${Date.now()}.webp`)
-
     fs.writeFileSync(input, buffer)
 
-    /* ───── 🛠️ FFMPEG ───── */
+    /* ───── 🛠️ FFMPEG FIX VIDEO ───── */
     await new Promise((resolve, reject) => {
       const args = isVideo
         ? [
             '-i', input,
-            '-vf', 'scale=512:512:force_original_aspect_ratio=decrease,fps=15',
+            '-vf',
+            'scale=512:512:force_original_aspect_ratio=decrease,' +
+            'pad=512:512:-1:-1:color=0x00000000,' +
+            'fps=15,format=rgba,setsar=1',
             '-loop', '0',
             '-t', '10',
+            '-preset', 'default',
             '-an',
             '-vsync', '0',
             output
           ]
         : [
             '-i', input,
-            '-vf', 'scale=512:512:force_original_aspect_ratio=decrease',
+            '-vf',
+            'scale=512:512:force_original_aspect_ratio=decrease,' +
+            'pad=512:512:-1:-1:color=0x00000000',
             output
           ]
 
@@ -115,9 +116,7 @@ export const handler = async (m, {
   } catch (e) {
     console.error('STICKER ERROR:', e)
     reply('❌ Error al crear el sticker')
-
   } finally {
-    /* ───── 🧹 LIMPIEZA SEGURA ───── */
     try { if (input) fs.unlinkSync(input) } catch {}
     try { if (output) fs.unlinkSync(output) } catch {}
   }
