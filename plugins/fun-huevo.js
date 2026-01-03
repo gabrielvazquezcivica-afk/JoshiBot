@@ -83,7 +83,7 @@ export const handler = async (m, {
 }
 
 handler.command = ['huevo']
-handler.tags = ['fun']
+handler.tags = ['juegos']
 handler.menu = true
 handler.group = true
 
