@@ -1,5 +1,4 @@
 // adoptado.js | JOSHI-BOT
-
 let frasesPesadas = [
   "fue abandonado hasta por su sombra",
   "ni sus propios padres querían cargarlo",
@@ -61,11 +60,10 @@ let handler = async (m, { conn, text, sender, from, isGroup, reply, owner, sock 
     await conn.sendMessage(from, { text: adoptedMessage, mentions: [who] }, { quoted: m })
 }
 
-// ───── CONFIGURACIÓN MENÚ ─────
 handler.help = ['adoptado @usuario']
 handler.tags = ['diversión']
 handler.command = ['adoptado']
 handler.group = true
-handler.menu = true 
+handler.menu = true
 
 export default handler
