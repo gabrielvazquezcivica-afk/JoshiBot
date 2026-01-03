@@ -1,50 +1,73 @@
 // sinpito.js | JOSHI-BOT
 
-let handler = async (m, { conn, args, from, isGroup, sender, reply, owner, sock }) => {
+const frases = [
+  "No tienes pito y aún así te crees macho.",
+  "Hasta tu sombra es más viril que tú.",
+  "Si te dieran un pito, seguro lo perderías al instante.",
+  "Sin pito pero con muchas ganas de presumir.",
+  "Eres como un Wi-Fi sin antena, inútil en todos lados.",
+  "Ni con lupa se ve tu pito.",
+  "Tu falta de pito es épica, digno de un meme.",
+  "Sin pito y aún así intentas impresionar a alguien.",
+  "Hasta un pez tiene más pito que tú.",
+  "Tu pito se esconde mejor que un ninja en la noche."
+];
 
-  /* ───── 👑 MODO ADMIN (silencioso) ───── */
-  if (isGroup) {
-    if (!global.db) global.db = {}
-    if (!global.db.groups) global.db.groups = {}
-    if (!global.db.groups[from]) global.db.groups[from] = { modoadmin: false }
+export const handler = async (m, { sock, from, isGroup, sender, reply, owner }) => {
 
-    if (global.db.groups[from].modoadmin) {
-      const metadata = await sock.groupMetadata(from)
-      const participants = metadata.participants || []
-      const ownerJids = owner?.jid || []
-      if (!ownerJids.includes(sender)) {
-        const isAdmin = participants.some(
-          p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
-        )
-        if (!isAdmin) return // 🚫 bloqueo silencioso
-      }
+  if (!isGroup) return reply("🚫 Este comando solo funciona en grupos");
+
+  /* ───── 👑 MODO ADMIN (SILENCIOSO) ───── */
+  if (!global.db) global.db = {};
+  if (!global.db.groups) global.db.groups = {};
+  if (!global.db.groups[from]) {
+    global.db.groups[from] = { modoadmin: false };
+  }
+
+  if (global.db.groups[from].modoadmin) {
+    const metadata = await sock.groupMetadata(from);
+    const participants = metadata.participants || [];
+
+    const ownerJids = owner?.jid || [];
+    if (!ownerJids.includes(sender)) {
+      const isAdmin = participants.some(
+        p =>
+          p.id === sender &&
+          (p.admin === 'admin' || p.admin === 'superadmin')
+      );
+      if (!isAdmin) return;
     }
   }
   /* ─────────────────────────────────── */
 
   // 📌 Detectar mención o respuesta
-  let userMentioned = null
+  let who = null;
   if (m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.length) {
-    userMentioned = m.message.extendedTextMessage.contextInfo.mentionedJid[0]
+    who = m.message.extendedTextMessage.contextInfo.mentionedJid[0];
   } else if (m.message?.extendedTextMessage?.contextInfo?.participant) {
-    userMentioned = m.message.extendedTextMessage.contextInfo.participant
-  } else if (args[0]) {
-    userMentioned = args[0].replace(/[^0-9]/g, '') + '@s.whatsapp.net'
+    who = m.message.extendedTextMessage.contextInfo.participant;
   }
 
-  if (!userMentioned) return reply("⚠️ Debes mencionar o responder a un usuario. Ejemplo: `.sinpito @usuario`")
+  if (!who) return reply("❌ Debes mencionar o responder a alguien");
 
-  // Generar porcentaje aleatorio
-  let porcentaje = Math.floor(Math.random() * 100) + 1
+  // 🎲 Frase aleatoria
+  const frase = frases[Math.floor(Math.random() * frases.length)];
 
-  const mensaje = `_*@${userMentioned.split('@')[0]}* *ES/IS* *${porcentaje}%* *SINPITO,* *ASI CREE QUE LA TIENE GRANDE? 😂 XD*_`
+  const texto = `
+${frase}
+> @${who.split('@')[0]} SIN PITO 😂
+  `.trim();
 
-  await conn.sendMessage(from, { text: mensaje, mentions: [userMentioned] }, { quoted: m })
-}
+  await sock.sendMessage(
+    from,
+    { text: texto, mentions: [who] },
+    { quoted: m }
+  );
+};
 
-handler.help = ['sinpito @usuario']
-handler.tags = ['juegos']
-handler.command = ['sinpito']
-handler.group = true
+handler.command = ['sinpito'];
+handler.tags = ['juegos'];
+handler.menu = true;
+handler.group = true;
 
-export default handler
+export default handler;
