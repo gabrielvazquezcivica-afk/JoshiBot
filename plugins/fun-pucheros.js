@@ -22,31 +22,52 @@ export const handler = async (m, {
     const metadata = await sock.groupMetadata(from)
     const participants = metadata.participants || []
 
+    // 👑 OWNER bypass
     const ownerJids = owner?.jid || []
     if (!ownerJids.includes(sender)) {
       const isAdmin = participants.some(
-        p => p.id === sender &&
-        (p.admin === 'admin' || p.admin === 'superadmin')
+        p =>
+          p.id === sender &&
+          (p.admin === 'admin' || p.admin === 'superadmin')
       )
-      if (!isAdmin) return
+      if (!isAdmin) return // 🚫 bloqueo silencioso
     }
   }
   /* ─────────────────────────────────── */
 
-  // 📌 Detectar usuario (mención o respuesta)
-  const who = m.mentionedJid?.[0] || m.quoted?.sender
-  if (!who) return reply('❌ Responde o menciona a alguien')
+  /* ───── 🎯 DETECTAR MENCIÓN / RESPUESTA ───── */
+  let who
 
-  const nombre = who.split('@')[0]
-  const ejecutor = sender.split('@')[0]
+  const ctx =
+    m.message?.extendedTextMessage?.contextInfo ||
+    m.message?.imageMessage?.contextInfo ||
+    m.message?.videoMessage?.contextInfo
 
+  // 👉 mención
+  if (ctx?.mentionedJid?.length) {
+    who = ctx.mentionedJid[0]
+  }
+  // 👉 responder mensaje
+  else if (ctx?.participant) {
+    who = ctx.participant
+  }
+
+  if (!who) {
+    return reply('❌ Menciona o responde a alguien')
+  }
+  /* ─────────────────────────────────── */
+
+  // 😶 reacción
   await sock.sendMessage(from, {
     react: { text: '😶', key: m.key }
   })
 
-  const texto = `@${ejecutor} le está haciendo pucheros a @${nombre}`
+  const name1 = sender.split('@')[0]
+  const name2 = who.split('@')[0]
 
-  // 🎥 Videos random
+  const texto = `@${name1} le está haciendo pucheros a @${name2}`
+
+  // 🎞️ Videos random
   const videos = [
     'https://telegra.ph/file/e2a25adcb74689a58bcc6.mp4',
     'https://telegra.ph/file/5239f6f8837383fa5bf2d.mp4',
@@ -76,7 +97,6 @@ export const handler = async (m, {
 
 handler.command = ['pucheros', 'pout']
 handler.tags = ['juegos']
-handler.help = ['pucheros @usuario']
 handler.menu = true
 handler.group = true
 
