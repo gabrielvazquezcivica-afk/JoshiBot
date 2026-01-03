@@ -65,5 +65,6 @@ handler.help = ['adoptado @usuario']
 handler.tags = ['juegos']
 handler.command = ['adoptado']
 handler.group = true
+handler.menu = true
 
 export default handler
