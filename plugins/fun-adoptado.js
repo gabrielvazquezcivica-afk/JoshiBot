@@ -48,10 +48,15 @@ export const handler = async (m, {
   /* ─────────────────────────────────── */
 
   // 📌 Detectar mención o respuesta
-  let who =
-    m.mentionedJid?.[0] ||
-    m.message?.extendedTextMessage?.contextInfo?.participant ||
-    null
+  let who = null
+  // Primero mencionados
+  if (m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.length) {
+    who = m.message.extendedTextMessage.contextInfo.mentionedJid[0]
+  } 
+  // Si no hay mención, revisar si respondió mensaje
+  else if (m.message?.extendedTextMessage?.contextInfo?.participant) {
+    who = m.message.extendedTextMessage.contextInfo.participant
+  }
 
   if (!who) return reply("❌ Debes mencionar o responder a alguien")
 
