@@ -17,12 +17,10 @@ export const handler = async (m, {
   if (!global.db) global.db = {}
   if (!global.db.groups) global.db.groups = {}
   if (isGroup && !global.db.groups[from]) {
-    global.db.groups[from] = {
-      modoadmin: false
-    }
+    global.db.groups[from] = { modoadmin: false }
   }
 
-  /* ───── 👑 MODO ADMIN (silencioso) ───── */
+  /* ───── 👑 MODO ADMIN (SILENCIOSO) ───── */
   if (isGroup && global.db.groups[from].modoadmin) {
     const metadata = await sock.groupMetadata(from)
     const participants = metadata.participants || []
@@ -30,23 +28,29 @@ export const handler = async (m, {
     const ownerJids = owner?.jid || []
     if (!ownerJids.includes(sender)) {
       const isAdmin = participants.some(
-        p =>
-          p.id === sender &&
-          (p.admin === 'admin' || p.admin === 'superadmin')
+        p => p.id === sender &&
+        (p.admin === 'admin' || p.admin === 'superadmin')
       )
-      if (!isAdmin) return
+      if (!isAdmin) return // 🚫 bloqueo silencioso
     }
   }
-  /* ─────────────────────────────── */
+  /* ─────────────────────────────────── */
 
-  /* ───── 🔎 DETECTAR MEDIA ───── */
-  const q = m.message?.extendedTextMessage?.contextInfo?.quotedMessage
+  /* ───── 🔎 DETECTAR MEDIA (FIX REAL) ───── */
+  const quoted =
+    m.message?.extendedTextMessage?.contextInfo ||
+    m.message?.imageMessage?.contextInfo ||
+    m.message?.videoMessage?.contextInfo
+
+  const qmsg = quoted?.quotedMessage
 
   const msg =
     m.message?.imageMessage ||
     m.message?.videoMessage ||
-    q?.imageMessage ||
-    q?.videoMessage
+    qmsg?.imageMessage ||
+    qmsg?.videoMessage ||
+    qmsg?.viewOnceMessageV2?.message?.imageMessage ||
+    qmsg?.viewOnceMessageV2?.message?.videoMessage
 
   if (!msg) {
     return reply('❌ Responde a una imagen o video')
@@ -69,7 +73,7 @@ export const handler = async (m, {
       buffer = Buffer.concat([buffer, chunk])
     }
 
-    /* ───── 📂 TEMPORALES ───── */
+    /* ───── 📂 ARCHIVOS TEMPORALES ───── */
     const tmp = os.tmpdir()
     input = path.join(tmp, `stk_in_${Date.now()}.${isVideo ? 'mp4' : 'jpg'}`)
     output = path.join(tmp, `stk_out_${Date.now()}.webp`)
@@ -95,17 +99,18 @@ export const handler = async (m, {
           ]
 
       const ff = spawn('ffmpeg', args)
-
       ff.on('error', reject)
-      ff.on('close', code => {
+      ff.on('close', code =>
         code === 0 ? resolve() : reject(new Error('FFmpeg falló'))
-      })
+      )
     })
 
     /* ───── 📤 ENVIAR STICKER ───── */
-    await sock.sendMessage(from, {
-      sticker: fs.readFileSync(output)
-    }, { quoted: m })
+    await sock.sendMessage(
+      from,
+      { sticker: fs.readFileSync(output) },
+      { quoted: m }
+    )
 
   } catch (e) {
     console.error('STICKER ERROR:', e)
