@@ -53,13 +53,13 @@ export const handler = async (m, {
 
   // 😈 Reacción
   await sock.sendMessage(from, {
-    react: { text: '🥵', key: m.key }
+    react: { text: '🦊', key: m.key }
   })
 
   const mensaje = `
 ━━━━━━━━━━━━━━━
 🥵 *@${who.split('@')[0]}*
-eres más zorra que una novela de las 9  
+eres más zorra que tu madre en 4 patas 
 y tienes un *${porcentaje}%* de serlo 😈
 ━━━━━━━━━━━━━━━
 `.trim()
