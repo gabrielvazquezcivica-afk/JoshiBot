@@ -61,7 +61,7 @@ let handler = async (m, { conn, text, sender, from, isGroup, reply, owner, sock 
 }
 
 handler.help = ['adoptado @usuario']
-handler.tags = ['diversión']
+handler.tags = ['juegos']
 handler.command = ['adoptado']
 handler.group = true
 handler.menu = true
