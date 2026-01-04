@@ -4,67 +4,79 @@ export const handler = async (m, {
   isGroup,
   sender
 }) => {
-
-  if (!isGroup) return reply('👻 Solo funciona en grupos')
+  if (!isGroup) {
+    return reply('🚫 Este comando solo funciona en grupos')
+  }
 
   const from = m.key.remoteJid
 
-  // 🔒 Metadata
+  // 🔒 Metadata del grupo
   const metadata = await sock.groupMetadata(from)
   const participants = metadata.participants || []
 
-  // 👮 Admins reales
   const admins = participants
-    .filter(p => p.admin === 'admin' || p.admin === 'superadmin')
+    .filter(p => p.admin)
     .map(p => p.id)
 
-  // ❌ Solo admins pueden usarlo
+  const groupOwner = metadata.owner
+
+  // ❌ Verificar admin
   if (!admins.includes(sender)) {
-    return reply('⛔ Solo administradores pueden usar este comando')
+    return reply('⛔ Solo los administradores pueden usar este comando')
   }
 
-  // ❌ Si no hay contador
+  // 🧠 DB usuarios del grupo
   if (!global.db.users?.[from]) {
-    return reply('📭 No hay datos de mensajes en este grupo')
+    return reply('📭 Aún no hay datos de mensajes en este grupo')
   }
 
-  // 👻 Detectar fantasmas (< 10 mensajes)
-  const fantasmas = []
+  let fantasmas = []
 
   for (const p of participants) {
     const jid = p.id
-    const isAdmin = admins.includes(jid)
+    const isAdmin = p.admin === 'admin' || p.admin === 'superadmin'
 
+    // 🛡 Protecciones
     if (isAdmin) continue
+    if (jid === groupOwner) continue
 
-    const msgs = global.db.users[from]?.[jid]?.messages || 0
+    const msgs = global.db.users[from][jid]?.messages || 0
 
+    // 👻 Menos de 10 mensajes
     if (msgs < 10) {
-      fantasmas.push(jid)
+      fantasmas.push({ jid, msgs })
     }
   }
 
   if (!fantasmas.length) {
-    return reply('✨ No hay fantasmas para expulsar')
+    return reply('✨ No hay fantasmas en este grupo')
   }
 
-  try {
-    // 🚪 Expulsar todos de golpe
-    await sock.groupParticipantsUpdate(from, fantasmas, 'remove')
+  // 📊 Ordenar por menos mensajes
+  fantasmas.sort((a, b) => a.msgs - b.msgs)
 
-    // ⚡ Reacción silenciosa
-    await sock.sendMessage(from, {
-      react: { text: '👻', key: m.key }
-    })
+  let texto = `👻 *FANTASMAS DEL GRUPO*\n━━━━━━━━━━━━━━━\n`
 
-  } catch (e) {
-    reply('❌ Error al expulsar fantasmas')
-  }
+  fantasmas.forEach((u, i) => {
+    texto += `${i + 1}. @${u.jid.split('@')[0]} — ${u.msgs} mensajes\n`
+  })
+
+  texto += `━━━━━━━━━━━━━━━\n💀 Total: ${fantasmas.length}`
+
+  await sock.sendMessage(
+    from,
+    {
+      text: texto,
+      mentions: fantasmas.map(u => u.jid)
+    },
+    { quoted: m }
+  )
 }
 
-handler.command = ['kickfantasmas']
+handler.command = ['fantasmas']
 handler.tags = ['group']
 handler.group = true
+handler.admin = true
 handler.menu = true
 
 export default handler
