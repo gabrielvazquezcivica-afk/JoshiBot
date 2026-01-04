@@ -32,7 +32,7 @@ let handler = async (m, {
   }
   /* ─────────────────────────────────── */
 
-  // Detectar mención o respuesta
+  // Detectar SOLO responder o mencionar
   let who
   const ctx =
     m.message?.extendedTextMessage?.contextInfo ||
@@ -51,10 +51,7 @@ let handler = async (m, {
     react: { text: '👊🏻', key: m.key }
   })
 
-  const name1 = sender.split('@')[0]
-  const name2 = who.split('@')[0]
-
-  const texto = `🤚 *@${name1}* le dio una bofetada a *@${name2}*`
+  const texto = `👊 *@${sender.split('@')[0]}* le dio una bofetada a *@${who.split('@')[0]}*`
 
   const videos = [
     'https://telegra.ph/file/3ba192c3806b097632d3f.mp4',
@@ -78,10 +75,10 @@ let handler = async (m, {
   )
 }
 
-/* 🔥 ESTO ES LO QUE HACE QUE SALGA EN EL MENÚ 🔥 */
 handler.help = ['slap']
 handler.tags = ['juegos']
-handler.command = /^(slap|bofetada)$/i
+handler.command = ['slap', 'bofetada']
+handler.menu = true
 handler.group = true
 
 export default handler
