@@ -107,7 +107,7 @@ export const handler = async (m, {
   menu += `  
 ══════════════════════  
 
-> ECHO POR SOY•GABO  
+> 𝐄𝐜𝐡𝐨 𝐩𝐨𝐫: 𝑺𝒐𝒚𝑮𝒂𝒃𝒐 ★
 `  
   
   await sock.sendMessage(  
