@@ -52,10 +52,11 @@ global.limits = config.limits
 /* ───────────────────────────── */
 
 /* =====================================================
-   🧠 DB PERSISTENTE (NSFW / MODOADMIN)
+   🧠 DB PERSISTENTE (GROUPS)
 ===================================================== */
 
 const GROUP_DB = './data/groups.json'
+const USERS_DB = './data/users.json'
 
 if (!fs.existsSync('./data')) {
   fs.mkdirSync('./data', { recursive: true })
@@ -65,8 +66,13 @@ if (!fs.existsSync(GROUP_DB)) {
   fs.writeFileSync(GROUP_DB, JSON.stringify({}))
 }
 
+if (!fs.existsSync(USERS_DB)) {
+  fs.writeFileSync(USERS_DB, JSON.stringify({}))
+}
+
 global.db = {
-  groups: {}
+  groups: {},
+  users: {}
 }
 
 try {
@@ -75,8 +81,15 @@ try {
   global.db.groups = {}
 }
 
+try {
+  global.db.users = JSON.parse(fs.readFileSync(USERS_DB))
+} catch {
+  global.db.users = {}
+}
+
 global.saveDB = () => {
   fs.writeFileSync(GROUP_DB, JSON.stringify(global.db.groups, null, 2))
+  fs.writeFileSync(USERS_DB, JSON.stringify(global.db.users, null, 2))
 }
 
 /* ===================================================== */
@@ -174,15 +187,15 @@ async function start () {
     const pushName = m.pushName || 'Sin nombre'
     const text = getText(m)
 
-    // 👻 CONTADOR DE MENSAJES POR GRUPO
-if (!global.db.users) global.db.users = {}
-if (!global.db.users[from]) global.db.users[from] = {}
+    // 👻 CONTADOR DE MENSAJES (PERSISTENTE)
+    if (!global.db.users[from]) global.db.users[from] = {}
 
-if (!global.db.users[from][sender]) {
-  global.db.users[from][sender] = { messages: 0 }
-}
+    if (!global.db.users[from][sender]) {
+      global.db.users[from][sender] = { messages: 0 }
+    }
 
-global.db.users[from][sender].messages++
+    global.db.users[from][sender].messages++
+    fs.writeFileSync(USERS_DB, JSON.stringify(global.db.users, null, 2))
 
     // 🔇 WATCHER DE MUTE
     try {
