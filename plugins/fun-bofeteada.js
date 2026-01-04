@@ -1,5 +1,3 @@
-// fun-slap.js
-
 let handler = async (m, {
   sock,
   from,
@@ -9,7 +7,7 @@ let handler = async (m, {
   owner
 }) => {
 
-  if (!isGroup) return reply('🚫 Solo funciona en grupos')
+  if (!isGroup) return
 
   /* ───── 👑 MODO ADMIN (SILENCIOSO) ───── */
   if (!global.db) global.db = {}
@@ -29,14 +27,13 @@ let handler = async (m, {
           p.id === sender &&
           (p.admin === 'admin' || p.admin === 'superadmin')
       )
-      if (!isAdmin) return // 🚫 bloqueo silencioso
+      if (!isAdmin) return
     }
   }
   /* ─────────────────────────────────── */
 
-  /* ───── 🎯 DETECTAR MENCIÓN / RESPUESTA ───── */
+  // Detectar mención o respuesta
   let who
-
   const ctx =
     m.message?.extendedTextMessage?.contextInfo ||
     m.message?.imageMessage?.contextInfo ||
@@ -48,12 +45,8 @@ let handler = async (m, {
     who = ctx.participant
   }
 
-  if (!who) {
-    return reply('❌ Menciona o responde a alguien para darle la bofetada')
-  }
-  /* ─────────────────────────────────── */
+  if (!who) return reply('❌ Responde o menciona a alguien')
 
-  // 👊 Reacción
   await sock.sendMessage(from, {
     react: { text: '👊🏻', key: m.key }
   })
@@ -63,17 +56,12 @@ let handler = async (m, {
 
   const texto = `🤚 *@${name1}* le dio una bofetada a *@${name2}*`
 
-  // 🎞️ Videos aleatorios
   const videos = [
     'https://telegra.ph/file/3ba192c3806b097632d3f.mp4',
     'https://telegra.ph/file/58b33c082a81f761bbee8.mp4',
     'https://telegra.ph/file/da5011a1c504946832c81.mp4',
     'https://telegra.ph/file/20ac5be925e6cd48f549f.mp4',
-    'https://telegra.ph/file/a00bc137b0beeec056b04.mp4',
-    'https://telegra.ph/file/080f08d0faa15119621fe.mp4',
-    'https://telegra.ph/file/eb0b010b2f249dd189d06.mp4',
-    'https://telegra.ph/file/734cb1e4416d80a299dac.mp4',
-    'https://telegra.ph/file/fc494a26b4e46c9b147d2.mp4'
+    'https://telegra.ph/file/a00bc137b0beeec056b04.mp4'
   ]
 
   const video = videos[Math.floor(Math.random() * videos.length)]
@@ -90,10 +78,10 @@ let handler = async (m, {
   )
 }
 
-handler.help = ['slap', 'bofetada']
+/* 🔥 ESTO ES LO QUE HACE QUE SALGA EN EL MENÚ 🔥 */
+handler.help = ['slap']
 handler.tags = ['juegos']
-handler.command = ['slap', 'bofetada']
+handler.command = /^(slap|bofetada)$/i
 handler.group = true
-handler.menu = true
 
 export default handler
