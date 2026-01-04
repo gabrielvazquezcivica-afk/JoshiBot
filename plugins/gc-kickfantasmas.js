@@ -1,41 +1,70 @@
 export const handler = async (m, {
   sock,
-  from,
-  isGroup
+  reply,
+  isGroup,
+  sender
 }) => {
 
-  if (!isGroup) return
+  if (!isGroup) return reply('👻 Solo funciona en grupos')
 
-  if (!global.db.users?.[from]) return
+  const from = m.key.remoteJid
 
+  // 🔒 Metadata
   const metadata = await sock.groupMetadata(from)
   const participants = metadata.participants || []
 
-  const botJid = sock.user.id.split(':')[0] + '@s.whatsapp.net'
+  // 👮 Admins reales
+  const admins = participants
+    .filter(p => p.admin === 'admin' || p.admin === 'superadmin')
+    .map(p => p.id)
 
+  // ❌ Solo admins pueden usarlo
+  if (!admins.includes(sender)) {
+    return reply('⛔ Solo administradores pueden usar este comando')
+  }
+
+  // ❌ Si no hay contador
+  if (!global.db.users?.[from]) {
+    return reply('📭 No hay datos de mensajes en este grupo')
+  }
+
+  // 👻 Detectar fantasmas (< 10 mensajes)
   const fantasmas = []
 
   for (const p of participants) {
-    if (p.id === botJid) continue
-    if (p.admin) continue
+    const jid = p.id
+    const isAdmin = admins.includes(jid)
 
-    const msgs = global.db.users[from]?.[p.id]?.messages ?? 0
+    if (isAdmin) continue
 
-    if (msgs < 10) fantasmas.push(p.id)
+    const msgs = global.db.users[from]?.[jid]?.messages || 0
+
+    if (msgs < 10) {
+      fantasmas.push(jid)
+    }
   }
 
-  if (!fantasmas.length) return
+  if (!fantasmas.length) {
+    return reply('✨ No hay fantasmas para expulsar')
+  }
 
   try {
+    // 🚪 Expulsar todos de golpe
     await sock.groupParticipantsUpdate(from, fantasmas, 'remove')
-  } catch {
-    // ❌ Silencioso: si el bot no es admin, WhatsApp lo bloquea
+
+    // ⚡ Reacción silenciosa
+    await sock.sendMessage(from, {
+      react: { text: '👻', key: m.key }
+    })
+
+  } catch (e) {
+    reply('❌ Error al expulsar fantasmas')
   }
 }
 
 handler.command = ['kickfantasmas']
-handler.group = true
 handler.tags = ['group']
+handler.group = true
 handler.menu = true
 
 export default handler
