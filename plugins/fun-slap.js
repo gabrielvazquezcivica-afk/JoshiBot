@@ -1,25 +1,18 @@
-let handler = async (m, {
-  sock,
-  from,
-  isGroup,
-  sender,
-  reply,
-  owner
-}) => {
+let handler = async (m, { conn, sock, from, isGroup, sender, owner }) => {
 
-  if (!isGroup) return
-
-  /* ───── 👑 MODO ADMIN (SILENCIOSO) ───── */
+  /* ───── 🧠 DB SAFE ───── */
   if (!global.db) global.db = {}
   if (!global.db.groups) global.db.groups = {}
-  if (!global.db.groups[from]) {
+  if (isGroup && !global.db.groups[from]) {
     global.db.groups[from] = { modoadmin: false }
   }
 
-  if (global.db.groups[from].modoadmin) {
+  /* ───── 👑 MODO ADMIN (SILENCIOSO) ───── */
+  if (isGroup && global.db.groups[from].modoadmin) {
     const metadata = await sock.groupMetadata(from)
     const participants = metadata.participants || []
 
+    // 👑 OWNER bypass
     const ownerJids = owner?.jid || []
     if (!ownerJids.includes(sender)) {
       const isAdmin = participants.some(
@@ -27,44 +20,38 @@ let handler = async (m, {
           p.id === sender &&
           (p.admin === 'admin' || p.admin === 'superadmin')
       )
-      if (!isAdmin) return
+      if (!isAdmin) return // 🚫 bloqueo silencioso
     }
   }
   /* ─────────────────────────────────── */
 
-  // Detectar SOLO responder o mencionar
-  let who
-  const ctx =
-    m.message?.extendedTextMessage?.contextInfo ||
-    m.message?.imageMessage?.contextInfo ||
-    m.message?.videoMessage?.contextInfo
+  if (!m.isGroup) return
 
-  if (ctx?.mentionedJid?.length) {
-    who = ctx.mentionedJid[0]
-  } else if (ctx?.participant) {
-    who = ctx.participant
+  let who =
+    m.mentionedJid?.[0] ||
+    m.quoted?.sender
+
+  if (!who) {
+    return conn.reply(m.chat, '❌ Responde o menciona a alguien', m)
   }
 
-  if (!who) return reply('❌ Responde o menciona a alguien')
-
-  await sock.sendMessage(from, {
+  await conn.sendMessage(m.chat, {
     react: { text: '👊🏻', key: m.key }
   })
 
-  const texto = `👊 *@${sender.split('@')[0]}* le dio una bofetada a *@${who.split('@')[0]}*`
+  let texto = `👊 @${sender.split('@')[0]} le dio una bofetada a @${who.split('@')[0]}`
 
-  const videos = [
+  let videos = [
     'https://telegra.ph/file/3ba192c3806b097632d3f.mp4',
     'https://telegra.ph/file/58b33c082a81f761bbee8.mp4',
     'https://telegra.ph/file/da5011a1c504946832c81.mp4',
-    'https://telegra.ph/file/20ac5be925e6cd48f549f.mp4',
-    'https://telegra.ph/file/a00bc137b0beeec056b04.mp4'
+    'https://telegra.ph/file/20ac5be925e6cd48f549f.mp4'
   ]
 
-  const video = videos[Math.floor(Math.random() * videos.length)]
+  let video = videos[Math.floor(Math.random() * videos.length)]
 
-  await sock.sendMessage(
-    from,
+  await conn.sendMessage(
+    m.chat,
     {
       video: { url: video },
       gifPlayback: true,
@@ -78,7 +65,6 @@ let handler = async (m, {
 handler.help = ['slap']
 handler.tags = ['juegos']
 handler.command = ['slap', 'bofetada']
-handler.menu = true
 handler.group = true
 
 export default handler
