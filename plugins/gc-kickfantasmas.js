@@ -11,25 +11,24 @@ export const handler = async (m, {
   const participants = metadata.participants || []
 
   const isAdmin = (p) =>
-    p.admin === 'admin' || p.admin === 'superadmin'
+    p.admin === 'admin' ||
+    p.admin === 'superadmin' ||
+    p.admin === true
 
-  // ✅ JID REAL DEL USUARIO
-  const senderJid =
-    m.key.participant ||
-    m.participant ||
-    m.sender
+  const senderJid = m.key.participant
+  const botJid = sock.user.id
 
   const userData = participants.find(p => p.id === senderJid)
-  const botData = participants.find(p => p.isMe)
+  const botData = participants.find(p => p.id === botJid)
 
-  // 👤 validar admin usuario
+  // 👮 validar admin usuario
   if (!userData || !isAdmin(userData)) {
     return reply('⛔ Solo administradores pueden usar este comando')
   }
 
   // 🤖 validar admin bot
   if (!botData || !isAdmin(botData)) {
-    return reply('🤖 El bot debe ser admin para expulsar')
+    return reply('🤖 El bot debe ser administrador')
   }
 
   if (!global.db.users?.[from]) {
@@ -39,13 +38,12 @@ export const handler = async (m, {
   const fantasmas = []
 
   for (const p of participants) {
-    const jid = p.id
+    if (p.id === botJid) continue
+    if (isAdmin(p)) continue
 
-    if (p.isMe || isAdmin(p)) continue
+    const msgs = global.db.users[from]?.[p.id]?.messages ?? 0
 
-    const msgs = global.db.users[from]?.[jid]?.messages ?? 0
-
-    if (msgs < 10) fantasmas.push(jid)
+    if (msgs < 10) fantasmas.push(p.id)
   }
 
   if (!fantasmas.length) {
