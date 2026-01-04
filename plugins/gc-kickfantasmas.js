@@ -11,17 +11,17 @@ export const handler = async (m, {
   const metadata = await sock.groupMetadata(from)
   const participants = metadata.participants || []
 
-  const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net'
-  const botData = participants.find(p => p.id === botId)
+  // 👤 datos reales
+  const botData = participants.find(p => p.isMe)
   const userData = participants.find(p => p.id === sender)
 
-  // 👑 Solo admins
-  if (!userData || !userData.admin) {
+  // 👑 solo admins
+  if (!userData?.admin) {
     return reply('⛔ Solo admins pueden usar este comando')
   }
 
-  // 🤖 Bot admin REAL
-  if (!botData || !botData.admin) {
+  // 🤖 bot admin real
+  if (!botData?.admin) {
     return reply('🤖 El bot debe ser admin para expulsar fantasmas')
   }
 
@@ -34,12 +34,12 @@ export const handler = async (m, {
   for (const p of participants) {
     const jid = p.id
 
-    // ❌ Ignorar admins y creador
-    if (p.admin === 'admin' || p.admin === 'superadmin') continue
+    // ❌ ignorar admins y bot
+    if (p.admin || p.isMe) continue
 
     const msgs = global.db.users[from]?.[jid]?.messages ?? 0
 
-    // 👻 Fantasma = menos de 10 mensajes
+    // 👻 fantasma < 10 mensajes
     if (msgs < 10) {
       expulsar.push(jid)
     }
@@ -49,14 +49,12 @@ export const handler = async (m, {
     return reply('✨ No hay fantasmas para expulsar')
   }
 
-  // ⚡ Expulsar de golpe
+  // ⚡ expulsar en bloque
   await sock.groupParticipantsUpdate(from, expulsar, 'remove')
 }
 
 handler.command = ['kickfantasmas']
 handler.group = true
-handler.admin = true
-handler.botAdmin = true
 handler.tags = ['group']
 handler.menu = true
 
