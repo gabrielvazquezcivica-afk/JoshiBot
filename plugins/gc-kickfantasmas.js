@@ -11,17 +11,18 @@ export const handler = async (m, {
   const metadata = await sock.groupMetadata(from)
   const participants = metadata.participants || []
 
-  // 👤 datos reales
+  const isAdmin = (p) => p.admin === 'admin' || p.admin === 'superadmin'
+
   const botData = participants.find(p => p.isMe)
   const userData = participants.find(p => p.id === sender)
 
-  // 👑 solo admins
-  if (!userData?.admin) {
-    return reply('⛔ Solo admins pueden usar este comando')
+  // 👑 usuario admin
+  if (!userData || !isAdmin(userData)) {
+    return reply('⛔ Solo administradores pueden usar este comando')
   }
 
-  // 🤖 bot admin real
-  if (!botData?.admin) {
+  // 🤖 bot admin (admin o superadmin)
+  if (!botData || !isAdmin(botData)) {
     return reply('🤖 El bot debe ser admin para expulsar fantasmas')
   }
 
@@ -35,11 +36,11 @@ export const handler = async (m, {
     const jid = p.id
 
     // ❌ ignorar admins y bot
-    if (p.admin || p.isMe) continue
+    if (isAdmin(p) || p.isMe) continue
 
     const msgs = global.db.users[from]?.[jid]?.messages ?? 0
 
-    // 👻 fantasma < 10 mensajes
+    // 👻 menos de 10 mensajes = fantasma
     if (msgs < 10) {
       expulsar.push(jid)
     }
@@ -49,7 +50,7 @@ export const handler = async (m, {
     return reply('✨ No hay fantasmas para expulsar')
   }
 
-  // ⚡ expulsar en bloque
+  // ⚡ expulsión masiva
   await sock.groupParticipantsUpdate(from, expulsar, 'remove')
 }
 
