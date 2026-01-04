@@ -70,10 +70,10 @@ Se han penetrado a ${user1} con todo y condon hasta quedar seco, has dicho "por 
   )
 }
 
-handler.command = ['humillar', 'humillado']
+handler.command = ['penetrar', 'humillar']
 handler.group = true
-handler.tags = ['fun']
+handler.tags = ['juegos']
 handler.menu = true
-handler.help = ['humillar @usuario']
+handler.help = ['penetrar @usuario']
 
 export default handler
