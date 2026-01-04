@@ -1,7 +1,6 @@
 export const handler = async (m, {
   sock,
   from,
-  sender,
   isGroup,
   reply
 }) => {
@@ -11,47 +10,49 @@ export const handler = async (m, {
   const metadata = await sock.groupMetadata(from)
   const participants = metadata.participants || []
 
-  const isAdmin = (p) => p.admin === 'admin' || p.admin === 'superadmin'
+  const isAdmin = (p) =>
+    p.admin === 'admin' || p.admin === 'superadmin'
 
+  // ✅ JID REAL DEL USUARIO
+  const senderJid =
+    m.key.participant ||
+    m.participant ||
+    m.sender
+
+  const userData = participants.find(p => p.id === senderJid)
   const botData = participants.find(p => p.isMe)
-  const userData = participants.find(p => p.id === sender)
 
-  // 👑 usuario admin
+  // 👤 validar admin usuario
   if (!userData || !isAdmin(userData)) {
     return reply('⛔ Solo administradores pueden usar este comando')
   }
 
-  // 🤖 bot admin (admin o superadmin)
+  // 🤖 validar admin bot
   if (!botData || !isAdmin(botData)) {
-    return reply('🤖 El bot debe ser admin para expulsar fantasmas')
+    return reply('🤖 El bot debe ser admin para expulsar')
   }
 
   if (!global.db.users?.[from]) {
     return reply('📭 No hay datos de mensajes en este grupo')
   }
 
-  const expulsar = []
+  const fantasmas = []
 
   for (const p of participants) {
     const jid = p.id
 
-    // ❌ ignorar admins y bot
-    if (isAdmin(p) || p.isMe) continue
+    if (p.isMe || isAdmin(p)) continue
 
     const msgs = global.db.users[from]?.[jid]?.messages ?? 0
 
-    // 👻 menos de 10 mensajes = fantasma
-    if (msgs < 10) {
-      expulsar.push(jid)
-    }
+    if (msgs < 10) fantasmas.push(jid)
   }
 
-  if (!expulsar.length) {
-    return reply('✨ No hay fantasmas para expulsar')
+  if (!fantasmas.length) {
+    return reply('✨ No hay fantasmas')
   }
 
-  // ⚡ expulsión masiva
-  await sock.groupParticipantsUpdate(from, expulsar, 'remove')
+  await sock.groupParticipantsUpdate(from, fantasmas, 'remove')
 }
 
 handler.command = ['kickfantasmas']
