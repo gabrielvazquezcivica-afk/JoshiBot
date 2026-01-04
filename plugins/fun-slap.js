@@ -1,18 +1,27 @@
-let handler = async (m, { conn, sock, from, isGroup, sender, owner }) => {
+// fun-slap.js | JOSHI-BOT
 
-  /* ───── 🧠 DB SAFE ───── */
+export const handler = async (m, {
+  sock,
+  from,
+  isGroup,
+  sender,
+  reply,
+  owner
+}) => {
+
+  if (!isGroup) return reply('🚫 Este comando solo funciona en grupos')
+
+  /* ───── 👑 MODO ADMIN (SILENCIOSO) ───── */
   if (!global.db) global.db = {}
   if (!global.db.groups) global.db.groups = {}
-  if (isGroup && !global.db.groups[from]) {
+  if (!global.db.groups[from]) {
     global.db.groups[from] = { modoadmin: false }
   }
 
-  /* ───── 👑 MODO ADMIN (SILENCIOSO) ───── */
-  if (isGroup && global.db.groups[from].modoadmin) {
+  if (global.db.groups[from].modoadmin) {
     const metadata = await sock.groupMetadata(from)
     const participants = metadata.participants || []
 
-    // 👑 OWNER bypass
     const ownerJids = owner?.jid || []
     if (!ownerJids.includes(sender)) {
       const isAdmin = participants.some(
@@ -25,33 +34,52 @@ let handler = async (m, { conn, sock, from, isGroup, sender, owner }) => {
   }
   /* ─────────────────────────────────── */
 
-  if (!m.isGroup) return
+  /* ───── 🎯 MENCIÓN O RESPUESTA ───── */
+  let who
 
-  let who =
-    m.mentionedJid?.[0] ||
-    m.quoted?.sender
+  const ctx =
+    m.message?.extendedTextMessage?.contextInfo ||
+    m.message?.imageMessage?.contextInfo ||
+    m.message?.videoMessage?.contextInfo
 
-  if (!who) {
-    return conn.reply(m.chat, '❌ Responde o menciona a alguien', m)
+  if (ctx?.mentionedJid?.length) {
+    who = ctx.mentionedJid[0]
+  } else if (ctx?.participant) {
+    who = ctx.participant
   }
 
-  await conn.sendMessage(m.chat, {
-    react: { text: '👊🏻', key: m.key }
+  if (!who) {
+    return reply('❌ Menciona o responde a alguien para darle una bofetada')
+  }
+  /* ─────────────────────────────────── */
+
+  // 👋 reacción
+  await sock.sendMessage(from, {
+    react: { text: '🖐🏻', key: m.key }
   })
 
-  let texto = `👊 @${sender.split('@')[0]} le dio una bofetada a @${who.split('@')[0]}`
+  const name1 = sender.split('@')[0]
+  const name2 = who.split('@')[0]
 
-  let videos = [
+  const texto = `🖐🏻 *@${name1}* le dio una bofetada a *@${name2}*`
+
+  // 🎞️ Videos random slap
+  const videos = [
     'https://telegra.ph/file/3ba192c3806b097632d3f.mp4',
     'https://telegra.ph/file/58b33c082a81f761bbee8.mp4',
     'https://telegra.ph/file/da5011a1c504946832c81.mp4',
-    'https://telegra.ph/file/20ac5be925e6cd48f549f.mp4'
+    'https://telegra.ph/file/20ac5be925e6cd48f549f.mp4',
+    'https://telegra.ph/file/a00bc137b0beeec056b04.mp4',
+    'https://telegra.ph/file/080f08d0faa15119621fe.mp4',
+    'https://telegra.ph/file/eb0b010b2f249dd189d06.mp4',
+    'https://telegra.ph/file/734cb1e4416d80a299dac.mp4',
+    'https://telegra.ph/file/fc494a26b4e46c9b147d2.mp4'
   ]
 
-  let video = videos[Math.floor(Math.random() * videos.length)]
+  const video = videos[Math.floor(Math.random() * videos.length)]
 
-  await conn.sendMessage(
-    m.chat,
+  await sock.sendMessage(
+    from,
     {
       video: { url: video },
       gifPlayback: true,
@@ -62,9 +90,9 @@ let handler = async (m, { conn, sock, from, isGroup, sender, owner }) => {
   )
 }
 
-handler.help = ['slap']
-handler.tags = ['juegos']
 handler.command = ['slap', 'bofetada']
+handler.tags = ['juegos']
+handler.menu = true
 handler.group = true
 
 export default handler
