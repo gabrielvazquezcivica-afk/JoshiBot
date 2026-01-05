@@ -10,7 +10,7 @@ export const handler = async (m, {
 
   const from = m.key.remoteJid
 
-  // 🔒 Metadata del grupo
+  // 🔒 Metadata
   const metadata = await sock.groupMetadata(from)
   const participants = metadata.participants || []
 
@@ -19,64 +19,86 @@ export const handler = async (m, {
     .map(p => p.id)
 
   const groupOwner = metadata.owner
+  const botOwners = global.owner?.jid || []
 
-  // ❌ Verificar admin
+  // ❌ Verificar admin usuario
   if (!admins.includes(sender)) {
     return reply('⛔ Solo los administradores pueden usar este comando')
   }
 
-  // 🧠 DB usuarios del grupo
-  if (!global.db.users?.[from]) {
-    return reply('📭 Aún no hay datos de mensajes en este grupo')
+  // ❌ Verificar admin bot
+  const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net'
+  if (!admins.includes(botId)) {
+    return reply('🤖 El bot necesita ser *ADMIN* para expulsar fantasmas')
   }
 
+  // 🧠 Verificar DB
+  if (!global.db.users?.[from]) {
+    return reply('📭 No hay datos de mensajes en este grupo')
+  }
+
+  // 👻 Buscar fantasmas
   let fantasmas = []
 
   for (const p of participants) {
     const jid = p.id
-    const isAdmin = p.admin === 'admin' || p.admin === 'superadmin'
 
-    // 🛡 Protecciones
-    if (isAdmin) continue
+    // 👮‍♂️ Ignorar admins
+    if (p.admin) continue
+
+    // 👑 Protecciones
     if (jid === groupOwner) continue
+    if (botOwners.includes(jid)) continue
 
-    const msgs = global.db.users[from][jid]?.messages || 0
+    const msgs = global.db.users[from]?.[jid]?.messages ?? 0
 
-    // 👻 Menos de 10 mensajes
     if (msgs < 10) {
-      fantasmas.push({ jid, msgs })
+      fantasmas.push(jid)
     }
   }
 
   if (!fantasmas.length) {
-    return reply('✨ No hay fantasmas en este grupo')
+    return reply('✨ No hay fantasmas para expulsar')
   }
 
-  // 📊 Ordenar por menos mensajes
-  fantasmas.sort((a, b) => a.msgs - b.msgs)
+  try {
+    // 🚪 Expulsar TODOS de golpe
+    await sock.groupParticipantsUpdate(
+      from,
+      fantasmas,
+      'remove'
+    )
 
-  let texto = `👻 *FANTASMAS DEL GRUPO*\n━━━━━━━━━━━━━━━\n`
+    // ⚡ Reacción
+    await sock.sendMessage(from, {
+      react: { text: '👻', key: m.key }
+    })
 
-  fantasmas.forEach((u, i) => {
-    texto += `${i + 1}. @${u.jid.split('@')[0]} — ${u.msgs} mensajes\n`
-  })
+    // 📢 Mensaje final
+    await sock.sendMessage(from, {
+      text: `
+👻 *LIMPIEZA DE FANTASMAS COMPLETA*
 
-  texto += `━━━━━━━━━━━━━━━\n💀 Total: ${fantasmas.length}`
+🚪 Usuarios expulsados: ${fantasmas.length}
+📉 Criterio: Menos de 10 mensajes
+👮 Moderador: @${sender.split('@')[0]}
 
-  await sock.sendMessage(
-    from,
-    {
-      text: texto,
-      mentions: fantasmas.map(u => u.jid)
-    },
-    { quoted: m }
-  )
+🤖 JoshiBot
+`.trim(),
+      mentions: [sender]
+    }, { quoted: m })
+
+  } catch (e) {
+    console.error(e)
+    reply('❌ Error al expulsar fantasmas')
+  }
 }
 
-handler.command = ['fantasmas']
+handler.command = ['kickfantasmas']
 handler.tags = ['group']
 handler.group = true
 handler.admin = true
+handler.botAdmin = true
 handler.menu = true
 
 export default handler
