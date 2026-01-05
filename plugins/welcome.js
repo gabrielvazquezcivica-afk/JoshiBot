@@ -45,7 +45,7 @@ async function getProfileImage (sock, jid, botJid) {
 }
 
 // ───── MENSAJE ─────
-function buildMessage (action, user) {
+function buildMessage (action, user, total) {
   const jid = normalizeJid(user)
   const number = jid.split('@')[0]
 
@@ -72,6 +72,7 @@ function buildMessage (action, user) {
   }
 ├────────────────
 │ 🗓 ${fecha} ⏰
+│ > 👥 Miembros ${action === 'add' ? 'actuales' : 'restantes'}: ${total}
 ╰─〔 😈 JoshiBot sin piedad 🔥 〕
 `.trim()
 }
@@ -138,7 +139,7 @@ Uso:
 `.trim())
 }
 
-handler.command = ['welcome']
+handler.command = ['welcome on/off']
 handler.tags = ['group']
 handler.group = true
 handler.admin = true
@@ -154,12 +155,15 @@ export async function welcomeEvent (sock, update) {
 
   const botJid = normalizeJid(sock.user.id)
 
+  const metadata = await sock.groupMetadata(id)
+  const total = metadata.participants.length
+
   for (const user of participants) {
     const jid = normalizeJid(user)
     if (!jid) continue
 
     const img = await getProfileImage(sock, jid, botJid)
-    const text = buildMessage(action, jid)
+    const text = buildMessage(action, jid, total)
 
     if (img) {
       await sock.sendMessage(id, {
@@ -174,4 +178,4 @@ export async function welcomeEvent (sock, update) {
       })
     }
   }
-                               }
+}
