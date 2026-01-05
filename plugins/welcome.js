@@ -142,7 +142,6 @@ Uso:
 handler.command = ['welcome on/off']
 handler.tags = ['group']
 handler.group = true
-handler.admin = true
 handler.menu = true
 
 // ───── EVENTO DE GRUPO ─────
