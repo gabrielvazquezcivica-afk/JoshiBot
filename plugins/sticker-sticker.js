@@ -3,6 +3,7 @@ import path from 'path'
 import os from 'os'
 import { spawn } from 'child_process'
 import { downloadContentFromMessage } from '@whiskeysockets/baileys'
+import { Sticker } from 'wa-sticker-formatter' 
 
 export const handler = async (m, {
   sock,
@@ -35,7 +36,7 @@ export const handler = async (m, {
     }
   }
 
-  /* ───── 🔎 DETECTAR MEDIA (ROBUSTO) ───── */
+  /* ───── 🔎 DETECTAR MEDIA ───── */
   const quoted =
     m.message?.extendedTextMessage?.contextInfo ||
     m.message?.imageMessage?.contextInfo ||
@@ -75,7 +76,7 @@ export const handler = async (m, {
     output = path.join(tmp, `stk_out_${Date.now()}.webp`)
     fs.writeFileSync(input, buffer)
 
-    /* ───── 🛠️ FFMPEG FIX VIDEO ───── */
+    /* ───── 🛠️ FFMPEG ───── */
     await new Promise((resolve, reject) => {
       const args = isVideo
         ? [
@@ -86,9 +87,7 @@ export const handler = async (m, {
             'fps=15,format=rgba,setsar=1',
             '-loop', '0',
             '-t', '10',
-            '-preset', 'default',
             '-an',
-            '-vsync', '0',
             output
           ]
         : [
@@ -106,16 +105,19 @@ export const handler = async (m, {
       )
     })
 
-    /* ───── 📤 ENVIAR STICKER ───── */
+    /* ───── 📤 STICKER CON EXIF REAL ───── */
+    const sticker = new Sticker(fs.readFileSync(output), {
+      pack: 'JOSHI BOT',        
+      author: 'Gabriel Indo',   
+      type: 'full',
+      quality: 100
+    })
+
     await sock.sendMessage(
-  from,
-  {
-    sticker: fs.readFileSync(output),
-    packname: 'JoshiBot',     
-    author: 'SoyGabo'   
-  },
-  { quoted: m }
-)
+      from,
+      await sticker.toMessage(),
+      { quoted: m }
+    )
 
   } catch (e) {
     console.error('STICKER ERROR:', e)
