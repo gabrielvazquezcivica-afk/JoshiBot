@@ -3,7 +3,6 @@ import path from 'path'
 import os from 'os'
 import { spawn } from 'child_process'
 import { downloadContentFromMessage } from '@whiskeysockets/baileys'
-import { Sticker } from 'wa-sticker-formatter' 
 
 export const handler = async (m, {
   sock,
@@ -105,17 +104,14 @@ export const handler = async (m, {
       )
     })
 
-    /* ───── 📤 STICKER CON EXIF REAL ───── */
-    const sticker = new Sticker(fs.readFileSync(output), {
-      pack: 'JOSHI BOT',        
-      author: 'Gabriel Indo',   
-      type: 'full',
-      quality: 100
-    })
-
+    /* ───── 📤 ENVIAR STICKER ───── */
     await sock.sendMessage(
       from,
-      await sticker.toMessage(),
+      {
+        sticker: fs.readFileSync(output),
+        packname: 'JOSHI BOT',      
+        author: 'Gabriel Indo'     
+      },
       { quoted: m }
     )
 
