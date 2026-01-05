@@ -8,21 +8,18 @@ export const handler = async (m, {
   if (!isGroup)
     return reply('🚫 Este comando solo funciona en grupos')
 
-  // 🔎 Metadata
+  const cleanJid = jid => jid.split(':')[0] + '@s.whatsapp.net'
+  const senderClean = cleanJid(sender)
+
   const metadata = await sock.groupMetadata(from)
   const participants = metadata.participants || []
 
   const admins = participants
     .filter(p => p.admin)
-    .map(p => p.id)
+    .map(p => cleanJid(p.id))
 
-  // 🧠 BOT REAL (forma correcta)
-  const botJid = participants.find(p =>
-    p.id.includes(sock.user.id.split(':')[0])
-  )?.id
-
-  // 🚫 Solo admins humanos
-  if (!admins.includes(sender)) {
+  // ✅ 
+  if (!admins.includes(senderClean)) {
     return reply(
 `╭─〔 ⛔ ACCESO RESTRINGIDO 〕
 │ Solo administradores
@@ -31,53 +28,42 @@ export const handler = async (m, {
     )
   }
 
-  // 🚫 Bot admin
-  if (!botJid || !admins.includes(botJid)) {
-    return reply('⚠️ El bot necesita ser *administrador* para expulsar usuarios')
+  // 🤖 BOT admin real
+  const botJid = cleanJid(sock.user.id)
+  if (!admins.includes(botJid)) {
+    return reply('⚠️ El bot debe ser administrador')
   }
 
-  // 📭 Sin datos
   if (!global.db.users?.[from]) {
     return reply('📭 No hay datos de mensajes en este grupo')
   }
 
-  /* ───── 👻 FANTASMAS (< 10 mensajes) ───── */
-  const fantasmas = []
+  // 👻 Fantasmas (<10 mensajes)
+  const fantasmas = participants
+    .filter(p => !p.admin)
+    .filter(p => (global.db.users[from][p.id]?.messages ?? 0) < 10)
+    .map(p => p.id)
 
-  for (const p of participants) {
-    if (p.admin) continue
-
-    const msgs = global.db.users[from][p.id]?.messages ?? 0
-    if (msgs < 10) fantasmas.push(p.id)
-  }
-
-  if (!fantasmas.length) {
+  if (!fantasmas.length)
     return reply('✨ No hay fantasmas para expulsar')
-  }
 
-  /* ───── 🚪 EXPULSIÓN ───── */
-  try {
-    await sock.groupParticipantsUpdate(from, fantasmas, 'remove')
+  await sock.groupParticipantsUpdate(from, fantasmas, 'remove')
 
-    await sock.sendMessage(from, {
-      react: { text: '👻', key: m.key }
-    })
+  await sock.sendMessage(from, {
+    react: { text: '👻', key: m.key }
+  })
 
-    await sock.sendMessage(from, {
-      text:
-`╭─〔 👻 LIMPIEZA DE FANTASMAS 〕
-│ Usuarios expulsados: ${fantasmas.length}
+  await sock.sendMessage(from, {
+    text:
+`╭─〔 👻 LIMPIEZA COMPLETA 〕
+│ Fantasmas expulsados: ${fantasmas.length}
 │ (< 10 mensajes)
 │
-│ 👮 Ejecutado por:
-│ @${sender.split('@')[0]}
+│ 👮 Moderador:
+│ @${senderClean.split('@')[0]}
 ╰─〔 🤖 JoshiBot 〕`,
-      mentions: [sender]
-    })
-
-  } catch (e) {
-    reply('❌ No se pudieron expulsar los fantasmas')
-  }
+    mentions: [senderClean]
+  })
 }
 
 handler.command = ['kickfantasmas']
