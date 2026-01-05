@@ -8,7 +8,7 @@ export const handler = async (m, {
   if (!isGroup)
     return reply('🚫 Este comando solo funciona en grupos')
 
-  // 🔎 Metadata del grupo
+  // 🔎 Metadata
   const metadata = await sock.groupMetadata(from)
   const participants = metadata.participants || []
 
@@ -16,20 +16,23 @@ export const handler = async (m, {
     .filter(p => p.admin)
     .map(p => p.id)
 
-  const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net'
+  // 🧠 BOT REAL (forma correcta)
+  const botJid = participants.find(p =>
+    p.id.includes(sock.user.id.split(':')[0])
+  )?.id
 
-  // 🚫 Solo admins pueden usarlo
+  // 🚫 Solo admins humanos
   if (!admins.includes(sender)) {
     return reply(
 `╭─〔 ⛔ ACCESO RESTRINGIDO 〕
-│ Permisos insuficientes
 │ Solo administradores
+│ pueden usar este comando
 ╰─〔 🤖 JoshiBot 〕`
     )
   }
 
-  // 🚫 Bot debe ser admin
-  if (!admins.includes(botId)) {
+  // 🚫 Bot admin
+  if (!botJid || !admins.includes(botJid)) {
     return reply('⚠️ El bot necesita ser *administrador* para expulsar usuarios')
   }
 
@@ -38,27 +41,21 @@ export const handler = async (m, {
     return reply('📭 No hay datos de mensajes en este grupo')
   }
 
-  /* ───── 👻 DETECTAR FANTASMAS ───── */
+  /* ───── 👻 FANTASMAS (< 10 mensajes) ───── */
   const fantasmas = []
 
   for (const p of participants) {
-    const jid = p.id
-
-    // ❌ No admins
     if (p.admin) continue
 
-    const msgs = global.db.users[from][jid]?.messages ?? 0
-
-    if (msgs < 10) {
-      fantasmas.push(jid)
-    }
+    const msgs = global.db.users[from][p.id]?.messages ?? 0
+    if (msgs < 10) fantasmas.push(p.id)
   }
 
   if (!fantasmas.length) {
     return reply('✨ No hay fantasmas para expulsar')
   }
 
-  /* ───── 🚪 EXPULSIÓN MASIVA ───── */
+  /* ───── 🚪 EXPULSIÓN ───── */
   try {
     await sock.groupParticipantsUpdate(from, fantasmas, 'remove')
 
@@ -72,7 +69,7 @@ export const handler = async (m, {
 │ Usuarios expulsados: ${fantasmas.length}
 │ (< 10 mensajes)
 │
-│ 👮 Acción por:
+│ 👮 Ejecutado por:
 │ @${sender.split('@')[0]}
 ╰─〔 🤖 JoshiBot 〕`,
       mentions: [sender]
