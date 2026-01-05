@@ -45,7 +45,7 @@ async function getProfileImage (sock, jid, botJid) {
 }
 
 // ───── MENSAJE ─────
-function buildMessage (action, user, total) {
+function buildMessage (action, user) {
   const jid = normalizeJid(user)
   const number = jid.split('@')[0]
 
@@ -67,12 +67,11 @@ function buildMessage (action, user, total) {
 │ 👤 @${number}
 │ 🔔 ${
     action === 'add'
-      ? 'ENTRADA REGISTRADA 💥 (YA VALISTE MADRE)'
-      : 'SALIDA REGISTRADA 🏳️ (SE RAJÓ)'
+      ? 'ENTRADA REGISTRADA 💥 YA VALISTE MADRE'
+      : 'SALIDA REGISTRADA 🏳️ SE RAJÓ'
   }
 ├────────────────
 │ 🗓 ${fecha} ⏰
-│ > 👥 Miembros ${action === 'add' ? 'actuales' : 'restantes'}: ${total}
 ╰─〔 😈 JoshiBot sin piedad 🔥 〕
 `.trim()
 }
@@ -139,9 +138,10 @@ Uso:
 `.trim())
 }
 
-handler.command = ['welcome on/off']
+handler.command = ['welcome']
 handler.tags = ['group']
 handler.group = true
+handler.admin = true
 handler.menu = true
 
 // ───── EVENTO DE GRUPO ─────
@@ -154,15 +154,12 @@ export async function welcomeEvent (sock, update) {
 
   const botJid = normalizeJid(sock.user.id)
 
-  const metadata = await sock.groupMetadata(id)
-  const total = metadata.participants.length
-
   for (const user of participants) {
     const jid = normalizeJid(user)
     if (!jid) continue
 
     const img = await getProfileImage(sock, jid, botJid)
-    const text = buildMessage(action, jid, total)
+    const text = buildMessage(action, jid)
 
     if (img) {
       await sock.sendMessage(id, {
@@ -177,4 +174,4 @@ export async function welcomeEvent (sock, update) {
       })
     }
   }
-}
+                               }
