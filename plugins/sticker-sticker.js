@@ -108,10 +108,14 @@ export const handler = async (m, {
 
     /* ───── 📤 ENVIAR STICKER ───── */
     await sock.sendMessage(
-      from,
-      { sticker: fs.readFileSync(output) },
-      { quoted: m }
-    )
+  from,
+  {
+    sticker: fs.readFileSync(output),
+    packname: 'JoshiBot',     
+    author: 'SoyGabo'   
+  },
+  { quoted: m }
+)
 
   } catch (e) {
     console.error('STICKER ERROR:', e)
