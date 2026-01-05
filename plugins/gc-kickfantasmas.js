@@ -1,51 +1,39 @@
 export const handler = async (m, {
   sock,
-  from,
-  sender,
   isGroup,
   reply
 }) => {
   if (!isGroup)
-    return reply('🚫 Este comando solo funciona en grupos')
+    return reply('🚫 Solo funciona en grupos')
 
-  const cleanJid = jid => jid.split(':')[0] + '@s.whatsapp.net'
-  const senderClean = cleanJid(sender)
+  const jidClean = jid => jid.split(':')[0] + '@s.whatsapp.net'
+  const from = m.key.remoteJid
+  const userJid = jidClean(m.sender)
 
   const metadata = await sock.groupMetadata(from)
-  const participants = metadata.participants || []
 
-  const admins = participants
+  const admins = metadata.participants
     .filter(p => p.admin)
-    .map(p => cleanJid(p.id))
+    .map(p => jidClean(p.id))
 
-  // ✅ 
-  if (!admins.includes(senderClean)) {
-    return reply(
-`╭─〔 ⛔ ACCESO RESTRINGIDO 〕
-│ Solo administradores
-│ pueden usar este comando
-╰─〔 🤖 JoshiBot 〕`
-    )
+  // ✅ ESTA VEZ SÍ
+  if (!admins.includes(userJid)) {
+    return reply('⛔ Solo administradores pueden usar este comando')
   }
 
-  // 🤖 BOT admin real
-  const botJid = cleanJid(sock.user.id)
-  if (!admins.includes(botJid)) {
-    return reply('⚠️ El bot debe ser administrador')
-  }
+  const botJid = jidClean(sock.user.id)
+  if (!admins.includes(botJid))
+    return reply('⚠️ El bot no es admin')
 
-  if (!global.db.users?.[from]) {
-    return reply('📭 No hay datos de mensajes en este grupo')
-  }
+  const users = global.db.users[from] || {}
 
-  // 👻 Fantasmas (<10 mensajes)
-  const fantasmas = participants
+  const fantasmas = metadata.participants
     .filter(p => !p.admin)
-    .filter(p => (global.db.users[from][p.id]?.messages ?? 0) < 10)
+    .filter(p => (users[p.id]?.messages || 0) < 10)
     .map(p => p.id)
 
   if (!fantasmas.length)
-    return reply('✨ No hay fantasmas para expulsar')
+    return reply('✨ No hay fantasmas')
 
   await sock.groupParticipantsUpdate(from, fantasmas, 'remove')
 
@@ -53,21 +41,10 @@ export const handler = async (m, {
     react: { text: '👻', key: m.key }
   })
 
-  await sock.sendMessage(from, {
-    text:
-`╭─〔 👻 LIMPIEZA COMPLETA 〕
-│ Fantasmas expulsados: ${fantasmas.length}
-│ (< 10 mensajes)
-│
-│ 👮 Moderador:
-│ @${senderClean.split('@')[0]}
-╰─〔 🤖 JoshiBot 〕`,
-    mentions: [senderClean]
-  })
+  await reply(`👻 Fantasmas expulsados: ${fantasmas.length}`)
 }
 
 handler.command = ['kickfantasmas']
-handler.tags = ['group']
 handler.group = true
 handler.menu = true
 
