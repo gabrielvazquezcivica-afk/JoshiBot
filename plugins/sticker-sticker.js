@@ -35,7 +35,7 @@ export const handler = async (m, {
     }
   }
 
-  /* ───── 🔎 DETECTAR MEDIA ───── */
+  /* ───── 🔎 DETECTAR MEDIA (ROBUSTO) ───── */
   const quoted =
     m.message?.extendedTextMessage?.contextInfo ||
     m.message?.imageMessage?.contextInfo ||
@@ -75,7 +75,7 @@ export const handler = async (m, {
     output = path.join(tmp, `stk_out_${Date.now()}.webp`)
     fs.writeFileSync(input, buffer)
 
-    /* ───── 🛠️ FFMPEG ───── */
+    /* ───── 🛠️ FFMPEG FIX VIDEO ───── */
     await new Promise((resolve, reject) => {
       const args = isVideo
         ? [
@@ -86,7 +86,9 @@ export const handler = async (m, {
             'fps=15,format=rgba,setsar=1',
             '-loop', '0',
             '-t', '10',
+            '-preset', 'default',
             '-an',
+            '-vsync', '0',
             output
           ]
         : [
@@ -107,11 +109,7 @@ export const handler = async (m, {
     /* ───── 📤 ENVIAR STICKER ───── */
     await sock.sendMessage(
       from,
-      {
-        sticker: fs.readFileSync(output),
-        packname: 'JOSHI BOT',      
-        author: 'Gabriel Indo'     
-      },
+      { sticker: fs.readFileSync(output) },
       { quoted: m }
     )
 
