@@ -3,12 +3,26 @@ export const handler = async (m, {
   isGroup,
   reply
 }) => {
+
   if (!isGroup)
     return reply('🚫 Solo funciona en grupos')
 
-  const jidClean = jid => jid.split(':')[0] + '@s.whatsapp.net'
+  const getSender = m =>
+    m.sender ||
+    m.key?.participant ||
+    m.participant ||
+    null
+
+  const jidClean = jid => {
+    if (!jid) return null
+    return jid.split(':')[0]
+  }
+
   const from = m.key.remoteJid
-  const userJid = jidClean(m.sender)
+  const senderJid = jidClean(getSender(m))
+
+  if (!senderJid)
+    return reply('❌ No pude identificar al usuario')
 
   const metadata = await sock.groupMetadata(from)
 
@@ -16,14 +30,14 @@ export const handler = async (m, {
     .filter(p => p.admin)
     .map(p => jidClean(p.id))
 
-  // ✅ ESTA VEZ SÍ
-  if (!admins.includes(userJid)) {
+  // 🔒 VERIFICAR ADMIN REAL
+  if (!admins.includes(senderJid)) {
     return reply('⛔ Solo administradores pueden usar este comando')
   }
 
   const botJid = jidClean(sock.user.id)
   if (!admins.includes(botJid))
-    return reply('⚠️ El bot no es admin')
+    return reply('⚠️ El bot necesita ser admin')
 
   const users = global.db.users[from] || {}
 
