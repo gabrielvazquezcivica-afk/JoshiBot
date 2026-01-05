@@ -4,101 +4,62 @@ export const handler = async (m, {
   isGroup,
   sender
 }) => {
-  if (!isGroup) {
-    return reply('🚫 Este comando solo funciona en grupos')
-  }
+  if (!isGroup) return reply('👻 Solo funciona en grupos')
 
   const from = m.key.remoteJid
-
-  // 🔒 Metadata
   const metadata = await sock.groupMetadata(from)
-  const participants = metadata.participants || []
 
-  const admins = participants
-    .filter(p => p.admin)
-    .map(p => p.id)
+  // ✅ verificar admin REAL
+  const isAdmin = metadata.participants.some(
+    p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
+  )
 
-  const groupOwner = metadata.owner
-  const botOwners = global.owner?.jid || []
-
-  // ❌ Verificar admin usuario
-  if (!admins.includes(sender)) {
+  if (!isAdmin) {
     return reply('⛔ Solo los administradores pueden usar este comando')
   }
 
-  // ❌ Verificar admin bot
+  // ✅ verificar bot admin
   const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net'
-  if (!admins.includes(botId)) {
-    return reply('🤖 El bot necesita ser *ADMIN* para expulsar fantasmas')
+  const isBotAdmin = metadata.participants.some(
+    p => p.id === botId && (p.admin === 'admin' || p.admin === 'superadmin')
+  )
+
+  if (!isBotAdmin) {
+    return reply('🤖 El bot necesita ser administrador')
   }
 
-  // 🧠 Verificar DB
+  // 📭 DB
   if (!global.db.users?.[from]) {
-    return reply('📭 No hay datos de mensajes en este grupo')
+    return reply('📭 Aún no hay registros de mensajes')
   }
 
-  // 👻 Buscar fantasmas
-  let fantasmas = []
-
-  for (const p of participants) {
-    const jid = p.id
-
-    // 👮‍♂️ Ignorar admins
-    if (p.admin) continue
-
-    // 👑 Protecciones
-    if (jid === groupOwner) continue
-    if (botOwners.includes(jid)) continue
-
-    const msgs = global.db.users[from]?.[jid]?.messages ?? 0
-
-    if (msgs < 10) {
-      fantasmas.push(jid)
-    }
-  }
+  const fantasmas = metadata.participants.filter(p => {
+    if (p.admin) return false
+    const msgs = global.db.users[from][p.id]?.messages || 0
+    return msgs < 10
+  })
 
   if (!fantasmas.length) {
-    return reply('✨ No hay fantasmas para expulsar')
+    return reply('✨ No hay fantasmas en este grupo')
   }
 
+  const ids = fantasmas.map(u => u.id)
+
   try {
-    // 🚪 Expulsar TODOS de golpe
-    await sock.groupParticipantsUpdate(
-      from,
-      fantasmas,
-      'remove'
-    )
+    await sock.groupParticipantsUpdate(from, ids, 'remove')
 
-    // ⚡ Reacción
     await sock.sendMessage(from, {
-      react: { text: '👻', key: m.key }
-    })
-
-    // 📢 Mensaje final
-    await sock.sendMessage(from, {
-      text: `
-👻 *LIMPIEZA DE FANTASMAS COMPLETA*
-
-🚪 Usuarios expulsados: ${fantasmas.length}
-📉 Criterio: Menos de 10 mensajes
-👮 Moderador: @${sender.split('@')[0]}
-
-🤖 JoshiBot
-`.trim(),
-      mentions: [sender]
+      text: `👻 ${ids.length} fantasmas expulsados`
     }, { quoted: m })
 
   } catch (e) {
-    console.error(e)
     reply('❌ Error al expulsar fantasmas')
   }
 }
 
 handler.command = ['kickfantasmas']
-handler.tags = ['group']
 handler.group = true
+handler.tags = ['group']
 handler.admin = true
 handler.botAdmin = true
 handler.menu = true
-
-export default handler
