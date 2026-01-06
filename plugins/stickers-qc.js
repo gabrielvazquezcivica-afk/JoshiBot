@@ -4,18 +4,18 @@ import os from 'os'
 import axios from 'axios'
 import { spawn } from 'child_process'
 
-/* ───── CREAR STICKER ───── */
-async function makeSticker(buffer, pack, author) {
+/* ───── FUNCIÓN PNG → WEBP (STICKER) ───── */
+async function toSticker(buffer) {
   const tmpIn = path.join(os.tmpdir(), `${Date.now()}.png`)
   const tmpOut = path.join(os.tmpdir(), `${Date.now()}.webp`)
-
   fs.writeFileSync(tmpIn, buffer)
 
   await new Promise((resolve, reject) => {
     const ff = spawn('ffmpeg', [
       '-i', tmpIn,
       '-vcodec', 'libwebp',
-      '-vf', 'scale=512:512:force_original_aspect_ratio=decrease,fps=15',
+      '-vf',
+      'scale=512:512:force_original_aspect_ratio=decrease,fps=15',
       '-lossless', '1',
       '-loop', '0',
       '-preset', 'default',
@@ -23,24 +23,24 @@ async function makeSticker(buffer, pack, author) {
       '-vsync', '0',
       tmpOut
     ])
-    ff.on('close', c => c === 0 ? resolve() : reject())
+    ff.on('close', code => code === 0 ? resolve() : reject())
     ff.on('error', reject)
   })
 
-  const result = fs.readFileSync(tmpOut)
+  const out = fs.readFileSync(tmpOut)
   fs.unlinkSync(tmpIn)
   fs.unlinkSync(tmpOut)
-  return result
+  return out
 }
 
 /* ───── COMANDO QC ───── */
 export const handler = async (m, {
   sock,
   from,
-  sender,
   isGroup,
-  args,
+  sender,
   reply,
+  args,
   owner
 }) => {
 
@@ -48,16 +48,15 @@ export const handler = async (m, {
   if (isGroup) {
     if (!global.db) global.db = {}
     if (!global.db.groups) global.db.groups = {}
-    if (!global.db.groups[from]) {
-      global.db.groups[from] = { modoadmin: false }
-    }
+    if (!global.db.groups[from]) global.db.groups[from] = { modoadmin: false }
 
     if (global.db.groups[from].modoadmin) {
       const meta = await sock.groupMetadata(from)
+      const participants = meta.participants || []
       const ownerJids = owner?.jid || []
 
       if (!ownerJids.includes(sender)) {
-        const isAdmin = meta.participants.some(
+        const isAdmin = participants.some(
           p => p.id === sender &&
           (p.admin === 'admin' || p.admin === 'superadmin')
         )
@@ -67,92 +66,91 @@ export const handler = async (m, {
   }
   /* ─────────────────────────────────── */
 
+  /* ───── TARGET (mención > reply > sender) ───── */
+  let target =
+    m.mentionedJid?.[0] ||
+    m.quoted?.sender ||
+    sender
+
   /* ───── TEXTO ───── */
   let text = args.join(' ').trim()
-  if (!text && m.quoted?.text) text = m.quoted.text
-  if (!text) return reply('❌ Escribe un texto')
-  if (text.length > 30) return reply('❌ Máximo 30 caracteres')
+  if (m.quoted?.text && !args.length) text = m.quoted.text
+  if (!text) return reply('❌ Escribe un texto o responde un mensaje.')
 
-  /* ───── TARGET ───── */
-  let target = sender
-  const ctx = m.message?.extendedTextMessage?.contextInfo
-
-  if (ctx?.mentionedJid?.length) {
-    target = ctx.mentionedJid[0]
-    text = text.replace(/@\d+/g, '').trim()
-  } else if (ctx?.participant) {
-    target = ctx.participant
+  if (text.length > 30) {
+    return reply('❌ Máximo 30 caracteres.')
   }
 
-  /* ───── OBTENER NOMBRE REAL (FIX) ───── */
-  let name = 'Usuario'
+  /* ───── FOTO ───── */
+  let pp = 'https://telegra.ph/file/24fa902ead26340f3df2c.png'
+  try {
+    pp = await sock.profilePictureUrl(target, 'image')
+  } catch {}
+
+  /* ───── NOMBRE REAL (ANTI-NÚMEROS DEFINITIVO) ───── */
+  let name = 'Sin nombre'
 
   if (isGroup) {
     const meta = await sock.groupMetadata(from)
     const user = meta.participants.find(p => p.id === target)
 
-    if (user?.name) name = user.name
-    else if (user?.notify) name = user.notify
-    else if (user?.id) name = user.id.split('@')[0]
+    if (user?.notify) {
+      name = user.notify
+    } else if (sock.contacts?.[target]?.name) {
+      name = sock.contacts[target].name
+    } else if (sock.contacts?.[target]?.notify) {
+      name = sock.contacts[target].notify
+    }
   } else {
-    name = m.pushName || target.split('@')[0]
+    name = m.pushName || 'Sin nombre'
   }
 
-  /* ───── FOTO PERFIL ───── */
-  const pp = await sock.profilePictureUrl(target, 'image')
-    .catch(() => 'https://telegra.ph/file/24fa902ead26340f3df2c.png')
-
-  /* ───── PAYLOAD QC ───── */
-  const payload = {
-    type: 'quote',
-    format: 'png',
-    backgroundColor: '#000000',
-    width: 512,
-    height: 768,
-    scale: 2,
-    messages: [{
-      avatar: true,
-      from: {
-        id: 1,
-        name,
-        photo: { url: pp }
-      },
-      text,
-      replyMessage: {}
-    }]
-  }
-
+  /* ───── API QC ───── */
   try {
+    const obj = {
+      type: 'quote',
+      format: 'png',
+      backgroundColor: '#0f0f0f',
+      width: 512,
+      height: 768,
+      scale: 2,
+      messages: [{
+        avatar: true,
+        from: {
+          id: 1,
+          name: name,
+          photo: { url: pp }
+        },
+        text,
+        replyMessage: {}
+      }]
+    }
+
     const res = await axios.post(
       'https://bot.lyo.su/quote/generate',
-      payload,
+      obj,
       { headers: { 'Content-Type': 'application/json' } }
     )
 
     const buffer = Buffer.from(res.data.result.image, 'base64')
+    const sticker = await toSticker(buffer)
 
-    const sticker = await makeSticker(
-      buffer,
-      'JoshiBot',
-      name
+    await sock.sendMessage(
+      from,
+      { sticker },
+      { quoted: m }
     )
-
-    await sock.sendMessage(from, { sticker }, { quoted: m })
 
   } catch (e) {
     console.error('QC ERROR:', e)
-    reply('❌ Error al crear el sticker')
+    reply('❌ Error al generar el sticker.')
   }
 }
 
 handler.command = ['qc']
 handler.tags = ['stickers']
+handler.help = ['qc <texto> | qc @usuario <texto>']
 handler.menu = true
 handler.group = true
-handler.help = [
-  'qc <texto>',
-  'qc @usuario <texto>',
-  'qc (respondiendo)'
-]
 
 export default handler
