@@ -4,8 +4,8 @@ import os from 'os'
 import axios from 'axios'
 import { spawn } from 'child_process'
 
-/* ───── FUNCIÓN PNG → WEBP (STICKER) ───── */
-async function toSticker(buffer) {
+// ───── FUNCIÓN PARA CREAR STICKER ─────
+async function createSticker(buffer) {
   const tmpIn = path.join(os.tmpdir(), `${Date.now()}.png`)
   const tmpOut = path.join(os.tmpdir(), `${Date.now()}.webp`)
   fs.writeFileSync(tmpIn, buffer)
@@ -14,8 +14,7 @@ async function toSticker(buffer) {
     const ff = spawn('ffmpeg', [
       '-i', tmpIn,
       '-vcodec', 'libwebp',
-      '-vf',
-      'scale=512:512:force_original_aspect_ratio=decrease,fps=15',
+      '-vf', 'scale=512:512:force_original_aspect_ratio=decrease,fps=15',
       '-lossless', '1',
       '-loop', '0',
       '-preset', 'default',
@@ -27,20 +26,20 @@ async function toSticker(buffer) {
     ff.on('error', reject)
   })
 
-  const out = fs.readFileSync(tmpOut)
+  const result = fs.readFileSync(tmpOut)
   fs.unlinkSync(tmpIn)
   fs.unlinkSync(tmpOut)
-  return out
+  return result
 }
 
-/* ───── COMANDO QC ───── */
+// ───── COMANDO QC ─────
 export const handler = async (m, {
   sock,
   from,
+  args,
   isGroup,
   sender,
   reply,
-  args,
   owner
 }) => {
 
@@ -48,66 +47,48 @@ export const handler = async (m, {
   if (isGroup) {
     if (!global.db) global.db = {}
     if (!global.db.groups) global.db.groups = {}
-    if (!global.db.groups[from]) global.db.groups[from] = { modoadmin: false }
+    if (!global.db.groups[from]) {
+      global.db.groups[from] = { modoadmin: false }
+    }
 
     if (global.db.groups[from].modoadmin) {
-      const meta = await sock.groupMetadata(from)
-      const participants = meta.participants || []
+      const metadata = await sock.groupMetadata(from)
+      const participants = metadata.participants || []
       const ownerJids = owner?.jid || []
 
       if (!ownerJids.includes(sender)) {
         const isAdmin = participants.some(
-          p => p.id === sender &&
-          (p.admin === 'admin' || p.admin === 'superadmin')
+          p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
         )
-        if (!isAdmin) return
+        if (!isAdmin) return // 🚫 bloqueo silencioso
       }
     }
   }
   /* ─────────────────────────────────── */
 
-  /* ───── TARGET (mención > reply > sender) ───── */
-  let target =
-    m.mentionedJid?.[0] ||
-    m.quoted?.sender ||
-    sender
-
-  /* ───── TEXTO ───── */
   let text = args.join(' ').trim()
-  if (m.quoted?.text && !args.length) text = m.quoted.text
-  if (!text) return reply('❌ Escribe un texto o responde un mensaje.')
+  if (!text && m.quoted?.text) text = m.quoted.text
+  if (!text) return reply('❌ Escribe un texto para el QC.\nEjemplo: `.qc Hola mundo`')
 
-  if (text.length > 30) {
-    return reply('❌ Máximo 30 caracteres.')
-  }
+  if (text.length > 30)
+    return reply('❌ El texto no puede tener más de 30 caracteres.')
 
-  /* ───── FOTO ───── */
-  let pp = 'https://telegra.ph/file/24fa902ead26340f3df2c.png'
+  // ───── NOMBRE REAL ─────
+  const name =
+    m.pushName ||
+    (isGroup
+      ? (await sock.groupMetadata(from))
+          .participants
+          .find(p => p.id === sender)?.name
+      : null) ||
+    sender.split('@')[0]
+
+  // ───── FOTO REAL ─────
+  const avatar = await sock.profilePictureUrl(sender, 'image')
+    .catch(() => 'https://telegra.ph/file/24fa902ead26340f3df2c.png')
+
   try {
-    pp = await sock.profilePictureUrl(target, 'image')
-  } catch {}
-
-  /* ───── NOMBRE REAL (ANTI-NÚMEROS DEFINITIVO) ───── */
-  let name = 'Sin nombre'
-
-  if (isGroup) {
-    const meta = await sock.groupMetadata(from)
-    const user = meta.participants.find(p => p.id === target)
-
-    if (user?.notify) {
-      name = user.notify
-    } else if (sock.contacts?.[target]?.name) {
-      name = sock.contacts[target].name
-    } else if (sock.contacts?.[target]?.notify) {
-      name = sock.contacts[target].notify
-    }
-  } else {
-    name = m.pushName || 'Sin nombre'
-  }
-
-  /* ───── API QC ───── */
-  try {
-    const obj = {
+    const body = {
       type: 'quote',
       format: 'png',
       backgroundColor: '#0f0f0f',
@@ -118,8 +99,8 @@ export const handler = async (m, {
         avatar: true,
         from: {
           id: 1,
-          name: name,
-          photo: { url: pp }
+          name,
+          photo: { url: avatar }
         },
         text,
         replyMessage: {}
@@ -128,12 +109,15 @@ export const handler = async (m, {
 
     const res = await axios.post(
       'https://bot.lyo.su/quote/generate',
-      obj,
+      body,
       { headers: { 'Content-Type': 'application/json' } }
     )
 
+    if (!res.data?.result?.image)
+      throw 'Respuesta inválida de la API'
+
     const buffer = Buffer.from(res.data.result.image, 'base64')
-    const sticker = await toSticker(buffer)
+    const sticker = await createSticker(buffer)
 
     await sock.sendMessage(
       from,
@@ -143,14 +127,14 @@ export const handler = async (m, {
 
   } catch (e) {
     console.error('QC ERROR:', e)
-    reply('❌ Error al generar el sticker.')
+    reply('❌ Error al generar el QC.')
   }
 }
 
 handler.command = ['qc']
 handler.tags = ['stickers']
-handler.help = ['qc <texto> | qc @usuario <texto>']
+handler.help = ['qc <texto>']
 handler.menu = true
-handler.group = true
+handler.group = false
 
 export default handler
