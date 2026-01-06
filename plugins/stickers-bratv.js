@@ -1,6 +1,43 @@
+import fs from 'fs'
+import path from 'path'
+import os from 'os'
 import fetch from 'node-fetch'
-import { Sticker } from 'wa-sticker-formatter'
+import { spawn } from 'child_process'
 
+// ───── FUNCIÓN VIDEO → STICKER ─────
+async function videoToSticker(buffer, pack = 'JoshiBot', author = 'JoshiBot') {
+  const tmpMp4 = path.join(os.tmpdir(), `${Date.now()}.mp4`)
+  const tmpWebp = path.join(os.tmpdir(), `${Date.now()}.webp`)
+
+  fs.writeFileSync(tmpMp4, buffer)
+
+  await new Promise((resolve, reject) => {
+    const ff = spawn('ffmpeg', [
+      '-i', tmpMp4,
+      '-vf',
+      'scale=512:512:force_original_aspect_ratio=decrease,fps=15',
+      '-loop', '0',
+      '-ss', '0',
+      '-t', '6',
+      '-preset', 'default',
+      '-an',
+      '-vsync', '0',
+      '-vcodec', 'libwebp',
+      tmpWebp
+    ])
+
+    ff.on('close', code => code === 0 ? resolve() : reject())
+    ff.on('error', reject)
+  })
+
+  const sticker = fs.readFileSync(tmpWebp)
+  fs.unlinkSync(tmpMp4)
+  fs.unlinkSync(tmpWebp)
+
+  return sticker
+}
+
+// ───── COMANDO ─────
 export const handler = async (m, {
   sock,
   from,
@@ -29,45 +66,42 @@ export const handler = async (m, {
           p => p.id === sender &&
           (p.admin === 'admin' || p.admin === 'superadmin')
         )
-        if (!isAdmin) return // 🚫 bloqueo silencioso
+        if (!isAdmin) return
       }
     }
   }
   /* ─────────────────────────────────── */
 
-  // ⏳ reacción inicial
+  const text = args.join(' ').trim()
+  if (!text) {
+    return reply('❌ Ejemplo:\n.bratv Hola mundo')
+  }
+
   await sock.sendMessage(from, {
     react: { text: '⏳', key: m.key }
   })
 
   try {
-    const texto = args.join(' ').trim()
-    if (!texto) {
-      return reply('❌ Ejemplo:\n.bravt Hola mundo')
-    }
+    const api =
+      `https://api.ypnk.dpdns.org/api/video/bratv?text=${encodeURIComponent(text)}`
 
-    const apiUrl =
-      `https://api.ypnk.dpdns.org/api/video/bratv?text=${encodeURIComponent(texto)}`
+    const res = await fetch(api)
+    if (!res.ok) throw new Error('API falló')
 
-    const res = await fetch(apiUrl)
-    if (!res.ok) throw new Error('API no respondió')
+    const buffer = await res.buffer()
 
-    const videoBuffer = await res.buffer()
-
-    const sticker = new Sticker(videoBuffer, {
-      pack: 'JoshiBot',
-      author: sender.split('@')[0],
-      type: 'crop',
-      quality: 50
-    })
+    const sticker = await videoToSticker(
+      buffer,
+      'JoshiBot',
+      sender.split('@')[0]
+    )
 
     await sock.sendMessage(
       from,
-      { sticker: await sticker.toBuffer() },
+      { sticker },
       { quoted: m }
     )
 
-    // ✅ reacción final
     await sock.sendMessage(from, {
       react: { text: '✅', key: m.key }
     })
@@ -77,7 +111,7 @@ export const handler = async (m, {
     await sock.sendMessage(from, {
       react: { text: '❌', key: m.key }
     })
-    reply('❌ Error al crear el sticker de video')
+    reply('❌ Error al crear el sticker')
   }
 }
 
