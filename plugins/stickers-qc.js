@@ -99,7 +99,7 @@ export const handler = async (m, {
 }
 
 handler.command = ['qc']
-handler.tags = ['sticker']
+handler.tags = ['stickers']
 handler.help = ['qc <texto>']
 handler.group = true
 handler.menu = true
