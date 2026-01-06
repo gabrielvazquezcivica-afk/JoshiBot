@@ -4,7 +4,7 @@ import os from 'os'
 import axios from 'axios'
 import { spawn } from 'child_process'
 
-// ───── FUNCIÓN PARA CREAR STICKER ─────
+// ───── CREAR STICKER ─────
 async function createSticker(buffer) {
   const tmpIn = path.join(os.tmpdir(), `${Date.now()}.png`)
   const tmpOut = path.join(os.tmpdir(), `${Date.now()}.webp`)
@@ -58,7 +58,8 @@ export const handler = async (m, {
 
       if (!ownerJids.includes(sender)) {
         const isAdmin = participants.some(
-          p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
+          p => p.id === sender &&
+          (p.admin === 'admin' || p.admin === 'superadmin')
         )
         if (!isAdmin) return // 🚫 bloqueo silencioso
       }
@@ -66,25 +67,34 @@ export const handler = async (m, {
   }
   /* ─────────────────────────────────── */
 
-  let text = args.join(' ').trim()
-  if (!text && m.quoted?.text) text = m.quoted.text
-  if (!text) return reply('❌ Escribe un texto para el QC.\nEjemplo: `.qc Hola mundo`')
+  // ───── OBLIGAR MENCIÓN ─────
+  const ctx = m.message?.extendedTextMessage?.contextInfo
+  const target = ctx?.mentionedJid?.[0]
+
+  if (!target)
+    return reply('❌ Debes mencionar a alguien.\nEjemplo:\n.qc @usuario Hola')
+
+  // ───── TEXTO SIN MENCIÓN ─────
+  let text = args.join(' ')
+    .replace(/@\d+/g, '')
+    .trim()
+
+  if (!text)
+    return reply('❌ Escribe el texto del QC.')
 
   if (text.length > 30)
     return reply('❌ El texto no puede tener más de 30 caracteres.')
 
-  // ───── NOMBRE REAL ─────
-  const name =
-    m.pushName ||
-    (isGroup
-      ? (await sock.groupMetadata(from))
-          .participants
-          .find(p => p.id === sender)?.name
-      : null) ||
-    sender.split('@')[0]
+  // ───── NOMBRE REAL DEL MENCIONADO ─────
+  let name = target.split('@')[0]
+  if (isGroup) {
+    const metadata = await sock.groupMetadata(from)
+    const user = metadata.participants.find(p => p.id === target)
+    if (user?.name) name = user.name
+  }
 
-  // ───── FOTO REAL ─────
-  const avatar = await sock.profilePictureUrl(sender, 'image')
+  // ───── FOTO REAL DEL MENCIONADO ─────
+  const avatar = await sock.profilePictureUrl(target, 'image')
     .catch(() => 'https://telegra.ph/file/24fa902ead26340f3df2c.png')
 
   try {
@@ -114,7 +124,7 @@ export const handler = async (m, {
     )
 
     if (!res.data?.result?.image)
-      throw 'Respuesta inválida de la API'
+      throw 'API inválida'
 
     const buffer = Buffer.from(res.data.result.image, 'base64')
     const sticker = await createSticker(buffer)
@@ -133,8 +143,8 @@ export const handler = async (m, {
 
 handler.command = ['qc']
 handler.tags = ['stickers']
-handler.help = ['qc <texto>']
+handler.help = ['qc @usuario <texto>']
 handler.menu = true
-handler.group = false
+handler.group = true
 
 export default handler
