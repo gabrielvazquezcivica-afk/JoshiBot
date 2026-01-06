@@ -5,7 +5,7 @@ import axios from 'axios'
 import { spawn } from 'child_process'
 
 /* ───── CREAR STICKER ───── */
-async function makeSticker(buffer, pack = 'JoshiBot', author = 'JoshiBot') {
+async function makeSticker(buffer, pack, author) {
   const tmpIn = path.join(os.tmpdir(), `${Date.now()}.png`)
   const tmpOut = path.join(os.tmpdir(), `${Date.now()}.webp`)
 
@@ -53,17 +53,15 @@ export const handler = async (m, {
     }
 
     if (global.db.groups[from].modoadmin) {
-      const metadata = await sock.groupMetadata(from)
-      const participants = metadata.participants || []
+      const meta = await sock.groupMetadata(from)
       const ownerJids = owner?.jid || []
 
       if (!ownerJids.includes(sender)) {
-        const isAdmin = participants.some(
-          p =>
-            p.id === sender &&
-            (p.admin === 'admin' || p.admin === 'superadmin')
+        const isAdmin = meta.participants.some(
+          p => p.id === sender &&
+          (p.admin === 'admin' || p.admin === 'superadmin')
         )
-        if (!isAdmin) return // 🚫 bloqueo silencioso
+        if (!isAdmin) return
       }
     }
   }
@@ -86,21 +84,23 @@ export const handler = async (m, {
     target = ctx.participant
   }
 
+  /* ───── OBTENER NOMBRE REAL (FIX) ───── */
+  let name = 'Usuario'
+
+  if (isGroup) {
+    const meta = await sock.groupMetadata(from)
+    const user = meta.participants.find(p => p.id === target)
+
+    if (user?.name) name = user.name
+    else if (user?.notify) name = user.notify
+    else if (user?.id) name = user.id.split('@')[0]
+  } else {
+    name = m.pushName || target.split('@')[0]
+  }
+
   /* ───── FOTO PERFIL ───── */
   const pp = await sock.profilePictureUrl(target, 'image')
     .catch(() => 'https://telegra.ph/file/24fa902ead26340f3df2c.png')
-
-  /* ───── NOMBRE REAL (ANTI-NÚMEROS) ───── */
-  let name = 'Usuario'
-
-  const contact = sock.contacts?.[target]
-  if (contact?.name) {
-    name = contact.name
-  } else if (contact?.notify) {
-    name = contact.notify
-  } else if (target === sender && m.pushName) {
-    name = m.pushName
-  }
 
   /* ───── PAYLOAD QC ───── */
   const payload = {
@@ -111,7 +111,6 @@ export const handler = async (m, {
     height: 768,
     scale: 2,
     messages: [{
-      entities: [],
       avatar: true,
       from: {
         id: 1,
@@ -138,11 +137,7 @@ export const handler = async (m, {
       name
     )
 
-    await sock.sendMessage(
-      from,
-      { sticker },
-      { quoted: m }
-    )
+    await sock.sendMessage(from, { sticker }, { quoted: m })
 
   } catch (e) {
     console.error('QC ERROR:', e)
@@ -154,6 +149,10 @@ handler.command = ['qc']
 handler.tags = ['stickers']
 handler.menu = true
 handler.group = true
-handler.help = ['qc <texto>', 'qc @usuario <texto>', 'qc (respondiendo)']
+handler.help = [
+  'qc <texto>',
+  'qc @usuario <texto>',
+  'qc (respondiendo)'
+]
 
 export default handler
