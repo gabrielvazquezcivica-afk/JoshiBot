@@ -1,3 +1,4 @@
+
 export const handler = async (m, { sock, from, isGroup, reply }) => {
   if (!isGroup) return reply('🚫 Este comando solo funciona en grupos')
 
@@ -21,34 +22,23 @@ export const handler = async (m, { sock, from, isGroup, reply }) => {
 
   /* 🎲 EMOJIS RANDOM */
   const emojis = [
-    // 🔥 Fuego / Poder
     '🔥','⚡','💥','🚀','☄️','🌋','🧨','💣','🩸',
-
-    // 👑 Dominio
     '👑','😈','☠️','🦂','🕷️','🦴','🗡️','⚔️',
-
-    // 🤖 Tech / Futuro
     '🤖','👾','🧠','🧬','💻','📡','🛰️','📀',
-
-    // 🎯 Acción
     '🎯','🚨','📣','🔔','🔊','📢','📍',
-
-    // 🧩 Random
     '😎','🥶','🤡','👀','🙃','😏','🤯',
     '🫠','🥵','😵‍💫','🤨','😼',
-
-    // 🌪️ Extra
     '🌪️','❄️','🌊','🌑','🌒','⭐','✨'
   ]
 
   const randomEmoji = () =>
     emojis[Math.floor(Math.random() * emojis.length)]
 
-  /* 🎨 MENSAJE */
+  /* 🎨 MENSAJE FUTURISTA */
   let text = `
 ╭───────────────╮
-│ 🔔 ${groupName}
-│ 👥 Miembros: ${participants.length}
+│ ▸🔔 ${groupName}
+│ ▸👥 Miembros: ${participants.length}
 ╰───────────────╯
 `.trim()
 
@@ -56,9 +46,15 @@ export const handler = async (m, { sock, from, isGroup, reply }) => {
 
   for (const p of participants) {
     const emoji = randomEmoji()
-    text += `\n│▸ ${emoji} @${p.id.split('@')[0]}`
+    text += `\n│ ▸${emoji} @${p.id.split('@')[0]}`
     mentions.push(p.id)
   }
+
+  text += `
+│
+╰══════════════════════════════
+> 𝘑𝘰𝘴𝘩𝘪𝘉𝘰𝘵
+`.trim()
 
   await sock.sendMessage(
     from,
