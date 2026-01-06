@@ -4,7 +4,7 @@ import os from 'os'
 import axios from 'axios'
 import { spawn } from 'child_process'
 
-// ───── FUNCIÓN STICKER (FFMPEG) ─────
+/* ───── CREAR STICKER ───── */
 async function makeSticker(buffer, pack = 'JoshiBot', author = 'JoshiBot') {
   const tmpIn = path.join(os.tmpdir(), `${Date.now()}.png`)
   const tmpOut = path.join(os.tmpdir(), `${Date.now()}.webp`)
@@ -23,7 +23,7 @@ async function makeSticker(buffer, pack = 'JoshiBot', author = 'JoshiBot') {
       '-vsync', '0',
       tmpOut
     ])
-    ff.on('close', code => code === 0 ? resolve() : reject())
+    ff.on('close', c => c === 0 ? resolve() : reject())
     ff.on('error', reject)
   })
 
@@ -33,25 +33,49 @@ async function makeSticker(buffer, pack = 'JoshiBot', author = 'JoshiBot') {
   return result
 }
 
-// ───── COMANDO QC ─────
+/* ───── COMANDO QC ───── */
 export const handler = async (m, {
   sock,
   from,
-  isGroup,
   sender,
+  isGroup,
+  args,
   reply,
-  args
+  owner
 }) => {
+
+  /* ───── 👑 MODO ADMIN (SILENCIOSO) ───── */
+  if (isGroup) {
+    if (!global.db) global.db = {}
+    if (!global.db.groups) global.db.groups = {}
+    if (!global.db.groups[from]) {
+      global.db.groups[from] = { modoadmin: false }
+    }
+
+    if (global.db.groups[from].modoadmin) {
+      const metadata = await sock.groupMetadata(from)
+      const participants = metadata.participants || []
+      const ownerJids = owner?.jid || []
+
+      if (!ownerJids.includes(sender)) {
+        const isAdmin = participants.some(
+          p =>
+            p.id === sender &&
+            (p.admin === 'admin' || p.admin === 'superadmin')
+        )
+        if (!isAdmin) return // 🚫 bloqueo silencioso
+      }
+    }
+  }
+  /* ─────────────────────────────────── */
 
   /* ───── TEXTO ───── */
   let text = args.join(' ').trim()
   if (!text && m.quoted?.text) text = m.quoted.text
-  if (!text) return reply('❌ Escribe un texto para el sticker')
+  if (!text) return reply('❌ Escribe un texto')
+  if (text.length > 30) return reply('❌ Máximo 30 caracteres')
 
-  if (text.length > 30)
-    return reply('❌ El texto no puede tener más de 30 caracteres')
-
-  /* ───── TARGET (prioridad correcta) ───── */
+  /* ───── TARGET ───── */
   let target = sender
   const ctx = m.message?.extendedTextMessage?.contextInfo
 
@@ -66,19 +90,16 @@ export const handler = async (m, {
   const pp = await sock.profilePictureUrl(target, 'image')
     .catch(() => 'https://telegra.ph/file/24fa902ead26340f3df2c.png')
 
-  /* ───── NOMBRE REAL (FIX DEFINITIVO) ───── */
+  /* ───── NOMBRE REAL (ANTI-NÚMEROS) ───── */
   let name = 'Usuario'
 
-  if (target === sender) {
-    name = m.pushName || 'Usuario'
-  } else if (isGroup) {
-    try {
-      const meta = await sock.groupMetadata(from)
-      const user = meta.participants.find(p => p.id === target)
-      name = user?.notify || user?.name || target.split('@')[0]
-    } catch {
-      name = target.split('@')[0]
-    }
+  const contact = sock.contacts?.[target]
+  if (contact?.name) {
+    name = contact.name
+  } else if (contact?.notify) {
+    name = contact.notify
+  } else if (target === sender && m.pushName) {
+    name = m.pushName
   }
 
   /* ───── PAYLOAD QC ───── */
