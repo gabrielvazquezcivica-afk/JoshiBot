@@ -4,18 +4,17 @@ import os from 'os'
 import axios from 'axios'
 import { spawn } from 'child_process'
 
-// ───── 🧩 PNG → WEBP ─────
-async function toSticker(buffer) {
+// ───── FUNCIÓN PARA CREAR STICKER ─────
+async function createSticker(buffer) {
   const tmpIn = path.join(os.tmpdir(), `${Date.now()}.png`)
   const tmpOut = path.join(os.tmpdir(), `${Date.now()}.webp`)
-
   fs.writeFileSync(tmpIn, buffer)
 
   await new Promise((resolve, reject) => {
     const ff = spawn('ffmpeg', [
       '-i', tmpIn,
       '-vcodec', 'libwebp',
-      '-vf', 'scale=512:512:force_original_aspect_ratio=decrease',
+      '-vf', 'scale=512:512:force_original_aspect_ratio=decrease,fps=15',
       '-lossless', '1',
       '-loop', '0',
       '-preset', 'default',
@@ -33,14 +32,14 @@ async function toSticker(buffer) {
   return result
 }
 
-// ───── QC ─────
+// ───── COMANDO QC ─────
 export const handler = async (m, {
   sock,
   from,
+  args,
   isGroup,
   sender,
   reply,
-  args,
   owner
 }) => {
 
@@ -59,41 +58,40 @@ export const handler = async (m, {
 
       if (!ownerJids.includes(sender)) {
         const isAdmin = participants.some(
-          p => p.id === sender &&
-          (p.admin === 'admin' || p.admin === 'superadmin')
+          p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
         )
-        if (!isAdmin) return
+        if (!isAdmin) return // 🚫 bloqueo silencioso
       }
     }
   }
   /* ─────────────────────────────────── */
 
-  // 📝 TEXTO
   let text = args.join(' ').trim()
-  const quotedText =
-    m.message?.extendedTextMessage?.contextInfo?.quotedMessage?.conversation
+  if (!text && m.quoted?.text) text = m.quoted.text
+  if (!text) return reply('❌ Escribe un texto para el QC.\nEjemplo: `.qc Hola mundo`')
 
-  if (!text && quotedText) text = quotedText
+  if (text.length > 30)
+    return reply('❌ El texto no puede tener más de 30 caracteres.')
 
-  if (!text) {
-    return reply('❌ Escribe o responde un texto\nEjemplo:\n.qc Hola Joshi')
-  }
+  // ───── NOMBRE REAL ─────
+  const name =
+    m.pushName ||
+    (isGroup
+      ? (await sock.groupMetadata(from))
+          .participants
+          .find(p => p.id === sender)?.name
+      : null) ||
+    sender.split('@')[0]
 
-  if (text.length > 30) {
-    return reply('❌ Máximo 30 caracteres')
-  }
+  // ───── FOTO REAL ─────
+  const avatar = await sock.profilePictureUrl(sender, 'image')
+    .catch(() => 'https://telegra.ph/file/24fa902ead26340f3df2c.png')
 
   try {
-    // 👤 DATOS REALES DEL SENDER
-    const name = await sock.getName(sender)
-    const avatar = await sock.profilePictureUrl(sender, 'image')
-      .catch(() => 'https://telegra.ph/file/24fa902ead26340f3df2c.png')
-
-    // 🧠 PAYLOAD QC
-    const payload = {
+    const body = {
       type: 'quote',
       format: 'png',
-      backgroundColor: '#000000',
+      backgroundColor: '#0f0f0f',
       width: 512,
       height: 768,
       scale: 2,
@@ -101,21 +99,25 @@ export const handler = async (m, {
         avatar: true,
         from: {
           id: 1,
-          name: name,
+          name,
           photo: { url: avatar }
         },
-        text: text
+        text,
+        replyMessage: {}
       }]
     }
 
     const res = await axios.post(
       'https://bot.lyo.su/quote/generate',
-      payload,
+      body,
       { headers: { 'Content-Type': 'application/json' } }
     )
 
-    const img = Buffer.from(res.data.result.image, 'base64')
-    const sticker = await toSticker(img)
+    if (!res.data?.result?.image)
+      throw 'Respuesta inválida de la API'
+
+    const buffer = Buffer.from(res.data.result.image, 'base64')
+    const sticker = await createSticker(buffer)
 
     await sock.sendMessage(
       from,
@@ -125,14 +127,14 @@ export const handler = async (m, {
 
   } catch (e) {
     console.error('QC ERROR:', e)
-    reply('❌ Error al crear el sticker')
+    reply('❌ Error al generar el QC.')
   }
 }
 
 handler.command = ['qc']
 handler.tags = ['stickers']
+handler.help = ['qc <texto>']
 handler.menu = true
 handler.group = false
-handler.help = ['qc <texto>']
 
 export default handler
