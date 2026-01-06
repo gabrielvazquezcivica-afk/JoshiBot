@@ -61,39 +61,47 @@ export const handler = async (m, {
           p => p.id === sender &&
           (p.admin === 'admin' || p.admin === 'superadmin')
         )
-        if (!isAdmin) return // 🚫 bloqueo silencioso
+        if (!isAdmin) return
       }
     }
   }
   /* ─────────────────────────────────── */
 
-  // ───── OBLIGAR MENCIÓN ─────
+  // ───── OBTENER TARGET ─────
   const ctx = m.message?.extendedTextMessage?.contextInfo
-  const target = ctx?.mentionedJid?.[0]
+  let target = sender
 
-  if (!target)
-    return reply('❌ Debes mencionar a alguien.\nEjemplo:\n.qc @usuario Hola')
+  if (ctx?.mentionedJid?.length) {
+    target = ctx.mentionedJid[0]
+  } else if (ctx?.participant) {
+    target = ctx.participant
+  }
 
-  // ───── TEXTO SIN MENCIÓN ─────
-  let text = args.join(' ')
-    .replace(/@\d+/g, '')
-    .trim()
+  // ───── TEXTO (QUITANDO MENCIÓN) ─────
+  let text = args.join(' ').trim()
+  if (!text && m.quoted?.text) text = m.quoted.text
+  if (!text) return reply('❌ Usa:\n.qc texto\n.qc @usuario texto')
 
-  if (!text)
-    return reply('❌ Escribe el texto del QC.')
+  if (ctx?.mentionedJid?.length) {
+    const tag = '@' + target.split('@')[0]
+    text = text.replace(tag, '').trim()
+  }
 
   if (text.length > 30)
     return reply('❌ El texto no puede tener más de 30 caracteres.')
 
-  // ───── NOMBRE REAL DEL MENCIONADO ─────
+  // ───── NOMBRE REAL DEL TARGET ─────
   let name = target.split('@')[0]
-  if (isGroup) {
-    const metadata = await sock.groupMetadata(from)
-    const user = metadata.participants.find(p => p.id === target)
-    if (user?.name) name = user.name
-  }
+  try {
+    if (isGroup) {
+      const meta = await sock.groupMetadata(from)
+      const user = meta.participants.find(p => p.id === target)
+      if (user?.name) name = user.name
+      else if (user?.notify) name = user.notify
+    }
+  } catch {}
 
-  // ───── FOTO REAL DEL MENCIONADO ─────
+  // ───── FOTO REAL DEL TARGET ─────
   const avatar = await sock.profilePictureUrl(target, 'image')
     .catch(() => 'https://telegra.ph/file/24fa902ead26340f3df2c.png')
 
@@ -143,8 +151,8 @@ export const handler = async (m, {
 
 handler.command = ['qc']
 handler.tags = ['stickers']
-handler.help = ['qc @usuario <texto>']
+handler.help = ['qc <texto>', 'qc @usuario <texto>']
 handler.menu = true
-handler.group = true
+handler.group = false
 
 export default handler
