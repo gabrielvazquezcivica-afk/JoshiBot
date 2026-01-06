@@ -56,7 +56,7 @@ export const handler = async (m, { sock, from, isGroup, reply }) => {
 
   for (const p of participants) {
     const emoji = randomEmoji()
-    text += `\n${emoji} @${p.id.split('@')[0]}`
+    text += `\n│▸ ${emoji} @${p.id.split('@')[0]}`
     mentions.push(p.id)
   }
 
