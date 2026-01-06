@@ -4,8 +4,8 @@ import os from 'os'
 import axios from 'axios'
 import { spawn } from 'child_process'
 
-// ───── 🧩 CONVERTIR A STICKER (FFMPEG) ─────
-async function toSticker(buffer, packname = 'JoshiBot', author = 'JoshiBot') {
+// ───── 🧩 PNG → WEBP ─────
+async function toSticker(buffer) {
   const tmpIn = path.join(os.tmpdir(), `${Date.now()}.png`)
   const tmpOut = path.join(os.tmpdir(), `${Date.now()}.webp`)
 
@@ -33,7 +33,7 @@ async function toSticker(buffer, packname = 'JoshiBot', author = 'JoshiBot') {
   return result
 }
 
-// ───── COMANDO QC ─────
+// ───── QC ─────
 export const handler = async (m, {
   sock,
   from,
@@ -70,28 +70,26 @@ export const handler = async (m, {
 
   // 📝 TEXTO
   let text = args.join(' ').trim()
-  if (!text && m.message?.extendedTextMessage?.contextInfo?.quotedMessage?.conversation) {
-    text = m.message.extendedTextMessage.contextInfo.quotedMessage.conversation
-  }
+  const quotedText =
+    m.message?.extendedTextMessage?.contextInfo?.quotedMessage?.conversation
+
+  if (!text && quotedText) text = quotedText
 
   if (!text) {
-    return reply('❌ Escribe o responde un texto para crear el sticker.\nEjemplo:\n.qc Hola mundo')
+    return reply('❌ Escribe o responde un texto\nEjemplo:\n.qc Hola Joshi')
   }
 
   if (text.length > 30) {
-    return reply('❌ El texto no puede tener más de 30 caracteres')
+    return reply('❌ Máximo 30 caracteres')
   }
 
-  // 👤 USUARIO
-  const target =
-    m.message?.extendedTextMessage?.contextInfo?.participant || sender
-
-  const name = target.split('@')[0]
-  const avatar = await sock.profilePictureUrl(target, 'image')
-    .catch(() => 'https://telegra.ph/file/24fa902ead26340f3df2c.png')
-
   try {
-    // 🧠 API QUOTE
+    // 👤 DATOS REALES DEL SENDER
+    const name = await sock.getName(sender)
+    const avatar = await sock.profilePictureUrl(sender, 'image')
+      .catch(() => 'https://telegra.ph/file/24fa902ead26340f3df2c.png')
+
+    // 🧠 PAYLOAD QC
     const payload = {
       type: 'quote',
       format: 'png',
@@ -103,10 +101,10 @@ export const handler = async (m, {
         avatar: true,
         from: {
           id: 1,
-          name,
+          name: name,
           photo: { url: avatar }
         },
-        text
+        text: text
       }]
     }
 
@@ -117,7 +115,7 @@ export const handler = async (m, {
     )
 
     const img = Buffer.from(res.data.result.image, 'base64')
-    const sticker = await toSticker(img, 'JoshiBot', name)
+    const sticker = await toSticker(img)
 
     await sock.sendMessage(
       from,
