@@ -1,11 +1,11 @@
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
-import fetch from 'node-fetch'
+import axios from 'axios'
 import { spawn } from 'child_process'
 
-// ───── FUNCIÓN VIDEO → STICKER ─────
-async function videoToSticker(buffer, pack = 'JoshiBot', author = 'JoshiBot') {
+// ───── VIDEO → STICKER ─────
+async function videoToSticker(buffer) {
   const tmpMp4 = path.join(os.tmpdir(), `${Date.now()}.mp4`)
   const tmpWebp = path.join(os.tmpdir(), `${Date.now()}.webp`)
 
@@ -48,7 +48,7 @@ export const handler = async (m, {
   owner
 }) => {
 
-  /* ───── 👑 MODO ADMIN (SILENCIOSO) ───── */
+  /* ───── 👑 MODO ADMIN SILENCIOSO ───── */
   if (isGroup) {
     if (!global.db) global.db = {}
     if (!global.db.groups) global.db.groups = {}
@@ -57,8 +57,8 @@ export const handler = async (m, {
     }
 
     if (global.db.groups[from].modoadmin) {
-      const metadata = await sock.groupMetadata(from)
-      const participants = metadata.participants || []
+      const meta = await sock.groupMetadata(from)
+      const participants = meta.participants || []
       const ownerJids = owner?.jid || []
 
       if (!ownerJids.includes(sender)) {
@@ -70,7 +70,7 @@ export const handler = async (m, {
       }
     }
   }
-  /* ─────────────────────────────────── */
+  /* ────────────────────────────────── */
 
   const text = args.join(' ').trim()
   if (!text) {
@@ -82,19 +82,20 @@ export const handler = async (m, {
   })
 
   try {
-    const api =
-      `https://api.ypnk.dpdns.org/api/video/bratv?text=${encodeURIComponent(text)}`
-
-    const res = await fetch(api)
-    if (!res.ok) throw new Error('API falló')
-
-    const buffer = await res.buffer()
-
-    const sticker = await videoToSticker(
-      buffer,
-      'JoshiBot',
-      sender.split('@')[0]
+    // API BRATV REAL
+    const res = await axios.get(
+      'https://kepolu-brat.hf.space/bratv',
+      {
+        params: { q: text },
+        responseType: 'arraybuffer'
+      }
     )
+
+    if (!res.data || res.data.byteLength === 0) {
+      throw new Error('Video vacío')
+    }
+
+    const sticker = await videoToSticker(res.data)
 
     await sock.sendMessage(
       from,
@@ -111,7 +112,7 @@ export const handler = async (m, {
     await sock.sendMessage(from, {
       react: { text: '❌', key: m.key }
     })
-    reply('❌ Error al crear el sticker')
+    reply('❌ Error al generar el sticker')
   }
 }
 
