@@ -110,7 +110,7 @@ export const handler = async (m, {
   }
 }
 
-handler.command = ['play', 'play2', 'playvid']
+handler.command = ['play2', 'playvid']
 handler.tags = ['descargas']
 handler.menu = true
 
