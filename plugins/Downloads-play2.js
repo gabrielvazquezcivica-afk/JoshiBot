@@ -8,51 +8,62 @@ export const handler = async (m, { sock, args, from, reply }) => {
   if (!query) return reply('🔎 Escribe el nombre del video a descargar')
 
   try {
-    await reply('⏳ Buscando video en YouTube...')
+    await sock.sendMessage(from, { react: { text: '🎶', key: m.key } })
 
-    // 🔎 Buscar en YouTube
+    // 🔎 Buscar video en YouTube
     const r = await yts(query)
     if (!r || !r.videos || r.videos.length === 0)
       return reply('❌ No se encontró ningún video')
 
     const video = r.videos[0]
-    const url = video.url
+    const info = `
+╭─[ *JoshiBot YouTube* ]─╮
+│
+│ 📌 Título: ${video.title}
+│ 👤 Autor: ${video.author.name}
+│ ⏱️ Duración: ${video.duration.timestamp}
+│ 👁️ Vistas: ${video.views.toLocaleString()}
+│ 🔗 Enlace: ${video.url}
+╰──────────────────╯
+`
 
-    await reply(`✅ Video encontrado: ${video.title}\n⏳ Descargando...`)
+    await reply(info + '\n⏳ Descargando el video...')
 
     // Carpeta temporal
     const tmpDir = path.join('./tmp')
     if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true })
     const outFile = path.join(tmpDir, `video_${Date.now()}.mp4`)
 
-    // Ejecutar yt-dlp
+    // 🔥 Descargar video silenciosamente
     await new Promise((resolve, reject) => {
       const ytdlp = spawn('yt-dlp', [
+        '--quiet',            // Sin logs
         '-f', 'bestvideo+bestaudio/best',
         '-o', outFile,
-        url
+        video.url
       ])
 
-      ytdlp.stdout.on('data', d => console.log(d.toString()))
-      ytdlp.stderr.on('data', d => console.error(d.toString()))
       ytdlp.on('close', code => (code === 0 ? resolve() : reject(new Error('yt-dlp falló'))))
     })
 
-    // Enviar video
+    // ⚡ Enviar video
     await sock.sendMessage(from, {
       video: fs.readFileSync(outFile),
-      caption: `✅ Video descargado: ${video.title}`
+      caption: info
     }, { quoted: m })
+
+    // ✅ Reacción
+    await sock.sendMessage(from, { react: { text: '✅', key: m.key } })
 
   } catch (e) {
     console.error('PLAY2 ERROR:', e)
-    reply('❌ Error descargando el video')
+    reply('❌ Ocurrió un error descargando el video')
   } finally {
     try { if (fs.existsSync(outFile)) fs.unlinkSync(outFile) } catch {}
   }
 }
 
 handler.command = ['play2']
-handler.tags = ['youtube']
+handler.tags = ['descargas']
 handler.menu = true
 export default handler
