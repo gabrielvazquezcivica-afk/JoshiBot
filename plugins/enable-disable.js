@@ -80,7 +80,7 @@ Uso:
 
 handler.command = ['nsfw', 'modoadmin']
 handler.group = true
-handler.tags = ['admins']
+handler.tags = ['on-off']
 handler.menu = true
 
 export default handler
