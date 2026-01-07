@@ -6,123 +6,80 @@ const LIMIT_MB = 200
 export const handler = async (m, {
   sock,
   from,
+  text,
   command,
   reply
 }) => {
 
-  /* ───── 📌 OBTENER TEXTO REAL (FIX JOSHI) ───── */
-  const body =
-    m.message?.conversation ||
-    m.message?.extendedTextMessage?.text ||
-    ''
-
-  const text = body.replace(/^[.!/#]\w+\s?/, '').trim()
-
-  if (!text) {
-    return reply('🔎 Ingresa el nombre de un video o una URL de YouTube')
+  if (!text || !text.trim()) {
+    return reply('🔎 Escribe el nombre del video o enlace de YouTube')
   }
 
-  await sock.sendMessage(from, {
-    react: { text: '🎶', key: m.key }
-  })
-
   try {
-    /* ───── 🔍 BUSCAR EN YOUTUBE ───── */
-    const res = await yts(text)
-    if (!res?.all?.length) {
+    // 🔍 Buscar video
+    const search = await yts(text.trim())
+    if (!search.videos || !search.videos.length) {
       return reply('❌ No se encontraron resultados')
     }
 
-    const video = res.all[0]
+    const video = search.videos[0]
 
     const caption = `
-╭─〔 🎬 YOUTUBE SEARCH 〕
+╭─〔 🎬 YOUTUBE VIDEO 〕
 │
 │ 📌 Título:
 │ ${video.title}
 │
-│ 👤 Autor:
-│ ${video.author?.name || 'Desconocido'}
+│ 👤 Canal:
+│ ${video.author.name}
 │
-│ ⏱️ Duración:
-│ ${video.duration?.timestamp || 'N/A'}
+│ ⏱ Duración:
+│ ${video.timestamp}
 │
-│ 👁️ Vistas:
-│ ${video.views?.toLocaleString() || 'N/A'}
+│ 👁 Vistas:
+│ ${video.views.toLocaleString()}
 │
 │ 🔗 Link:
 │ ${video.url}
-╰──────────────────────╯
+╰────────────────────╯
 
-⏳ Procesando descarga...
+⏳ Descargando video...
 `.trim()
 
-    /* ───── 🖼️ MINIATURA ───── */
-    const thumbRes = await fetch(video.thumbnail)
-    const thumb = Buffer.from(await thumbRes.arrayBuffer())
+    // 🖼 Miniatura
+    const thumb = await fetch(video.thumbnail).then(r => r.buffer())
 
     await sock.sendMessage(from, {
       image: thumb,
       caption
     }, { quoted: m })
 
-    /* ───── 🎵 AUDIO ───── */
-    if (command === 'play') {
-      const apiRes = await fetch(
-        `https://api.sylphy.xyz/download/ytmp3?url=${encodeURIComponent(video.url)}&apikey=sylphy-e321`
-      )
-      const api = await apiRes.json()
+    // 📥 Descargar video
+    const res = await fetch(
+      `https://api.ryzendesu.vip/api/downloader/ytmp4?url=${encodeURIComponent(video.url)}`
+    )
 
-      const dl = api?.dl_url || api?.res?.url
-      if (!dl) return reply('❌ No se pudo obtener el audio')
+    const json = await res.json()
+    const dl = json?.result?.download?.url
+    if (!dl) return reply('❌ No se pudo obtener el video')
 
-      await sock.sendMessage(from, {
-        audio: { url: dl },
-        mimetype: 'audio/mpeg'
-      }, { quoted: m })
+    const sizeMB = (json.result.download.size || 0) / (1024 * 1024)
 
-      await sock.sendMessage(from, {
-        react: { text: '✅', key: m.key }
-      })
-    }
-
-    /* ───── 🎬 VIDEO ───── */
-    if (command === 'play2' || command === 'playvid') {
-      const apiRes = await fetch(
-        `https://api.sylphy.xyz/download/ytmp4?url=${encodeURIComponent(video.url)}&apikey=sylphy-e321`
-      )
-      const api = await apiRes.json()
-
-      const dl = api?.dl_url || api?.res?.url
-      if (!dl) return reply('❌ No se pudo obtener el video')
-
-      const head = await fetch(dl, { method: 'HEAD' })
-      const bytes = Number(head.headers.get('content-length') || 0)
-      const sizeMB = bytes / (1024 * 1024)
-
-      await sock.sendMessage(from, {
-        video: { url: dl },
-        mimetype: 'video/mp4',
-        caption: video.title
-      }, {
-        quoted: m,
-        asDocument: sizeMB >= LIMIT_MB
-      })
-
-      await sock.sendMessage(from, {
-        react: { text: '📽️', key: m.key }
-      })
-    }
+    await sock.sendMessage(from, {
+      video: { url: dl },
+      mimetype: 'video/mp4',
+      caption: '🎬 Video listo',
+      asDocument: sizeMB > LIMIT_MB
+    }, { quoted: m })
 
   } catch (e) {
-    console.error('PLAY ERROR:', e)
-    reply('⚠️ Ocurrió un error al procesar tu solicitud')
+    console.error('PLAY2 ERROR:', e)
+    reply('❌ Ocurrió un error al descargar el video')
   }
 }
 
-/* ───── CONFIGURACIÓN ───── */
-handler.command = ['play2', 'playvid']
-handler.tags = ['youtube', 'descargas']
+handler.command = ['play2']
+handler.tags = ['descargas']
 handler.menu = true
 
 export default handler
