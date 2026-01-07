@@ -22,13 +22,13 @@ export const handler = async (m, {
   
   // 🎯 Emoji por categoría  
   const tagEmoji = {  
-    info: 'ℹ️',  
-    main: '🧩',  
-    group: '🛠️',  
+    info: '🍄',  
+    'on-off': '🔘',  
+    group: '🐉',  
     admin: '👑',  
-    juegos: '🎮',  
+    juegos: '🎡',  
     ff: '🔫',  
-    descargas: '🎵',  
+    descargas: '🎧',  
     buscador: '🔍',  
     tools: '🧰',  
     stickers: '🖼️',  
@@ -58,7 +58,7 @@ export const handler = async (m, {
   // 📌 ORDEN DEL MENÚ  
   const orderedTags = [  
     'info',  
-    'main',  
+    'on-off',  
     'group',  
     'admin',  
     'juegos',  
