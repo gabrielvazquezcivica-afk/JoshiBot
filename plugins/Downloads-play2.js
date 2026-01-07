@@ -1,8 +1,6 @@
 import yts from 'yt-search'
 import fetch from 'node-fetch'
 
-const LIMIT_MB = 200
-
 export const handler = async (m, {
   sock,
   from,
@@ -10,67 +8,55 @@ export const handler = async (m, {
   reply
 }) => {
 
-  // 🔧 FIX JOSHIBOT
   const text = args.join(' ').trim()
-  if (!text) {
-    return reply('🔎 Escribe el nombre del video o un enlace de YouTube')
-  }
+  if (!text) return reply('🔎 Escribe el nombre del video')
 
   try {
     // 🔍 Buscar video
     const search = await yts(text)
-    if (!search.videos || !search.videos.length) {
+    if (!search.videos.length) {
       return reply('❌ No se encontraron resultados')
     }
 
     const video = search.videos[0]
 
+    // 🖼 Miniatura (sin warning)
+    const thumbRes = await fetch(video.thumbnail)
+    const thumb = Buffer.from(await thumbRes.arrayBuffer())
+
     const caption = `
-╭─〔 🎬 YOUTUBE VIDEO 〕
+╭─〔 🎬 YOUTUBE 〕
 │
-│ 📌 Título:
-│ ${video.title}
-│
-│ 👤 Canal:
-│ ${video.author.name}
-│
-│ ⏱ Duración:
-│ ${video.timestamp}
-│
-│ 👁 Vistas:
-│ ${video.views.toLocaleString()}
-│
-│ 🔗 Link:
-│ ${video.url}
-╰────────────────────╯
+│ 📌 ${video.title}
+│ 👤 ${video.author.name}
+│ ⏱ ${video.timestamp}
+│ 👁 ${video.views.toLocaleString()}
+│ 🔗 ${video.url}
+╰────────────────╯
 
 ⏳ Descargando video...
 `.trim()
-
-    // 🖼 Miniatura
-    const thumb = await fetch(video.thumbnail).then(r => r.buffer())
 
     await sock.sendMessage(from, {
       image: thumb,
       caption
     }, { quoted: m })
 
-    // 📥 Descargar video
-    const res = await fetch(
-      `https://api.ryzendesu.vip/api/downloader/ytmp4?url=${encodeURIComponent(video.url)}`
+    // 📥 API ESTABLE
+    const api = await fetch(
+      `https://api.cafirexos.com/api/ytmp4?url=${encodeURIComponent(video.url)}`
     )
 
-    const json = await res.json()
-    const dl = json?.result?.download?.url
-    if (!dl) return reply('❌ No se pudo obtener el video')
+    const json = await api.json().catch(() => null)
+    if (!json || !json.result?.url) {
+      return reply('❌ La API falló al descargar el video')
+    }
 
-    const sizeMB = (json.result.download.size || 0) / (1024 * 1024)
-
+    // 📤 Enviar video
     await sock.sendMessage(from, {
-      video: { url: dl },
+      video: { url: json.result.url },
       mimetype: 'video/mp4',
-      caption: '🎬 Video listo',
-      asDocument: sizeMB > LIMIT_MB
+      caption: '🎬 Video listo'
     }, { quoted: m })
 
   } catch (e) {
