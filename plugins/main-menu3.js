@@ -9,6 +9,13 @@ export const handler = async (m, { sock, from }) => {
     .map(p => p.help)
     .flat()
 
+  if (!cmds.length) {
+    // Si no hay comandos
+    return await sock.sendMessage(from, {
+      text: '❌ No hay comandos disponibles para mostrar en el menú.\n> Menú Owner'
+    }, { quoted: m })
+  }
+
   // Emojis fijos para los comandos
   const emojiList = [
     '⚡','🔥','💥','🚀','🛰️','🤖','👾','🧠','💻','📡','📀','🩸','🗡️','⚔️','☄️'
@@ -20,9 +27,8 @@ export const handler = async (m, { sock, from }) => {
     return { cmd: c, emoji }
   })
 
-  // Texto futurista
-  let text = '╭─〔 ⚡ MENU 3 FUTURISTA ⚡ 〕\n'
-  text += '│\n'
+  // Construir texto estilo futurista vertical
+  let text = '╭─〔 ⚡ MENÚ OWNER ⚡ 〕\n│\n'
 
   cmdWithEmoji.forEach(c => {
     text += `│ ${c.emoji}  ${c.cmd}\n`
