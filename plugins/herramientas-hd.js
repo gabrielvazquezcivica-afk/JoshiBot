@@ -1,4 +1,5 @@
 import fetch from 'node-fetch'
+import { downloadContentFromMessage } from '@whiskeysockets/baileys'
 
 export const handler = async (m, {
   sock,
@@ -30,6 +31,7 @@ export const handler = async (m, {
     }
   }
 
+  /* ───── 📸 OBTENER IMAGEN ───── */
   const quoted =
     m.message?.extendedTextMessage?.contextInfo?.quotedMessage ||
     m.message?.imageMessage
@@ -38,25 +40,28 @@ export const handler = async (m, {
     quoted?.imageMessage ||
     m.message?.imageMessage
 
-  if (!msg) {
-    return reply('🪐 Responde a una imagen')
-  }
+  if (!msg) return reply('🪐 Responde a una imagen')
 
   await reply('⏳ Mejorando imagen…')
 
   try {
-    const stream = await sock.downloadContentFromMessage(msg, 'image')
+    /* ───── 📥 DESCARGAR IMAGEN ───── */
+    const stream = await downloadContentFromMessage(msg, 'image')
     let buffer = Buffer.alloc(0)
+
     for await (const chunk of stream) {
       buffer = Buffer.concat([buffer, chunk])
     }
 
+    /* ───── ⚡ UPSCALE API ───── */
     const res = await fetch(
       'https://api.siputzx.my.id/api/iloveimg/upscale',
       {
         method: 'POST',
         body: buffer,
-        headers: { 'Content-Type': 'image/jpeg' }
+        headers: {
+          'Content-Type': 'image/jpeg'
+        }
       }
     )
 
@@ -64,6 +69,7 @@ export const handler = async (m, {
 
     const result = await res.buffer()
 
+    /* ───── 📤 ENVIAR RESULTADO ───── */
     await sock.sendMessage(from, {
       image: result,
       caption: '✅ Imagen mejorada'
