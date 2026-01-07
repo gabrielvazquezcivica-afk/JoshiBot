@@ -38,12 +38,13 @@ export const handler = async (m, {
 
   const groupData = global.db.groups[from]
 
+  // 📋 Mostrar estado
   if (!option) {
     return reply(
-`⚙️ CONFIGURACIÓN
+`⚙️ CONFIGURACIÓN DEL GRUPO
 
-🔞 NSFW: ${groupData.nsfw ? 'ON' : 'OFF'}
-👑 MODO ADMIN: ${groupData.modoadmin ? 'ON' : 'OFF'}
+🔞 NSFW: ${groupData.nsfw ? '🟢 ON' : '🔴 OFF'}
+👑 MODO ADMIN: ${groupData.modoadmin ? '🟢 ON' : '🔴 OFF'}
 
 Uso:
 .nsfw on | off
@@ -51,6 +52,7 @@ Uso:
     )
   }
 
+  // 🔞 NSFW
   if (cmd === 'nsfw') {
     if (option === 'on') {
       groupData.nsfw = true
@@ -64,6 +66,7 @@ Uso:
     }
   }
 
+  // 👑 MODO ADMIN
   if (cmd === 'modoadmin') {
     if (option === 'on') {
       groupData.modoadmin = true
@@ -82,5 +85,10 @@ handler.command = ['nsfw', 'modoadmin']
 handler.group = true
 handler.tags = ['on-off']
 handler.menu = true
+
+handler.help = [
+  'nsfw on | off',
+  'modoadmin on | off'
+]
 
 export default handler
