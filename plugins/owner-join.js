@@ -1,4 +1,4 @@
-export const handler = async (m, {
+deexport const handler = async (m, {
   sock,
   args,
   sender,
@@ -56,4 +56,4 @@ Solución:
 handler.command = ['join']
 handler.tags = ['owner']
 handler.owner = true
-handler.menu = true
+handler.menu3 = true
