@@ -28,6 +28,8 @@ export const handler = async (m, { sock, isGroup, sender, reply }) => {
   // ───── ESTADOS ─────
   let welcomeStatus = '🔴 Desactivado'
   let antilinkStatus = '🔴 Desactivado'
+  let modoadminStatus = '🔴 Desactivado'
+  let nsfwStatus = '🔴 Desactivado'
 
   if (fs.existsSync(welcomeDB)) {
     const wdb = JSON.parse(fs.readFileSync(welcomeDB))
@@ -39,10 +41,15 @@ export const handler = async (m, { sock, isGroup, sender, reply }) => {
     if (adb[from]) antilinkStatus = '🟢 Activado'
   }
 
-  // ───── LISTA ADMINS ─────
-  const adminList = admins
-    .map((id, i) => `│ ${i + 1}. @${id.split('@')[0]}`)
-    .join('\n')
+  // ───── DB GLOBAL (MODOADMIN / NSFW) ─────
+  if (global.db?.groups?.[from]) {
+    if (global.db.groups[from].modoadmin) {
+      modoadminStatus = '🟢 Activado'
+    }
+    if (global.db.groups[from].nsfw) {
+      nsfwStatus = '🟢 Activado'
+    }
+  }
 
   const text = `
 ╭─〔 📊 INFO DEL GRUPO 〕
@@ -50,15 +57,12 @@ export const handler = async (m, { sock, isGroup, sender, reply }) => {
 │ 🏷️ Nombre:
 │ ${metadata.subject}
 │
-│ 👥 Miembros:
-│ ${metadata.participants.length}
-│
 │ ⚙️ CONFIGURACIÓN
 │ • Welcome: ${welcomeStatus}
 │ • Antilink: ${antilinkStatus}
+│ • Modo Admin: ${modoadminStatus}
+│ • NSFW: ${nsfwStatus}
 │
-│ 👮 ADMINISTRADORES
-${adminList}
 ╰─〔 🤖 JoshiBot 〕
 `.trim()
 
@@ -67,14 +71,12 @@ ${adminList}
 
     await sock.sendMessage(from, {
       image: { url: pp },
-      caption: text,
-      mentions: admins
+      caption: text
     }, { quoted: m })
 
   } catch {
     await sock.sendMessage(from, {
-      text,
-      mentions: admins
+      text
     }, { quoted: m })
   }
 }
@@ -85,3 +87,5 @@ handler.tags = ['group']
 handler.group = true
 handler.admin = true
 handler.menu = true
+
+export default handler
