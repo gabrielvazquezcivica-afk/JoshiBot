@@ -1,9 +1,4 @@
-import fs from 'fs'
-import path from 'path'
 import fetch from 'node-fetch'
-import Jimp from 'jimp'
-import FormData from 'form-data'
-import os from 'os'
 
 export const handler = async (m, {
   sock,
@@ -13,7 +8,6 @@ export const handler = async (m, {
   owner,
   reply
 }) => {
-  let tmpFile
 
   /* ───── 🧠 DB SAFE ───── */
   if (!global.db) global.db = {}
@@ -30,68 +24,54 @@ export const handler = async (m, {
 
     if (!ownerJids.includes(sender)) {
       const isAdmin = participants.some(
-        p =>
-          p.id === sender &&
-          (p.admin === 'admin' || p.admin === 'superadmin')
+        p => p.id === sender && p.admin
       )
       if (!isAdmin) return
     }
   }
 
+  const quoted =
+    m.message?.extendedTextMessage?.contextInfo?.quotedMessage ||
+    m.message?.imageMessage
+
+  const msg =
+    quoted?.imageMessage ||
+    m.message?.imageMessage
+
+  if (!msg) {
+    return reply('🪐 Responde a una imagen')
+  }
+
+  await reply('⏳ Mejorando imagen…')
+
   try {
-    const quoted =
-      m.message?.extendedTextMessage?.contextInfo?.quotedMessage ||
-      m.message?.imageMessage
-
-    const msg =
-      quoted?.imageMessage ||
-      m.message?.imageMessage
-
-    if (!msg) {
-      return reply('🪐 Responde a una imagen JPG o PNG.')
-    }
-
-    const mime = msg.mimetype || ''
-    if (!/^image\/(jpe?g|png)$/.test(mime)) {
-      return reply('🪐 Solo imágenes JPG o PNG.')
-    }
-
-    await reply('⏳ Mejorando la imagen, espera un momento…')
-
-    // 📥 Descargar imagen
     const stream = await sock.downloadContentFromMessage(msg, 'image')
     let buffer = Buffer.alloc(0)
     for await (const chunk of stream) {
       buffer = Buffer.concat([buffer, chunk])
     }
 
-    // 🖼️ JIMP resize
-    const image = await Jimp.read(buffer)
-    image.resize(800, Jimp.AUTO)
+    const res = await fetch(
+      'https://api.siputzx.my.id/api/iloveimg/upscale',
+      {
+        method: 'POST',
+        body: buffer,
+        headers: { 'Content-Type': 'image/jpeg' }
+      }
+    )
 
-    tmpFile = path.join(os.tmpdir(), `hd_${Date.now()}.jpg`)
-    await image.writeAsync(tmpFile)
+    if (!res.ok) throw new Error('API falló')
 
-    // ☁️ Subir imagen
-    const imageUrl = await uploadToUguu(tmpFile)
-    if (!imageUrl) throw new Error('La API falló al subir la imagen')
+    const result = await res.buffer()
 
-    // 🚀 Upscale
-    const enhanced = await upscaleImage(imageUrl)
-
-    // 📤 Enviar resultado
     await sock.sendMessage(from, {
-      image: enhanced,
+      image: result,
       caption: '✅ Imagen mejorada'
     }, { quoted: m })
 
   } catch (e) {
-    console.error('HD ERROR:', e)
+    console.error(e)
     reply('❌ Error al mejorar la imagen')
-  } finally {
-    try {
-      if (tmpFile && fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile)
-    } catch {}
   }
 }
 
@@ -100,39 +80,3 @@ handler.tags = ['tools']
 handler.menu = true
 
 export default handler
-
-// ────────────────────────────────
-// ☁️ SUBIR A UGUU
-// ────────────────────────────────
-async function uploadToUguu (filePath) {
-  const form = new FormData()
-  form.append('files[]', fs.createReadStream(filePath))
-
-  try {
-    const res = await fetch('https://uguu.se/upload.php', {
-      method: 'POST',
-      headers: form.getHeaders(),
-      body: form
-    })
-
-    const json = await res.json()
-    return json.files?.[0]?.url || null
-  } catch {
-    return null
-  }
-}
-
-// ────────────────────────────────
-// 🔥 UPSCALE API
-// ────────────────────────────────
-async function upscaleImage (url) {
-  const res = await fetch(
-    `https://api.siputzx.my.id/api/iloveimg/upscale?image=${encodeURIComponent(url)}`
-  )
-
-  if (!res.ok) {
-    throw new Error('No se pudo mejorar la imagen')
-  }
-
-  return await res.buffer()
-      }
