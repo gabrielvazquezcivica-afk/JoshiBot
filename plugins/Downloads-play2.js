@@ -1,7 +1,5 @@
 import yts from 'yt-search'
-import { spawn } from 'child_process'
-import fs from 'fs'
-import path from 'path'
+import { spawnSync } from 'child_process'
 
 export const handler = async (m, { sock, args, from, reply }) => {
   const query = args.join(' ').trim()
@@ -27,29 +25,34 @@ export const handler = async (m, { sock, args, from, reply }) => {
 ╰──────────────────╯
 `
 
-    await reply(info + '\n⏳ Descargando el video...')
+    await reply(info + '\n⏳ Obteniendo video...')
 
-    // Carpeta temporal
-    const tmpDir = path.join('./tmp')
-    if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true })
-    const outFile = path.join(tmpDir, `video_${Date.now()}.mp4`)
+    // 🔹 Obtener URL directa del video usando yt-dlp (silencioso)
+    const videoUrl = spawnSync('yt-dlp', [
+      '-f', 'bestvideo+bestaudio/best',
+      '--get-url',
+      video.url
+    ], { encoding: 'utf-8' }).stdout.trim()
 
-    // 🔥 Descargar video silenciosamente
-    await new Promise((resolve, reject) => {
-      const ytdlp = spawn('yt-dlp', [
-        '--quiet',            // Sin logs
-        '-f', 'bestvideo+bestaudio/best',
-        '-o', outFile,
-        video.url
-      ])
+    if (!videoUrl) return reply('❌ No se pudo obtener la URL del video')
 
-      ytdlp.on('close', code => (code === 0 ? resolve() : reject(new Error('yt-dlp falló'))))
-    })
+    // 🔹 Obtener URL directa del audio
+    const audioUrl = spawnSync('yt-dlp', [
+      '-f', 'bestaudio',
+      '--get-url',
+      video.url
+    ], { encoding: 'utf-8' }).stdout.trim()
 
     // ⚡ Enviar video
     await sock.sendMessage(from, {
-      video: fs.readFileSync(outFile),
+      video: { url: videoUrl },
       caption: info
+    }, { quoted: m })
+
+    // ⚡ Enviar audio
+    await sock.sendMessage(from, {
+      audio: { url: audioUrl },
+      mimetype: 'audio/mpeg'
     }, { quoted: m })
 
     // ✅ Reacción
@@ -57,9 +60,7 @@ export const handler = async (m, { sock, args, from, reply }) => {
 
   } catch (e) {
     console.error('PLAY2 ERROR:', e)
-    reply('❌ Ocurrió un error descargando el video')
-  } finally {
-    try { if (fs.existsSync(outFile)) fs.unlinkSync(outFile) } catch {}
+    reply('❌ Ocurrió un error descargando el video/audio')
   }
 }
 
