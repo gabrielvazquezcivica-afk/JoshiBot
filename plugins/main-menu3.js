@@ -1,27 +1,27 @@
-// menu3-futurista.js | JoshiBot
-export const handler = async (m, { conn }) => {
+// main-menu3.js | JoshiBot
+export const handler = async (m, { sock, from }) => {
   // Reacción inicial
-  await conn.sendMessage(m.chat, { react: { text: '🕴🏻', key: m.key } })
+  await sock.sendMessage(from, { react: { text: '⚡', key: m.key } })
 
-  // Tomar todos los comandos registrados
+  // Tomar todos los comandos activos
   const cmds = Object.values(global.plugins)
     .filter(p => !p.disabled && Array.isArray(p.help))
     .map(p => p.help)
     .flat()
 
-  // Asignar un emoji fijo a cada comando
+  // Emojis fijos para los comandos
   const emojiList = [
     '⚡','🔥','💥','🚀','🛰️','🤖','👾','🧠','💻','📡','📀','🩸','🗡️','⚔️','☄️'
   ]
 
-  // Mapear cada comando con un emoji
+  // Mapear comando con emoji
   const cmdWithEmoji = cmds.map((c, i) => {
-    const emoji = emojiList[i % emojiList.length] // cicla si hay más comandos
+    const emoji = emojiList[i % emojiList.length]
     return { cmd: c, emoji }
   })
 
-  // Construir el texto futurista
-  let text = '╭─〔 ⚡ MENU OWNER ⚡ 〕\n'
+  // Texto futurista
+  let text = '╭─〔 ⚡ MENU 3 FUTURISTA ⚡ 〕\n'
   text += '│\n'
 
   cmdWithEmoji.forEach(c => {
@@ -31,8 +31,8 @@ export const handler = async (m, { conn }) => {
   text += '│\n╰─────────────────────────╯\n'
   text += '─────────────────────────────\n> 𝘑𝘰𝘴𝘩𝘪𝘉𝘰𝘵'
 
-  // Enviar el menú
-  await conn.sendMessage(m.chat, { text }, { quoted: m })
+  // Enviar menú
+  await sock.sendMessage(from, { text }, { quoted: m })
 }
 
 handler.command = ['menu3','menufut']
