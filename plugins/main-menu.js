@@ -91,7 +91,7 @@ export const handler = async (m, {
   
   for (const tag of orderedTags) {  
     if (!categories[tag]) continue  
-    const emoji = tagEmoji[tag] || defaultEmoji  
+    const emoji = tagEmoji[tag] || defaultEmoji
   
     menu += `  
 ╔══〔 ${emoji} ${tag.toUpperCase()} 〕══╗  
@@ -100,6 +100,11 @@ export const handler = async (m, {
     for (const cmd of categories[tag]) {  
       menu += `║ ▸ ${emoji}  .${cmd}\n`  
     }  
+
+    // ✅ Agregar "on-off" al final de main
+    if (tag === 'main') {
+      menu += `║ ▸ 🟢 on-off\n`
+    }
   
     menu += `╚══════════════════════╝\n`  
   }  
