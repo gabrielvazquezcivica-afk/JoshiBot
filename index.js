@@ -95,7 +95,7 @@ global.saveDB = () => {
 /* ===================================================== */
 
 const PREFIX = global.prefix
-const plugins = []
+let plugins = []
 
 // ⏱️ Ignorar mensajes viejos
 const botStartTime = Math.floor(Date.now() / 1000)
@@ -125,17 +125,19 @@ async function loadPlugins () {
 
   const files = fs.readdirSync(pluginsDir).filter(f => f.endsWith('.js'))
 
+  const newPlugins = []
   for (const file of files) {
     try {
       const plugin = await import(
         pathToFileURL(path.join(pluginsDir, file)).href
       )
-      if (plugin?.handler) plugins.push(plugin)
+      if (plugin?.handler) newPlugins.push(plugin)
     } catch (e) {
       console.error(chalk.red(`❌ Error cargando plugin: ${file}`), e)
     }
   }
-
+  plugins = newPlugins
+  global.plugins = plugins
   console.log(
     chalk.green('🔌 Plugins cargados:'),
     chalk.cyan(plugins.length)
@@ -158,8 +160,6 @@ async function start () {
   showBanner()
   await loadPlugins()
 
-  global.plugins = plugins
-
   const sock = await connectBot()
 
   // 🔔 AUTO-DETECT
@@ -172,6 +172,14 @@ async function start () {
       await autoAdminOwnerEvent(sock, update, global.owner)
     } catch (e) {
       console.error(chalk.red('❌ Error en eventos de grupo:'), e)
+    }
+  })
+
+  // 🔁 RECARGA DE PLUGINS AL RECONECTAR
+  sock.ev.on('connection.update', async (update) => {
+    if (update.connection === 'open') {
+      console.log(chalk.green('🤖 Bot reconectado, recargando plugins...'))
+      await loadPlugins()
     }
   })
 
