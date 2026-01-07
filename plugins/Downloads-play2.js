@@ -1,87 +1,54 @@
-import yts from 'yt-search'
-import fetch from 'node-fetch'
+import { spawn } from 'child_process'
+import fs from 'fs'
+import path from 'path'
 
-const apis = [
-  url => `https://api.siputzx.my.id/api/d/ytmp4?url=${encodeURIComponent(url)}`,
-  url => `https://api.ryzendesu.vip/api/downloader/ytmp4?url=${encodeURIComponent(url)}`,
-  url => `https://api.davidcyril.tech/dl/ytmp4?url=${encodeURIComponent(url)}`
-]
+export const handler = async (m, { sock, from, args, reply }) => {
+  const query = args.join(' ').trim()
+  if (!query) return reply('🔎 Escribe el nombre del video a descargar')
 
-export const handler = async (m, {
-  sock,
-  from,
-  args,
-  reply
-}) => {
+  // Carpeta temporal
+  const tmpDir = path.join('./tmp')
+  if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true })
 
-  const text = args.join(' ').trim()
-  if (!text) return reply('🔎 Escribe el nombre del video')
+  // Nombre del archivo de salida
+  const outFile = path.join(tmpDir, `video_${Date.now()}.mp4`)
 
   try {
-    // 🔍 Buscar video
-    const search = await yts(text)
-    if (!search.videos.length) {
-      return reply('❌ No se encontraron resultados')
-    }
+    await reply('⏳ Buscando y descargando video, espera un momento...')
 
-    const video = search.videos[0]
+    // Ejecutar yt-dlp
+    await new Promise((resolve, reject) => {
+      const ytdlp = spawn('yt-dlp', [
+        '-f', 'mp4',           // formato video
+        '-o', outFile,         // salida
+        '--no-playlist',       // solo un video
+        query
+      ])
 
-    // 🖼 Thumbnail
-    const thumbRes = await fetch(video.thumbnail)
-    const thumb = Buffer.from(await thumbRes.arrayBuffer())
+      ytdlp.stdout.on('data', d => console.log(d.toString()))
+      ytdlp.stderr.on('data', d => console.error(d.toString()))
+      ytdlp.on('close', code => {
+        if (code === 0) resolve()
+        else reject(new Error('yt-dlp falló'))
+      })
+    })
 
+    // Enviar video
     await sock.sendMessage(from, {
-      image: thumb,
-      caption: `
-╭─〔 🎬 YOUTUBE 〕
-│ 📌 ${video.title}
-│ 👤 ${video.author.name}
-│ ⏱ ${video.timestamp}
-│ 👁 ${video.views.toLocaleString()}
-╰────────────────╯
-
-⏳ Descargando video...
-`.trim()
-    }, { quoted: m })
-
-    let videoUrl = null
-
-    // 🔁 PROBAR APIs
-    for (const api of apis) {
-      try {
-        const res = await fetch(api(video.url), { timeout: 15000 })
-        const json = await res.json().catch(() => null)
-
-        videoUrl =
-          json?.result?.url ||
-          json?.url ||
-          json?.data?.url ||
-          json?.dl_url ||
-          null
-
-        if (videoUrl) break
-      } catch {}
-    }
-
-    if (!videoUrl) {
-      return reply('❌ Todas las APIs fallaron, intenta más tarde')
-    }
-
-    // 📤 Enviar video
-    await sock.sendMessage(from, {
-      video: { url: videoUrl },
-      mimetype: 'video/mp4',
-      caption: '🎬 Video listo'
+      video: fs.readFileSync(outFile),
+      caption: `✅ Video descargado: ${query}`
     }, { quoted: m })
 
   } catch (e) {
     console.error('PLAY2 ERROR:', e)
-    reply('❌ Error al procesar el video')
+    reply('❌ Error descargando el video')
+  } finally {
+    // Limpiar temporal
+    try { if (fs.existsSync(outFile)) fs.unlinkSync(outFile) } catch {}
   }
 }
 
 handler.command = ['play2']
 handler.tags = ['descargas']
 handler.menu = true
-
 export default handler
