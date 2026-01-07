@@ -6,18 +6,19 @@ const LIMIT_MB = 200
 export const handler = async (m, {
   sock,
   from,
-  text,
-  command,
+  args,
   reply
 }) => {
 
-  if (!text || !text.trim()) {
-    return reply('🔎 Escribe el nombre del video o enlace de YouTube')
+  // 🔧 FIX JOSHIBOT
+  const text = args.join(' ').trim()
+  if (!text) {
+    return reply('🔎 Escribe el nombre del video o un enlace de YouTube')
   }
 
   try {
     // 🔍 Buscar video
-    const search = await yts(text.trim())
+    const search = await yts(text)
     if (!search.videos || !search.videos.length) {
       return reply('❌ No se encontraron resultados')
     }
@@ -74,7 +75,7 @@ export const handler = async (m, {
 
   } catch (e) {
     console.error('PLAY2 ERROR:', e)
-    reply('❌ Ocurrió un error al descargar el video')
+    reply('❌ Error al procesar el video')
   }
 }
 
