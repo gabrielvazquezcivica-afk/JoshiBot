@@ -1,44 +1,49 @@
-let handler = async (m, { conn }) => {
-  // 🔒 Solo OWNER
-  const ownerJids = global.owner.map(o => typeof o === 'string' ? o : o[0])
-  if (!ownerJids.includes(m.sender)) {
-    return conn.reply(m.chat, '⛔ Solo el OWNER puede usar este comando', m)
+// owner-leave-futurista.js | JoshiBot
+export const handler = async (m, { sock, sender, reply, global }) => {
+
+  // 👑 SOLO OWNER
+  const owners = global.owner?.map(o => typeof o === 'string' ? o : o[0]) || []
+  const senderNum = sender.replace(/[^0-9]/g, '')
+
+  if (!owners.includes(senderNum)) {
+    return reply('🚫 Solo el OWNER puede usar este comando')
   }
 
-  // 🛑 Desactivar bienvenida en DB
-  if (!global.db) global.db = {}
-  if (!global.db.data) global.db.data = {}
-  if (!global.db.data.chats) global.db.data.chats = {}
-  if (!global.db.data.chats[m.chat]) global.db.data.chats[m.chat] = {}
-  const chat = global.db.data.chats[m.chat]
-  chat.welcome = false
+  // 🔥 Mensaje futurista alburero
+  const text = `
+╔═══════════════════════════════╗
+║       ⚡ JOSHI BOT ⚡
+║
+║   🚪 *SALIDA DEL GRUPO* 🚪
+║
+║ (っ◔◡◔)っ 𝙰𝚍𝚒𝚘𝚜, bolitas de inútiles 🍆💦
+║ Me voy a darle duro a mis cosas 🔥😏
+║ No lloren si me extrañan 🩸😉
+║
+╚═══════════════════════════════╝
+> 𝘑𝘰𝘴𝘩𝘪𝘉𝘰𝘵
+`
 
-  // ⚡ Mensaje de despedida con albur extremo
-  await conn.reply(m.chat, `
-╭─❖ 「 💀 ADIÓS AL GRUPO 」 ❖─╮
-│ ( ͡⚆ ͜ʖ ͡⚆)つ
-│ Me voy del grupo, que se les apriete la vida
-│ 🔥 Aquí hay más culos que conversación
-│ 😏 No lloren cuando extrañen mi sabrosura
-│ 💣 Sigan disfrutando del caos y de mis memes calientes
-╰────────────────────────────╯
-`.trim(), m)
-
-  // 🚪 Salir del grupo
-  await conn.groupLeave(m.chat)
-
-  // 🔄 Reactivar bienvenida por si vuelve el bot
   try {
-    chat.welcome = true
+    // ⚡ Reacción
+    await sock.sendMessage(m.chat, { react: { text: '⚡', key: m.key } })
+
+    // 🏃‍♂️ Enviar mensaje y salir del grupo
+    await sock.sendMessage(m.chat, { text }, { quoted: m })
+    await sock.groupLeave(m.chat)
+
   } catch (e) {
-    console.log('ERROR al reactivar welcome:', e)
+    console.error('LEAVE ERROR:', e)
+    reply('❌ Ocurrió un error al intentar salir del grupo')
   }
 }
 
-handler.command = ['salir', 'salirdelgrupo', 'leave']
-handler.group = true
-handler.rowner = true
-handler.menu = true
+handler.command = ['salir','salirdelgrupo','leave']
+handler.help = ['salir']
 handler.tags = ['owner']
+handler.owner = true
+handler.menu = false
+handler.menu3 = true
+handler.group = true
 
 export default handler
