@@ -1,11 +1,25 @@
 import config from '../config.js'
 
 export const handler = async (m, { sock, from, text }) => {
-  if (!text) throw '⚠ *_️Ingrese el error que desea reportar._*'
-  if (text.length < 10) throw '⚠️ *_Especifique bien el error, mínimo 10 caracteres._*'
-  if (text.length > 1000) throw '⚠️ *_Máximo 1000 caracteres para enviar el error._*'
+  if (!text) {
+    return await sock.sendMessage(from, {
+      text: '⚠ *_Ingrese el error que desea reportar (mínimo 10 caracteres)._*\nEjemplo: .reportar Bot se cierra solo'
+    }, { quoted: m })
+  }
 
-  // 👑 Reacción al ejecutor
+  if (text.length < 10) {
+    return await sock.sendMessage(from, {
+      text: '⚠ *_Especifique bien el error, mínimo 10 caracteres._*'
+    }, { quoted: m })
+  }
+
+  if (text.length > 1000) {
+    return await sock.sendMessage(from, {
+      text: '⚠ *_Máximo 1000 caracteres para enviar el error._*'
+    }, { quoted: m })
+  }
+
+  // 👑 Reacción
   await sock.sendMessage(from, {
     react: { text: '⚡', key: m.key }
   })
@@ -24,7 +38,7 @@ export const handler = async (m, { sock, from, text }) => {
 
   // Enviar reporte al owner
   const ownerJid = config.owner.numbers[0] + '@s.whatsapp.net'
-  await sock.sendMessage(ownerJid, m.quoted ? teks + m.quoted.text : teks, m, { mentions: sock.parseMention(teks) })
+  await sock.sendMessage(ownerJid, { text: teks, mentions: sock.parseMention(teks) }, { quoted: m })
 
   // Confirmación al usuario
   await sock.sendMessage(from, {
