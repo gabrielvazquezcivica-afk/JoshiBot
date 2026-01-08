@@ -1,6 +1,8 @@
 import config from '../config.js'
 
-export const handler = async (m, { sock, from, text }) => {
+export const handler = async (m, { sock, from, args }) => {
+  const text = args.join(' ').trim() // ← tomamos todo lo que el usuario escribió
+
   if (!text) {
     return await sock.sendMessage(from, {
       text: '⚠ *_Ingrese el error que desea reportar (mínimo 10 caracteres)._*\nEjemplo: .reportar Bot se cierra solo'
