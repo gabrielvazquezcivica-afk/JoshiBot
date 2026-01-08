@@ -53,7 +53,9 @@ Solución:
   }
 }
 
+// ───── CONFIG ─────
 handler.command = ['join']
 handler.tags = ['owner']
 handler.owner = true
-handler.menu = true
+handler.menu = false
+handler.menu3 = true
