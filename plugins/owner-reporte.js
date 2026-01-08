@@ -40,5 +40,6 @@ handler.help = ['reportar <mensaje>']
 handler.tags = ['info']
 handler.command = ['reporte','report','reportar','bug','error']
 handler.group = true
+handler.menu = true
 
 export default handler
