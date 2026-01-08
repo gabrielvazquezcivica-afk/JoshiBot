@@ -1,49 +1,70 @@
 // main-menu3.js | JoshiBot
 export const handler = async (m, { sock, from }) => {
-  // Reacción inicial
-  await sock.sendMessage(from, { react: { text: '⚡', key: m.key } })
 
-  // Tomar todos los comandos activos
+  // ⚡ Reacción inicial
+  await sock.sendMessage(from, {
+    react: { text: '⚡', key: m.key }
+  })
+
+  // 🔍 Leer SOLO comandos menu3
   const cmds = Object.values(global.plugins)
-    .filter(p => !p.disabled && Array.isArray(p.help))
+    .filter(p =>
+      !p.disabled &&
+      p.menu3 === true &&
+      Array.isArray(p.help)
+    )
     .map(p => p.help)
     .flat()
 
+  // ❌ Si no hay comandos
   if (!cmds.length) {
-    // Si no hay comandos
     return await sock.sendMessage(from, {
-      text: '❌ No hay comandos disponibles para mostrar en el menú.\n> Menú Owner'
+      text:
+`╭─〔 ⚠️ MENÚ OWNER 〕
+│
+│ ❌ No hay comandos disponibles
+│
+╰──────────────────╯
+────────────────────
+> 𝘑𝘰𝘴𝘩𝘪𝘉𝘰𝘵`
     }, { quoted: m })
   }
 
-  // Emojis fijos para los comandos
+  // 🎨 Emojis fijos
   const emojiList = [
-    '⚡','🔥','💥','🚀','🛰️','🤖','👾','🧠','💻','📡','📀','🩸','🗡️','⚔️','☄️'
+    '⚡','🔥','💥','🚀','🛰️','🤖','👾','🧠','💻',
+    '📡','📀','🩸','🗡️','⚔️','☄️'
   ]
 
-  // Mapear comando con emoji
-  const cmdWithEmoji = cmds.map((c, i) => {
-    const emoji = emojiList[i % emojiList.length]
-    return { cmd: c, emoji }
-  })
+  // Asociar emoji fijo
+  const cmdWithEmoji = cmds.map((cmd, i) => ({
+    cmd,
+    emoji: emojiList[i % emojiList.length]
+  }))
 
-  // Construir texto estilo futurista vertical
-  let text = '╭─〔 ⚡ MENÚ OWNER ⚡ 〕\n│\n'
+  // 🧾 Construcción futurista
+  let text = `╭─〔 ⚡ MENÚ OWNER ⚡ 〕
+│
+`
 
-  cmdWithEmoji.forEach(c => {
+  for (const c of cmdWithEmoji) {
     text += `│ ${c.emoji}  ${c.cmd}\n`
-  })
+  }
 
-  text += '│\n╰─────────────────────────╯\n'
-  text += '─────────────────────────────\n> 𝘑𝘰𝘴𝘩𝘪𝘉𝘰𝘵'
+  text += `│
+╰─────────────────────────╯
+─────────────────────────────
+> 𝘑𝘰𝘴𝘩𝘪𝘉𝘰𝘵`
 
-  // Enviar menú
+  // 📤 Enviar
   await sock.sendMessage(from, { text }, { quoted: m })
 }
 
-handler.command = ['menu3','menufut']
-handler.tags = ['owner']
+handler.command = ['menu3', 'menufut']
 handler.help = ['menu3']
+handler.tags = ['info']
 handler.group = false
+handler.menu = false
+handler.menu3 = false
 
 export default handler
