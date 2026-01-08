@@ -1,19 +1,19 @@
 import yts from 'yt-search'
 import axios from 'axios'
 
-// ───── HELPERS ─────
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 
-async function isMp3Ready(url) {
-  try {
-    const res = await axios.get(url, {
-      headers: { Range: 'bytes=0-1024' },
-      timeout: 8000
-    })
-    return res.status === 206 || res.status === 200
-  } catch {
-    return false
+async function downloadMp3(url) {
+  const res = await axios.get(url, {
+    responseType: 'arraybuffer',
+    timeout: 30000
+  })
+
+  if (!res.data || res.data.byteLength < 50_000) {
+    throw new Error('MP3 inválido')
   }
+
+  return res.data
 }
 
 export const handler = async (m, {
@@ -25,12 +25,12 @@ export const handler = async (m, {
   owner
 }) => {
 
-  // 🧠 DB mínima
+  // 🧠 DB
   if (!global.db) global.db = {}
   if (!global.db.groups) global.db.groups = {}
   if (!global.db.groups[from]) global.db.groups[from] = { modoadmin: false }
 
-  // 🔒 MODO ADMIN SILENCIOSO
+  // 🔒 MODO ADMIN
   if (isGroup && global.db.groups[from].modoadmin) {
     const metadata = await sock.groupMetadata(from)
     const sender = m.key.participant
@@ -47,12 +47,7 @@ export const handler = async (m, {
   try {
     const text = args.join(' ').trim()
     if (!text) {
-      return reply(
-`🎧 *JOSHI AUDIO*
-━━━━━━━━━━━━━━
-Ejemplo:
-.play bad bunny`
-      )
+      return reply('🎧 Usa:\n.play nombre de canción')
     }
 
     // 🔎 BUSCAR
@@ -77,60 +72,54 @@ Ejemplo:
 👤 ${author?.name || 'Desconocido'}
 ⏱ ${timestamp}
 
-⚡ Procesando...
+⚡ Generando audio...
 `.trim()
     }, { quoted: m })
 
-    // ⬇️ INICIAR CONVERSIÓN
+    // ⬇️ INICIAR
     const start = await axios.get(
-      `https://p.savenow.to/ajax/download.php?format=mp3&url=${encodeURIComponent(url)}`,
-      { timeout: 15000 }
+      `https://p.savenow.to/ajax/download.php?format=mp3&url=${encodeURIComponent(url)}`
     )
 
-    if (!start.data?.success || !start.data.id) {
-      return reply('❌ No se pudo convertir')
-    }
+    if (!start.data?.success) throw 'Error conversión'
 
     const id = start.data.id
-    let dl = null
+    let audioBuffer = null
 
-    // 🔄 ESPERA REAL DEL MP3
-    for (let i = 0; i < 12; i++) {
+    // 🔄 ESPERA REAL
+    for (let i = 0; i < 15; i++) {
       const p = await axios.get(
-        `https://p.savenow.to/ajax/progress?id=${id}`,
-        { timeout: 10000 }
+        `https://p.savenow.to/ajax/progress?id=${id}`
       )
 
       if (p.data?.download_url) {
-        const ready = await isMp3Ready(p.data.download_url)
-        if (ready) {
-          dl = p.data.download_url
+        try {
+          audioBuffer = await downloadMp3(p.data.download_url)
           break
-        }
+        } catch {}
       }
 
-      await sleep(800)
+      await sleep(1000)
     }
 
-    if (!dl) {
-      return reply('❌ El audio no estuvo disponible')
+    if (!audioBuffer) {
+      return reply('❌ No se pudo obtener el audio')
     }
 
-    // 📤 ENVIAR AUDIO
+    // 📤 ENVIAR AUDIO REAL
     await sock.sendMessage(from, {
-      audio: { url: dl },
+      audio: audioBuffer,
       mimetype: 'audio/mpeg',
       fileName: `${title}.mp3`
     }, { quoted: m })
 
-    // ✅ FINAL
     await sock.sendMessage(from, {
       react: { text: '✅', key: m.key }
     })
 
   } catch (e) {
     console.error('PLAY ERROR:', e)
-    reply('❌ Error al obtener el audio')
+    reply('❌ Error al generar el audio')
   }
 }
 
