@@ -1,6 +1,18 @@
 import yts from 'yt-search'
 import axios from 'axios'
 
+// ───── ESPERA INTELIGENTE ─────
+async function waitForFile (url, tries = 6) {
+  for (let i = 0; i < tries; i++) {
+    try {
+      const head = await axios.head(url, { timeout: 5000 })
+      if (head.status === 200) return true
+    } catch {}
+    await new Promise(r => setTimeout(r, 800))
+  }
+  return false
+}
+
 export const handler = async (m, {
   sock,
   from,
@@ -10,42 +22,30 @@ export const handler = async (m, {
   owner
 }) => {
 
-  // 🧠 Inicializar DB si no existe
+  // 🧠 DB FIX
   if (!global.db) global.db = {}
   if (!global.db.groups) global.db.groups = {}
   if (!global.db.groups[from]) {
-    global.db.groups[from] = {
-      nsfw: false,
-      modoadmin: false
-    }
+    global.db.groups[from] = { nsfw: false, modoadmin: false }
   }
 
-  // 🔒 MODO ADMIN (BLOQUEO SILENCIOSO)
-  if (isGroup) {
-    const groupData = global.db.groups[from]
+  // 🔒 MODO ADMIN (SILENCIOSO)
+  if (isGroup && global.db.groups[from].modoadmin) {
+    const metadata = await sock.groupMetadata(from)
+    const sender = m.key.participant
+    const ownerJids = owner?.jid || []
 
-    if (groupData.modoadmin) {
-      const metadata = await sock.groupMetadata(from)
-      const participants = metadata.participants
-      const sender = m.key.participant
-
-      // 👑 OWNER SIEMPRE PERMITIDO
-      const ownerJids = (owner?.jid || [])
-      if (ownerJids.includes(sender)) {
-        // owner pasa sin bloqueo
-      } else {
-        const isAdmin = participants.some(
-          p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
-        )
-
-        if (!isAdmin) return // 🚫 bloqueo silencioso
-      }
+    if (!ownerJids.includes(sender)) {
+      const isAdmin = metadata.participants.some(
+        p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
+      )
+      if (!isAdmin) return
     }
   }
 
   try {
-    const text = args.join(' ').trim()
-    if (!text) {
+    const query = args.join(' ').trim()
+    if (!query) {
       return reply(
 `🎧 *JOSHI AUDIO SYSTEM*
 ━━━━━━━━━━━━━━━━━━
@@ -56,22 +56,24 @@ Ejemplo:
       )
     }
 
-    // 🔎 Buscar en YouTube
-    const search = await yts(text)
+    // 🔎 BÚSQUEDA
+    const search = await yts(query)
     if (!search.all.length) return reply('❌ No encontré resultados')
 
-    const v = search.all.find(x => x.seconds) || search.all[0]
-    const { title, url, timestamp, views, thumbnail, author, ago } = v
+    const v = search.all.find(v => v.seconds) || search.all[0]
+    const { title, url, thumbnail, timestamp, views, author, ago } = v
 
-    // 🎶 Reacción inicial
+    // 🎶 Reacción
     await sock.sendMessage(from, {
       react: { text: '🎶', key: m.key }
     })
 
-    // 🧾 DISEÑO FUTURISTA
-    const caption = `
+    // 🧾 INFO
+    await sock.sendMessage(from, {
+      image: { url: thumbnail },
+      caption: `
 ╔══════════════════════╗
-║   🎧 JOSHI AUDIO 🔊   ║
+║ 🎧 JOSHI AUDIO SYSTEM
 ╚══════════════════════╝
 
 🎵 *Título:* ${title}
@@ -80,50 +82,53 @@ Ejemplo:
 👁 *Vistas:* ${views.toLocaleString()}
 📅 *Publicado:* ${ago}
 
-━━━━━━━━━━━━━━━━━━━━━━
-⚡ *Estado:* Procesando audio
-💾 *Formato:* MP3 Alta calidad
-🤖 *Bot:* JOSHI-BOT
-━━━━━━━━━━━━━━━━━━━━━━
+⚡ Estado: Generando audio...
 `.trim()
-
-    await sock.sendMessage(from, {
-      image: { url: thumbnail },
-      caption
     }, { quoted: m })
 
-    // ⬇️ DESCARGA (API ESTABLE)
-    const res = await axios.get(
+    // ⬇️ DESCARGA
+    const start = await axios.get(
       `https://p.savenow.to/ajax/download.php?format=mp3&url=${encodeURIComponent(url)}`
     )
 
-    if (!res.data?.success) {
-      return reply('❌ No se pudo obtener el audio')
+    if (!start.data?.success) {
+      return reply('❌ No se pudo generar el audio')
     }
 
-    const id = res.data.id
+    const id = start.data.id
     let dl
 
-    // ⏳ Esperar progreso
-    while (true) {
+    // ⏳ PROGRESO REAL
+    for (let i = 0; i < 10; i++) {
       const p = await axios.get(
         `https://p.savenow.to/ajax/progress?id=${id}`
       )
+
       if (p.data?.success && p.data.progress === 1000) {
         dl = p.data.download_url
         break
       }
-      await new Promise(r => setTimeout(r, 2000))
+      await new Promise(r => setTimeout(r, 700))
     }
 
-    // 📤 Enviar audio
+    if (!dl) {
+      return reply('❌ El audio tardó demasiado en generarse')
+    }
+
+    // ✅ VALIDAR MP3 REAL
+    const ready = await waitForFile(dl)
+    if (!ready) {
+      return reply('❌ El audio aún no está listo, intenta otra vez')
+    }
+
+    // 📤 ENVIAR AUDIO
     await sock.sendMessage(from, {
       audio: { url: dl },
       mimetype: 'audio/mpeg',
       fileName: `${title}.mp3`
     }, { quoted: m })
 
-    // ✅ Reacción final
+    // ✅ FINAL
     await sock.sendMessage(from, {
       react: { text: '✅', key: m.key }
     })
