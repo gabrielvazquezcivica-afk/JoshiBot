@@ -1,14 +1,16 @@
 import yts from 'yt-search'
 import axios from 'axios'
 
-// ───── ESPERA INTELIGENTE ─────
-async function waitForFile (url, tries = 6) {
+// ───── HELPERS ─────
+const sleep = ms => new Promise(r => setTimeout(r, ms))
+
+async function fileExists(url, tries = 6) {
   for (let i = 0; i < tries; i++) {
     try {
-      const head = await axios.head(url, { timeout: 5000 })
-      if (head.status === 200) return true
+      const h = await axios.head(url, { timeout: 5000 })
+      if (h.status === 200) return true
     } catch {}
-    await new Promise(r => setTimeout(r, 800))
+    await sleep(600)
   }
   return false
 }
@@ -22,14 +24,14 @@ export const handler = async (m, {
   owner
 }) => {
 
-  // 🧠 DB FIX
+  // 🧠 DB
   if (!global.db) global.db = {}
   if (!global.db.groups) global.db.groups = {}
   if (!global.db.groups[from]) {
-    global.db.groups[from] = { nsfw: false, modoadmin: false }
+    global.db.groups[from] = { modoadmin: false }
   }
 
-  // 🔒 MODO ADMIN (SILENCIOSO)
+  // 🔒 MODO ADMIN (silencioso)
   if (isGroup && global.db.groups[from].modoadmin) {
     const metadata = await sock.groupMetadata(from)
     const sender = m.key.participant
@@ -44,26 +46,25 @@ export const handler = async (m, {
   }
 
   try {
-    const query = args.join(' ').trim()
-    if (!query) {
+    const text = args.join(' ').trim()
+    if (!text) {
       return reply(
-`🎧 *JOSHI AUDIO SYSTEM*
-━━━━━━━━━━━━━━━━━━
-📌 Escribe el nombre de una canción
-
+`🎧 *JOSHI AUDIO*
+━━━━━━━━━━━━━━
+📌 Escribe una canción
 Ejemplo:
 .play bad bunny`
       )
     }
 
-    // 🔎 BÚSQUEDA
-    const search = await yts(query)
+    // 🔎 BUSCAR
+    const search = await yts(text)
     if (!search.all.length) return reply('❌ No encontré resultados')
 
     const v = search.all.find(v => v.seconds) || search.all[0]
-    const { title, url, thumbnail, timestamp, views, author, ago } = v
+    const { title, url, timestamp, views, thumbnail, author, ago } = v
 
-    // 🎶 Reacción
+    // 🎶 REACCIÓN
     await sock.sendMessage(from, {
       react: { text: '🎶', key: m.key }
     })
@@ -72,54 +73,53 @@ Ejemplo:
     await sock.sendMessage(from, {
       image: { url: thumbnail },
       caption: `
-╔══════════════════════╗
-║ 🎧 JOSHI AUDIO SYSTEM
-╚══════════════════════╝
+╔══════════════════╗
+║ 🎧 JOSHI AUDIO   ║
+╚══════════════════╝
 
-🎵 *Título:* ${title}
-👤 *Canal:* ${author?.name || 'Desconocido'}
-⏱ *Duración:* ${timestamp}
-👁 *Vistas:* ${views.toLocaleString()}
-📅 *Publicado:* ${ago}
+🎵 ${title}
+👤 ${author?.name || 'Desconocido'}
+⏱ ${timestamp}
+👁 ${views.toLocaleString()}
+📅 ${ago}
 
-⚡ Estado: Generando audio...
+⚡ Procesando audio...
 `.trim()
     }, { quoted: m })
 
-    // ⬇️ DESCARGA
+    // ⬇️ PEDIR CONVERSIÓN
     const start = await axios.get(
-      `https://p.savenow.to/ajax/download.php?format=mp3&url=${encodeURIComponent(url)}`
+      `https://p.savenow.to/ajax/download.php?format=mp3&url=${encodeURIComponent(url)}`,
+      { timeout: 15000 }
     )
 
-    if (!start.data?.success) {
-      return reply('❌ No se pudo generar el audio')
+    if (!start.data?.success || !start.data.id) {
+      return reply('❌ No se pudo iniciar la descarga')
     }
 
     const id = start.data.id
     let dl
 
-    // ⏳ PROGRESO REAL
+    // 🔄 PROGRESO (rápido + real)
     for (let i = 0; i < 10; i++) {
       const p = await axios.get(
-        `https://p.savenow.to/ajax/progress?id=${id}`
+        `https://p.savenow.to/ajax/progress?id=${id}`,
+        { timeout: 10000 }
       )
 
-      if (p.data?.success && p.data.progress === 1000) {
+      if (p.data?.download_url) {
         dl = p.data.download_url
         break
       }
-      await new Promise(r => setTimeout(r, 700))
+
+      await sleep(700)
     }
 
-    if (!dl) {
-      return reply('❌ El audio tardó demasiado en generarse')
-    }
+    if (!dl) return reply('❌ No se pudo obtener el audio')
 
-    // ✅ VALIDAR MP3 REAL
-    const ready = await waitForFile(dl)
-    if (!ready) {
-      return reply('❌ El audio aún no está listo, intenta otra vez')
-    }
+    // ✅ VALIDAR MP3 (CLAVE)
+    const ok = await fileExists(dl, 8)
+    if (!ok) return reply('❌ Audio no disponible, intenta otra canción')
 
     // 📤 ENVIAR AUDIO
     await sock.sendMessage(from, {
