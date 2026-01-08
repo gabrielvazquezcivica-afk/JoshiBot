@@ -1,3 +1,4 @@
+// owner-join.js | JoshiBot
 export const handler = async (m, {
   sock,
   args,
@@ -5,6 +6,8 @@ export const handler = async (m, {
   owner,
   reply
 }) => {
+
+  // 👑 SOLO OWNER
   const owners = owner?.numbers || []
   const senderNum = sender.replace(/[^0-9]/g, '')
 
@@ -12,21 +15,35 @@ export const handler = async (m, {
     return reply('🚫 Solo el OWNER puede usar este comando')
   }
 
+  // 🔗 LINK
   const link = args[0]
-  if (!link) return reply('❌ Usa:\n.join <link>')
+  if (!link) {
+    return reply(
+`❌ Uso incorrecto
+
+Ejemplo:
+.join https://chat.whatsapp.com/XXXXX`
+    )
+  }
 
   const match = link.match(/chat\.whatsapp\.com\/([A-Za-z0-9]+)/i)
-  if (!match) return reply('❌ Link inválido')
+  if (!match) return reply('❌ Link de grupo inválido')
 
   const code = match[1]
 
   try {
+    // ⚡ Reacción
+    await sock.sendMessage(m.chat, {
+      react: { text: '⚡', key: m.key }
+    })
+
+    // 🚪 Intentar unirse
     await sock.groupAcceptInvite(code)
 
-    // ⏳ esperar a WhatsApp
+    // ⏳ Esperar respuesta real de WhatsApp
     await new Promise(r => setTimeout(r, 4000))
 
-    // 🔍 verificar si REALMENTE entró
+    // 🔍 Verificar si REALMENTE entró
     const groups = await sock.groupFetchAllParticipating()
     const joined = Object.values(groups).some(
       g => g.inviteCode === code
@@ -34,18 +51,19 @@ export const handler = async (m, {
 
     if (!joined) {
       return reply(
-`❌ WhatsApp BLOQUEÓ la unión
+`❌ *WhatsApp bloqueó la unión automática*
 
-⚠️ Esto NO es error del bot
-📛 WhatsApp restringe joins automáticos
+📛 Esto NO es error del bot
+⚠️ Restricción de WhatsApp
 
-Solución:
+✅ Solución:
 • Invita al bot manualmente 1 vez
-• Usa cuenta más antigua`
+• Usa una cuenta más antigua`
       )
     }
 
-    reply('✅ El bot SÍ se unió correctamente')
+    // ✅ Éxito
+    reply('✅ El bot se unió correctamente al grupo')
 
   } catch (e) {
     console.error('JOIN ERROR:', e)
@@ -53,9 +71,12 @@ Solución:
   }
 }
 
-// ───── CONFIG ─────
 handler.command = ['join']
+handler.help = ['join <link>']
 handler.tags = ['owner']
 handler.owner = true
 handler.menu = false
 handler.menu3 = true
+handler.group = true
+
+export default handler
