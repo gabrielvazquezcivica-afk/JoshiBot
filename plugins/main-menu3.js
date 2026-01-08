@@ -42,34 +42,37 @@ export const handler = async (m, {
     return reply('❌ No hay comandos de OWNER disponibles.')
   }
 
-  // 🎨 Emojis fijos (ordenados)
+  // 🎯 Emojis fijos
   const emojis = [
-    '👑','⚙️','🛠️','💣','🔥','🚨','🧠','📛',
-    '🧬','🛰️','📡','💀','🔒','⚡','🧪','🗑️'
+    '👑','⚙️','🛠️','🔥','🚨','🧠','🧬','📡',
+    '🛰️','🔒','⚡','🧪','💀','📛','🗑️','💣'
   ]
 
-  // 🎨 MENÚ TEXTO
+  // 🎨 MENÚ FUTURISTA
   let menu = `
-╔══════════════════════════════╗
-║   👑 MENU OWNER • JOSHI BOT
-║   👤 Usuario: ${pushName}
-╚══════════════════════════════╝
+╭━━━〔 👑 OWNER CONTROL PANEL 〕━━━╮
+┃ 🤖 Bot      : ${botName}
+┃ 👤 Usuario  : ${pushName}
+┃ 🧠 Acceso   : NIVEL ROOT
+┃ ⚡ Estado   : ACTIVO
+╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╯
 
-│ COMANDOS OWNER
-│
+▌▌▌ COMANDOS DE CONTROL ▌▌▌
+
 `
 
   ownerCommands.sort().forEach((cmd, i) => {
     const emoji = emojis[i % emojis.length]
-    menu += `│ ${emoji} .${cmd}\n`
+    menu += `▸ ${emoji}  .${cmd}\n`
   })
 
   menu += `
-│
-╰──────────────────────────────╯
-────────────────────────────────
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+▌ SISTEMA: OWNER MODE ENABLED
+▌ DEV: ${dev}
+
 > 𝘑𝘰𝘴𝘩𝘪𝘉𝘰𝘵
-🤖 ${botName} • Dev: ${dev}
 `
 
   await sock.sendMessage(
