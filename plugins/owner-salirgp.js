@@ -1,17 +1,18 @@
-// owner-leave-futurista.js | JoshiBot
+// owner-salir-futurista.js | JoshiBot
 import config from '../config.js'
 
 export const handler = async (m, { sock, reply }) => {
 
   // 👑 SOLO OWNER
   const owners = config.owner?.numbers || []
-  const senderNum = m.sender.split('@')[0]
+  const senderJid = m.key.participant || m.sender  // Asegura que tengamos el JID
+  const senderNum = senderJid.split('@')[0]
 
   if (!owners.includes(senderNum)) {
     return reply('🚫 Solo el OWNER puede usar este comando')
   }
 
-  // 🔥 Mensaje futurista alburero
+  // 🔥 Mensaje futurista y alburero
   const text = `
 ╔═══════════════════════════════╗
 ║       ⚡ JOSHI BOT ⚡
@@ -19,7 +20,7 @@ export const handler = async (m, { sock, reply }) => {
 ║   🚪 *SALIDA DEL GRUPO* 🚪
 ║
 ║ (っ◔◡◔)っ 𝙰𝚍𝚒𝚘𝚜, bolitas de inútiles 🍆💦
-║ Aqui hay mas culos que conversación 🔥😏
+║ Aqui hay mas culos que conversacion 🔥😏
 ║ No lloren si me extrañan 🩸😉
 ║
 ╚═══════════════════════════════╝
@@ -40,7 +41,7 @@ export const handler = async (m, { sock, reply }) => {
   }
 }
 
-handler.command = ['salir']
+handler.command = ['salir','salirdelgrupo','leave']
 handler.help = ['salir']
 handler.tags = ['owner']
 handler.owner = true
