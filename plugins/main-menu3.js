@@ -1,70 +1,88 @@
-// main-menu3.js | JoshiBot
-export const handler = async (m, { sock, from }) => {
+export const handler = async (m, {
+  sock,
+  from,
+  reply,
+  pushName,
+  plugins,
+  isGroup
+}) => {
 
-  // ⚡ Reacción inicial
-  await sock.sendMessage(from, {
-    react: { text: '⚡', key: m.key }
-  })
-
-  // 🔍 Leer SOLO comandos menu3
-  const cmds = Object.values(global.plugins)
-    .filter(p =>
-      !p.disabled &&
-      p.menu3 === true &&
-      Array.isArray(p.help)
-    )
-    .map(p => p.help)
-    .flat()
-
-  // ❌ Si no hay comandos
-  if (!cmds.length) {
-    return await sock.sendMessage(from, {
-      text:
-`╭─〔 ⚠️ MENÚ OWNER 〕
-│
-│ ❌ No hay comandos disponibles
-│
-╰──────────────────╯
-────────────────────
-> 𝘑𝘰𝘴𝘩𝘪𝘉𝘰𝘵`
-    }, { quoted: m })
+  // 👥 Solo grupos
+  if (!isGroup) {
+    return reply('🚫 Este menú solo está disponible en grupos')
   }
 
-  // 🎨 Emojis fijos
-  const emojiList = [
-    '⚡','🔥','💥','🚀','🛰️','🤖','👾','🧠','💻',
-    '📡','📀','🩸','🗡️','⚔️','☄️'
+  // 🛑 Fix plugins
+  if (!Array.isArray(plugins) || plugins.length === 0) {
+    return reply('❌ No hay plugins cargados.')
+  }
+
+  // ⚡ Reacción
+  await sock.sendMessage(from, {
+    react: { text: '👑', key: m.key }
+  })
+
+  const botName = 'JoshiBot'
+  const dev = 'SoyGabo'
+
+  // 📦 Recolectar comandos OWNER
+  const ownerCommands = []
+
+  for (const plugin of plugins) {
+    const h = plugin?.handler
+    if (!h?.command) continue
+
+    if (h.owner === true || (Array.isArray(h.tags) && h.tags.includes('owner'))) {
+      const cmds = Array.isArray(h.command) ? h.command : [h.command]
+      ownerCommands.push(...cmds)
+    }
+  }
+
+  if (!ownerCommands.length) {
+    return reply('❌ No hay comandos de OWNER disponibles.')
+  }
+
+  // 🎨 Emojis fijos (ordenados)
+  const emojis = [
+    '👑','⚙️','🛠️','💣','🔥','🚨','🧠','📛',
+    '🧬','🛰️','📡','💀','🔒','⚡','🧪','🗑️'
   ]
 
-  // Asociar emoji fijo
-  const cmdWithEmoji = cmds.map((cmd, i) => ({
-    cmd,
-    emoji: emojiList[i % emojiList.length]
-  }))
+  // 🎨 MENÚ TEXTO
+  let menu = `
+╔══════════════════════════════╗
+║   👑 MENU OWNER • JOSHI BOT
+║   👤 Usuario: ${pushName}
+║   👀 Visible para todos
+╚══════════════════════════════╝
 
-  // 🧾 Construcción futurista
-  let text = `╭─〔 ⚡ MENÚ OWNER ⚡ 〕
+│ COMANDOS OWNER
 │
 `
 
-  for (const c of cmdWithEmoji) {
-    text += `│ ${c.emoji}  ${c.cmd}\n`
-  }
+  ownerCommands.sort().forEach((cmd, i) => {
+    const emoji = emojis[i % emojis.length]
+    menu += `│ ${emoji} .${cmd}\n`
+  })
 
-  text += `│
-╰─────────────────────────╯
-─────────────────────────────
-> 𝘑𝘰𝘴𝘩𝘪𝘉𝘰𝘵`
+  menu += `
+│
+╰──────────────────────────────╯
+────────────────────────────────
+> 𝘑𝘰𝘴𝘩𝘪𝘉𝘰𝘵
+🤖 ${botName} • Dev: ${dev}
+`
 
-  // 📤 Enviar
-  await sock.sendMessage(from, { text }, { quoted: m })
+  await sock.sendMessage(
+    from,
+    { text: menu.trim() },
+    { quoted: m }
+  )
 }
 
-handler.command = ['menu3', 'menufut']
-handler.help = ['menu3']
+handler.command = ['menu3', 'menuowner']
 handler.tags = ['info']
-handler.group = false
-handler.menu = false
-handler.menu3 = false
+handler.group = true
+handler.menu = true
 
 export default handler
