@@ -30,7 +30,7 @@ export const handler = async (m, { sock, reply }) => {
     // ⚡ Reacción
     await sock.sendMessage(m.chat, { react: { text: '⚡', key: m.key } })
 
-    // 🏃‍♂️ Enviar mensaje SIN quoted para evitar error
+    // 🏃‍♂️ Enviar mensaje sin `quoted`
     await sock.sendMessage(m.chat, { text })
 
     // 🚪 Salir del grupo
@@ -42,7 +42,7 @@ export const handler = async (m, { sock, reply }) => {
   }
 }
 
-handler.command = ['salir']
+handler.command = ['salir','salirdelgrupo','leave']
 handler.help = ['salir']
 handler.tags = ['owner']
 handler.owner = true
