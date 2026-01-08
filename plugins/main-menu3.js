@@ -53,7 +53,6 @@ export const handler = async (m, {
 ╔══════════════════════════════╗
 ║   👑 MENU OWNER • JOSHI BOT
 ║   👤 Usuario: ${pushName}
-║   👀 Visible para todos
 ╚══════════════════════════════╝
 
 │ COMANDOS OWNER
