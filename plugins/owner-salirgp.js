@@ -5,7 +5,7 @@ export const handler = async (m, { sock, reply }) => {
 
   // 👑 SOLO OWNER
   const owners = config.owner?.numbers || []
-  const senderJid = m.key.participant || m.sender  // Asegura que tengamos el JID
+  const senderJid = m.key?.participant || m.sender
   const senderNum = senderJid.split('@')[0]
 
   if (!owners.includes(senderNum)) {
@@ -14,16 +14,15 @@ export const handler = async (m, { sock, reply }) => {
 
   // 🔥 Mensaje futurista y alburero
   const text = `
-╔═══════════════════════════════╗
-║       ⚡ JOSHI BOT ⚡
-║
-║   🚪 *SALIDA DEL GRUPO* 🚪
-║
-║ (っ◔◡◔)っ 𝙰𝚍𝚒𝚘𝚜, bolitas de inútiles 🍆💦
-║ Aqui hay mas culos que conversacion 🔥😏
-║ No lloren si me extrañan 🩸😉
-║
-╚═══════════════════════════════╝
+╭────────────────────────╮
+│ ⚡ 𝙹𝙾𝚂𝙷𝙸 𝙱𝙾𝚃 ⚡
+│
+│ 🚪 SALIDA DEL GRUPO
+│
+│ (っ◔◡◔)っ 𝙰𝚍𝚒𝚘𝚜, bolitas de inútiles 🍆💦
+│ Me voy a darle duro a mis cosas 🔥😏
+│ No lloren si me extrañan 🩸😉
+╰────────────────────────╯
 > 𝘑𝘰𝘴𝘩𝘪𝘉𝘰𝘵
 `
 
@@ -31,8 +30,10 @@ export const handler = async (m, { sock, reply }) => {
     // ⚡ Reacción
     await sock.sendMessage(m.chat, { react: { text: '⚡', key: m.key } })
 
-    // 🏃‍♂️ Enviar mensaje y salir del grupo
-    await sock.sendMessage(m.chat, { text }, { quoted: m })
+    // 🏃‍♂️ Enviar mensaje SIN quoted para evitar error
+    await sock.sendMessage(m.chat, { text })
+
+    // 🚪 Salir del grupo
     await sock.groupLeave(m.chat)
 
   } catch (e) {
@@ -41,7 +42,7 @@ export const handler = async (m, { sock, reply }) => {
   }
 }
 
-handler.command = ['salir','salirdelgrupo','leave']
+handler.command = ['salir']
 handler.help = ['salir']
 handler.tags = ['owner']
 handler.owner = true
