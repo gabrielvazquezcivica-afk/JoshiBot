@@ -43,7 +43,7 @@ export const handler = async (m, { sock, from, args }) => {
 
   // Enviar reporte al owner
   const ownerJid = config.owner.numbers[0] + '@s.whatsapp.net'
-  await sock.sendMessage(ownerJid, { text: teks, mentions: sock.parseMention(teks) }, { quoted: m })
+  await sock.sendMessage(ownerJid, { text: teks, mentions: [ownerJid] }, { quoted: m })
 
   // Confirmación al usuario
   await sock.sendMessage(from, {
