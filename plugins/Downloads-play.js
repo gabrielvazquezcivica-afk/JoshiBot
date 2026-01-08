@@ -8,9 +8,39 @@ export const handler = async (m, {
   sock,
   from,
   args,
-  reply
+  reply,
+  isGroup,
+  owner
 }) => {
 
+  const sender = m.key.participant
+
+  /* ───── 👑 MODO ADMIN (SILENCIOSO) ───── */
+  if (isGroup) {
+    if (!global.db) global.db = {}
+    if (!global.db.groups) global.db.groups = {}
+    if (!global.db.groups[from]) {
+      global.db.groups[from] = { modoadmin: false }
+    }
+
+    if (global.db.groups[from].modoadmin) {
+      const metadata = await sock.groupMetadata(from)
+      const participants = metadata.participants || []
+
+      // 👑 OWNER bypass
+      const ownerJids = owner?.jid || []
+      if (!ownerJids.includes(sender)) {
+        const isAdmin = participants.some(
+          p => p.id === sender &&
+            (p.admin === 'admin' || p.admin === 'superadmin')
+        )
+        if (!isAdmin) return // 🚫 bloqueo silencioso
+      }
+    }
+  }
+  /* ─────────────────────────────────── */
+
+  // ───── VALIDAR TEXTO ─────
   const text = args.join(' ').trim()
   if (!text) {
     return reply(`
@@ -22,21 +52,17 @@ export const handler = async (m, {
   }
 
   try {
-    /* 🔍 BUSCAR */
+    /* 🔍 BUSCAR EN YT */
     const search = await yts(text)
-    if (!search.all.length) {
-      return reply('❌ No encontré resultados')
-    }
+    if (!search.all.length) return reply('❌ No encontré resultados')
 
     const v = search.all.find(v => v.seconds) || search.all[0]
     const { title, url, thumbnail, author, timestamp, views, ago } = v
 
     /* 🎶 REACCIÓN */
-    await sock.sendMessage(from, {
-      react: { text: '🎶', key: m.key }
-    })
+    await sock.sendMessage(from, { react: { text: '🎶', key: m.key } })
 
-    /* 📡 PANEL */
+    /* 📡 PANEL DE INFORMACIÓN */
     await sock.sendMessage(from, {
       image: { url: thumbnail },
       caption: `
@@ -44,17 +70,16 @@ export const handler = async (m, {
 ║   🎧 JOSHI AUDIO SYSTEM   ║
 ╠════════════════════════════╣
 ║ 🎵 Título   : ${title}
-║ 👤 Canal   : ${author?.name || 'Desconocido'}
-║ ⏱ Duración: ${timestamp}
-║ 👁 Vistas  : ${views?.toLocaleString() || 'N/A'}
-║ 📅 Subido  : ${ago || 'N/A'}
+║ 👤 Canal    : ${author?.name || 'Desconocido'}
+║ ⏱ Duración : ${timestamp}
+║ 👁 Vistas   : ${views?.toLocaleString() || 'N/A'}
+║ 📅 Subido   : ${ago || 'N/A'}
 ╚════════════════════════════╝
 `.trim()
     }, { quoted: m })
 
-    /* ⬇️ DESCARGA */
+    /* ⬇️ DESCARGA DE AUDIO */
     const tmp = path.join(os.tmpdir(), `${Date.now()}.mp3`)
-
     await new Promise((resolve, reject) => {
       const yt = spawn('yt-dlp', [
         '-x',
@@ -63,7 +88,6 @@ export const handler = async (m, {
         '-o', tmp,
         url
       ])
-
       yt.on('close', code => code === 0 ? resolve() : reject())
       yt.on('error', reject)
     })
@@ -78,10 +102,8 @@ export const handler = async (m, {
       fileName: `${title}.mp3`
     }, { quoted: m })
 
-    /* ✅ OK */
-    await sock.sendMessage(from, {
-      react: { text: '✅', key: m.key }
-    })
+    /* ✅ REACCIÓN FINAL */
+    await sock.sendMessage(from, { react: { text: '✅', key: m.key } })
 
   } catch (e) {
     console.error('PLAY ERROR:', e)
