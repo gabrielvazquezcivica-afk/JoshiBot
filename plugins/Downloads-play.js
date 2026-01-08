@@ -1,20 +1,8 @@
 import yts from 'yt-search'
-import axios from 'axios'
-
-const sleep = ms => new Promise(r => setTimeout(r, ms))
-
-async function downloadMp3(url) {
-  const res = await axios.get(url, {
-    responseType: 'arraybuffer',
-    timeout: 30000
-  })
-
-  if (!res.data || res.data.byteLength < 50_000) {
-    throw new Error('MP3 inválido')
-  }
-
-  return res.data
-}
+import fs from 'fs'
+import os from 'os'
+import path from 'path'
+import { spawn } from 'child_process'
 
 export const handler = async (m, {
   sock,
@@ -25,44 +13,20 @@ export const handler = async (m, {
   owner
 }) => {
 
-  // 🧠 DB
-  if (!global.db) global.db = {}
-  if (!global.db.groups) global.db.groups = {}
-  if (!global.db.groups[from]) global.db.groups[from] = { modoadmin: false }
-
-  // 🔒 MODO ADMIN
-  if (isGroup && global.db.groups[from].modoadmin) {
-    const metadata = await sock.groupMetadata(from)
-    const sender = m.key.participant
-    const ownerJids = owner?.jid || []
-
-    if (!ownerJids.includes(sender)) {
-      const isAdmin = metadata.participants.some(
-        p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
-      )
-      if (!isAdmin) return
-    }
-  }
+  const text = args.join(' ').trim()
+  if (!text) return reply('🎧 Usa:\n.play nombre de canción')
 
   try {
-    const text = args.join(' ').trim()
-    if (!text) {
-      return reply('🎧 Usa:\n.play nombre de canción')
-    }
-
-    // 🔎 BUSCAR
     const search = await yts(text)
     if (!search.all.length) return reply('❌ Sin resultados')
 
     const v = search.all.find(v => v.seconds) || search.all[0]
     const { title, url, thumbnail, author, timestamp } = v
 
-    // 🎶 REACCIÓN
     await sock.sendMessage(from, {
       react: { text: '🎶', key: m.key }
     })
 
-    // 🖼️ INFO
     await sock.sendMessage(from, {
       image: { url: thumbnail },
       caption: `
@@ -72,43 +36,30 @@ export const handler = async (m, {
 👤 ${author?.name || 'Desconocido'}
 ⏱ ${timestamp}
 
-⚡ Generando audio...
+⚡ Descargando audio...
 `.trim()
     }, { quoted: m })
 
-    // ⬇️ INICIAR
-    const start = await axios.get(
-      `https://p.savenow.to/ajax/download.php?format=mp3&url=${encodeURIComponent(url)}`
-    )
+    const tmp = path.join(os.tmpdir(), `${Date.now()}.mp3`)
 
-    if (!start.data?.success) throw 'Error conversión'
+    await new Promise((resolve, reject) => {
+      const yt = spawn('yt-dlp', [
+        '-x',
+        '--audio-format', 'mp3',
+        '--audio-quality', '0',
+        '-o', tmp,
+        url
+      ])
 
-    const id = start.data.id
-    let audioBuffer = null
+      yt.on('close', code => code === 0 ? resolve() : reject())
+      yt.on('error', reject)
+    })
 
-    // 🔄 ESPERA REAL
-    for (let i = 0; i < 15; i++) {
-      const p = await axios.get(
-        `https://p.savenow.to/ajax/progress?id=${id}`
-      )
+    const audio = fs.readFileSync(tmp)
+    fs.unlinkSync(tmp)
 
-      if (p.data?.download_url) {
-        try {
-          audioBuffer = await downloadMp3(p.data.download_url)
-          break
-        } catch {}
-      }
-
-      await sleep(1000)
-    }
-
-    if (!audioBuffer) {
-      return reply('❌ No se pudo obtener el audio')
-    }
-
-    // 📤 ENVIAR AUDIO REAL
     await sock.sendMessage(from, {
-      audio: audioBuffer,
+      audio,
       mimetype: 'audio/mpeg',
       fileName: `${title}.mp3`
     }, { quoted: m })
@@ -119,13 +70,13 @@ export const handler = async (m, {
 
   } catch (e) {
     console.error('PLAY ERROR:', e)
-    reply('❌ Error al generar el audio')
+    reply('❌ Error al descargar el audio')
   }
 }
 
 handler.command = ['play']
 handler.tags = ['descargas']
-handler.help = ['play <canción>']
 handler.menu = true
+handler.help = ['play <canción>']
 
 export default handler
