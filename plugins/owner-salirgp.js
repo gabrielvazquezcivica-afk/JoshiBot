@@ -1,8 +1,7 @@
-// owner-salir-futurista.js | JoshiBot
+// owner-salirgp.js | JoshiBot
 import config from '../config.js'
 
 export const handler = async (m, { sock, reply }) => {
-
   // 👑 SOLO OWNER
   const owners = config.owner?.numbers || []
   const senderJid = m.key?.participant || m.sender
@@ -14,7 +13,7 @@ export const handler = async (m, { sock, reply }) => {
 
   // 🔥 Mensaje futurista y alburero
   const text = `
-╭────────────────────────╮
+╭───────────────╮
 │ ⚡ 𝙹𝙾𝚂𝙷𝙸 𝙱𝙾𝚃 ⚡
 │
 │ 🚪 SALIDA DEL GRUPO
@@ -22,7 +21,7 @@ export const handler = async (m, { sock, reply }) => {
 │ (っ◔◡◔)っ 𝙰𝚍𝚒𝚘𝚜, bolitas de inútiles 🍆💦
 │ Me voy a darle duro a mis cosas 🔥😏
 │ No lloren si me extrañan 🩸😉
-╰────────────────────────╯
+╰───────────────╯
 > 𝘑𝘰𝘴𝘩𝘪𝘉𝘰𝘵
 `
 
@@ -30,7 +29,7 @@ export const handler = async (m, { sock, reply }) => {
     // ⚡ Reacción
     await sock.sendMessage(m.chat, { react: { text: '⚡', key: m.key } })
 
-    // 🏃‍♂️ Enviar mensaje sin `quoted`
+    // 📤 Mensaje sin `quoted`
     await sock.sendMessage(m.chat, { text })
 
     // 🚪 Salir del grupo
@@ -42,7 +41,7 @@ export const handler = async (m, { sock, reply }) => {
   }
 }
 
-handler.command = ['salir','salirdelgrupo','leave']
+handler.command = ['salir']
 handler.help = ['salir']
 handler.tags = ['owner']
 handler.owner = true
