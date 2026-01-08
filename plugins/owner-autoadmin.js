@@ -66,8 +66,7 @@ handler.command = ['autoadmin']
 handler.tags = ['owner']
 handler.owner = true
 handler.group = true
-handler.menu = false
-hanlder.menu3 = true
+handler.menu = true
 
 // ───── AUTO DETECTOR (SIN COMANDO) ─────
 export async function autoAdminOwnerEvent (sock, update, owner) {
