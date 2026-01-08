@@ -1,9 +1,11 @@
 // owner-leave-futurista.js | JoshiBot
-export const handler = async (m, { sock, sender, reply, global }) => {
+import config from '../config.js'
+
+export const handler = async (m, { sock, reply }) => {
 
   // 👑 SOLO OWNER
-  const owners = global.owner?.map(o => typeof o === 'string' ? o : o[0]) || []
-  const senderNum = sender.replace(/[^0-9]/g, '')
+  const owners = config.owner?.numbers || []
+  const senderNum = m.sender.split('@')[0]
 
   if (!owners.includes(senderNum)) {
     return reply('🚫 Solo el OWNER puede usar este comando')
@@ -17,7 +19,7 @@ export const handler = async (m, { sock, sender, reply, global }) => {
 ║   🚪 *SALIDA DEL GRUPO* 🚪
 ║
 ║ (っ◔◡◔)っ 𝙰𝚍𝚒𝚘𝚜, bolitas de inútiles 🍆💦
-║ Me voy a darle duro a mis cosas 🔥😏
+║ Aqui hay mas culos que conversación 🔥😏
 ║ No lloren si me extrañan 🩸😉
 ║
 ╚═══════════════════════════════╝
