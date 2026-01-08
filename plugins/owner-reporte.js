@@ -1,7 +1,7 @@
 import config from '../config.js'
 
 export const handler = async (m, { sock, from, args }) => {
-  const text = args.join(' ').trim() // ← tomamos todo lo que el usuario escribió
+  const text = args.join(' ').trim()
 
   if (!text) {
     return await sock.sendMessage(from, {
@@ -26,12 +26,15 @@ export const handler = async (m, { sock, from, args }) => {
     react: { text: '⚡', key: m.key }
   })
 
+  // ⚠ Protege m.sender
+  const senderId = m.sender ? m.sender.split('@')[0] : 'desconocido'
+
   const teks = `
 ╭───────────────────
 │⊷〘 *R E P O R T E* 🤍 〙⊷
 ├───────────────────
 │⁖🧡꙰  *Cliente:*
-│✏️ Wa.me/${m.sender.split`@`[0]}
+│✏️ Wa.me/${senderId}
 │
 │⁖💚꙰  *Mensaje:*
 │📩 ${text}
