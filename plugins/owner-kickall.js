@@ -62,7 +62,7 @@ export const handler = async (m, {
 }
 
 handler.command = ['kickall', 'eliminaratodos', 'sacaratodos']
-handler.tags = ['group']
+handler.tags = []
 handler.group = true
 handler.menu = false // 🔒 oculto del menú
 
