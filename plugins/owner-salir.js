@@ -1,16 +1,12 @@
 import config from '../config.js'
 
-// ───── HELPER ─────
 function onlyNumber(jid = '') {
   return jid?.toString().replace(/[^0-9]/g, '')
 }
 
 export const handler = async (m, { sock, from, reply }) => {
-  // 🔹 Obtener sender
   const senderJid = m.key?.participant || m.sender
   const senderNum = onlyNumber(senderJid)
-
-  // 🔹 Normalizar owners
   const ownerNums = config.owner.numbers.map(n => onlyNumber(n))
 
   if (!ownerNums.includes(senderNum)) {
@@ -18,16 +14,23 @@ export const handler = async (m, { sock, from, reply }) => {
   }
 
   try {
-    // 📝 Mensaje antes de salir
+    // ───── DISEÑO FUTURISTA + TEXTO ALBURERO ─────
     const mensaje = `
-💦 El grupo se puso intenso...
-😈 No aguanto más, me voy
-👋 Bye bye!
+╭─❖ 「 ⚡ JOSHI BOT ALERT 」 ❖─╮
+│ 🔥 Grupo demasiado oloroso
+│ 🙄 Deberas como enfadan
+│ 💦 Me voy por otros culitos
+│
+│ 👋 Bye bye, apestosos, inservibles 
+╰─────────────────────────────╯
+───────────────────────────────
+> 𝘑𝘰𝘴𝘩𝘪𝘉𝘰𝘵
 `.trim()
 
+    // ───── ENVIAR MENSAJE ─────
     await sock.sendMessage(from, { text: mensaje })
 
-    // ⬇️ Salir del grupo
+    // ───── SALIR DEL GRUPO ─────
     await sock.groupLeave(from)
   } catch (e) {
     console.error('ERROR al salir del grupo:', e)
@@ -35,7 +38,7 @@ export const handler = async (m, { sock, from, reply }) => {
   }
 }
 
-handler.command = ['salir']
+handler.command = ['salirgpo', 'exitgroup', 'bye']
 handler.tags = ['owner']
 handler.owner = true
 handler.group = true
