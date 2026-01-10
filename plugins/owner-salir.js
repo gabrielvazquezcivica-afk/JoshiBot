@@ -38,7 +38,7 @@ export const handler = async (m, { sock, from, reply }) => {
   }
 }
 
-handler.command = ['salirgpo', 'exitgroup', 'bye']
+handler.command = ['salir']
 handler.tags = ['owner']
 handler.owner = true
 handler.group = true
