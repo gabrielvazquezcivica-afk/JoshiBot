@@ -1,10 +1,19 @@
 import config from '../config.js'
 
+// ───── HELPER ─────
+function onlyNumber(jid = '') {
+  return jid?.toString().replace(/[^0-9]/g, '')
+}
+
 export const handler = async (m, { sock, from, reply }) => {
-  // 🔑 Owner check
+  // 🔹 Obtener sender
   const senderJid = m.key?.participant || m.sender
-  const ownerJids = config.owner.numbers.map(n => n + '@s.whatsapp.net')
-  if (!ownerJids.includes(senderJid)) {
+  const senderNum = onlyNumber(senderJid)
+
+  // 🔹 Normalizar owners
+  const ownerNums = config.owner.numbers.map(n => onlyNumber(n))
+
+  if (!ownerNums.includes(senderNum)) {
     return reply('🚫 Este comando solo puede usarlo el OWNER')
   }
 
