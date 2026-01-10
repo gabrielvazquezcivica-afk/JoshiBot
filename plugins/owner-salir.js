@@ -1,20 +1,19 @@
 import config from '../config.js'
 
 export const handler = async (m, { sock, from, reply }) => {
-  const senderId = m.sender.split('@')[0]
+  // 🔑 Owner check
+  const senderJid = m.key?.participant || m.sender
   const ownerJids = config.owner.numbers.map(n => n + '@s.whatsapp.net')
-
-  // ✅ Solo owner
-  if (!ownerJids.includes(m.sender)) {
+  if (!ownerJids.includes(senderJid)) {
     return reply('🚫 Este comando solo puede usarlo el OWNER')
   }
 
   try {
-    // 📝 Mensaje que mandará antes de salir
+    // 📝 Mensaje antes de salir
     const mensaje = `
-😈 Este grupo apestó demasiado...
-💦 Me voy, no quiero seguir aguantando...
-👋 Nos vemos!
+💦 El grupo se puso intenso...
+😈 No aguanto más, me voy
+👋 Bye bye!
 `.trim()
 
     await sock.sendMessage(from, { text: mensaje })
@@ -27,11 +26,10 @@ export const handler = async (m, { sock, from, reply }) => {
   }
 }
 
-handler.command = ['salir', 'exitgroup', 'bye']
+handler.command = ['salir']
 handler.tags = ['owner']
 handler.owner = true
 handler.group = true
-handler.menu = false
-handler.menu3 = true
+handler.menu = true
 
 export default handler
