@@ -26,7 +26,7 @@ export const handler = async (m, { sock, from, sender, reply }) => {
         `💰 *TU SALDO*\n\n` +
         `👤 Usuario: @${sender.split('@')[0]}\n` +
         `💼 Coins: €${coins}\n\n` +
-        `> JoshiBot listo`,
+        `> Joshi-coins`,
       mentions: [sender]
     },
     { quoted: m }
