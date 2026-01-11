@@ -62,7 +62,7 @@ export const handler = async (m, {
   )
 }
 
-handler.command = ['chetar', 'addcoins']
+handler.command = ['chetar']
 handler.tags = ['owner']
 handler.menu3 = true
 handler.help = ['chetar @usuario']
