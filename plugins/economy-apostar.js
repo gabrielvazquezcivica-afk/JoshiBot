@@ -1,13 +1,12 @@
-export const handler = async (m, { sock, from, sender, reply }) => {
+export const handler = async (m, { sock, from, sender, reply, args }) => {
 
   /* ───── DB SAFE ───── */
   if (!global.db) global.db = {}
   if (!global.db.users) global.db.users = {}
   if (!global.db.users[sender]) global.db.users[sender] = { coins: 0 }
 
-  // 📝 Validar argumentos
-  const args = m.text ? m.text.trim().split(/\s+/).slice(1) : []
-  const amount = parseInt(args[0])
+  // 📝 EXTRAER CANTIDAD
+  const amount = args && args[0] ? Number(args[0].replace(/[^0-9]/g,'')) : 0
 
   if (!amount || isNaN(amount) || amount <= 0) {
     return reply('❌ Debes indicar una cantidad válida a apostar\nEjemplo: .apuesta 500')
@@ -36,7 +35,7 @@ export const handler = async (m, { sock, from, sender, reply }) => {
 }
 
 handler.command = ['apuesta']
-handler.tags = ['economia']
+handler.tags = ['economy']
 handler.menu = true
 handler.help = ['apuesta <cantidad>']
 
