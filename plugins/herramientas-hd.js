@@ -27,9 +27,7 @@ export const handler = async (m, {
     const ownerJids = owner?.jid || []
 
     if (!ownerJids.includes(sender)) {
-      const isAdmin = participants.some(
-        p => p.id === sender && p.admin
-      )
+      const isAdmin = participants.some(p => p.id === sender && p.admin)
       if (!isAdmin) return
     }
   }
@@ -45,16 +43,12 @@ export const handler = async (m, {
 
   if (!msg) return reply('🪐 Responde a una imagen')
 
-  /* ───── 📊 BARRA DE PROGRESO ───── */
-  const bar = async (txt) => {
-    await reply(`🛠️ *Mejorando imagen*\n${txt}`)
-  }
+  /* ───── 📊 AVISO ───── */
+  await reply('🛠️ Mejorando imagen…')
 
   let input, output
 
   try {
-    await bar('▰▱▱▱▱ 10%')
-
     /* ───── 📥 DESCARGAR ───── */
     const stream = await downloadContentFromMessage(msg, 'image')
     let buffer = Buffer.alloc(0)
@@ -67,25 +61,19 @@ export const handler = async (m, {
     output = path.join(tmp, `out_${Date.now()}.jpg`)
     fs.writeFileSync(input, buffer)
 
-    await bar('▰▰▱▱▱ 30%')
-
     /* ───── 🎨 MEJORA REAL ───── */
-    const image = await Jimp.read(input)
+    const image = await Jimp.Jimp.read(input)
 
     image
-      .brightness(0.12)     // brillo
-      .contrast(0.18)       // contraste
-      .color([
-        { apply: 'saturate', params: [15] }
-      ])
-      .convolute([          // nitidez
+      .brightness(0.12)
+      .contrast(0.18)
+      .color([{ apply: 'saturate', params: [15] }])
+      .convolute([
         [0, -1, 0],
         [-1, 5, -1],
         [0, -1, 0]
       ])
       .quality(95)
-
-    await bar('▰▰▰▰▱ 80%')
 
     await image.writeAsync(output)
 
@@ -98,7 +86,7 @@ export const handler = async (m, {
     }, { quoted: m })
 
   } catch (e) {
-    console.error('HD ERROR:', e?.message || e)
+    console.error('HD ERROR:', e)
     reply('❌ Error al mejorar la imagen')
   } finally {
     try { if (input) fs.unlinkSync(input) } catch {}
