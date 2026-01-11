@@ -109,7 +109,7 @@ es soltar.`
 }
 
 handler.command = ['poema', 'poemas']
-handler.tags = ['diversión']
+handler.tags = ['frases']
 handler.menu = true
 handler.help = ['poema']
 
