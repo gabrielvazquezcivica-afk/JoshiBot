@@ -1,82 +1,56 @@
-// owner-join.js | JoshiBot
 export const handler = async (m, {
   sock,
   args,
-  sender,
+  reply,
+  isGroup,
   owner,
-  reply
+  sender
 }) => {
 
-  // 👑 SOLO OWNER
-  const owners = owner?.numbers || []
-  const senderNum = sender.replace(/[^0-9]/g, '')
-
-  if (!owners.includes(senderNum)) {
-    return reply('🚫 Solo el OWNER puede usar este comando')
+  // 👑 SOLO OWNER (recomendado)
+  const ownerJids = owner?.jid || []
+  if (!ownerJids.includes(sender)) {
+    return reply('👑 Solo el owner puede usar este comando')
   }
 
-  // 🔗 LINK
+  // 🔗 Validar link
   const link = args[0]
   if (!link) {
     return reply(
-`❌ Uso incorrecto
-
-Ejemplo:
-.join https://chat.whatsapp.com/XXXXX`
+      '🔗 Debes enviar un link de grupo\n\n' +
+      'Ejemplo:\n' +
+      '.join https://chat.whatsapp.com/XXXX'
     )
   }
 
-  const match = link.match(/chat\.whatsapp\.com\/([A-Za-z0-9]+)/i)
-  if (!match) return reply('❌ Link de grupo inválido')
+  const regex = /chat\.whatsapp\.com\/([0-9A-Za-z]{20,24})/i
+  const match = link.match(regex)
+  if (!match) {
+    return reply('❌ Link de grupo inválido')
+  }
 
-  const code = match[1]
+  const inviteCode = match[1]
 
   try {
     // ⚡ Reacción
     await sock.sendMessage(m.chat, {
-      react: { text: '⚡', key: m.key }
+      react: { text: '📥', key: m.key }
     })
 
-    // 🚪 Intentar unirse
-    await sock.groupAcceptInvite(code)
+    // 🚀 Unirse al grupo
+    await sock.groupAcceptInvite(inviteCode)
 
-    // ⏳ Esperar respuesta real de WhatsApp
-    await new Promise(r => setTimeout(r, 4000))
+    await reply('✅ El bot se unió correctamente al grupo')
 
-    // 🔍 Verificar si REALMENTE entró
-    const groups = await sock.groupFetchAllParticipating()
-    const joined = Object.values(groups).some(
-      g => g.inviteCode === code
-    )
-
-    if (!joined) {
-      return reply(
-`❌ *WhatsApp bloqueó la unión automática*
-
-📛 Esto NO es error del bot
-⚠️ Restricción de WhatsApp
-
-✅ Solución:
-• Invita al bot manualmente 1 vez
-• Usa una cuenta más antigua`
-      )
-    }
-
-    // ✅ Éxito
-    reply('✅ El bot se unió correctamente al grupo')
-
-  } catch (e) {
-    console.error('JOIN ERROR:', e)
-    reply('❌ No se pudo unir al grupo')
+  } catch (err) {
+    console.error('JOIN ERROR:', err)
+    reply('❌ No pude unirme al grupo\nPuede que el link esté vencido o el bot esté bloqueado')
   }
 }
 
 handler.command = ['join']
-handler.help = ['join <link>']
 handler.tags = ['owner']
-handler.owner = true
-handler.menu = false
 handler.menu3 = true
-handler.group = true
+handler.help = ['join <link_grupo>']
 
 export default handler
