@@ -31,7 +31,7 @@ export const handler = async (m, {
         p => p.id === sender &&
         (p.admin === 'admin' || p.admin === 'superadmin')
       )
-      if (!isAdmin) return // 🚫 bloqueo silencioso
+      if (!isAdmin) return
     }
   }
 
@@ -59,40 +59,42 @@ export const handler = async (m, {
     const tmp = os.tmpdir()
     input = path.join(tmp, `in_${Date.now()}.jpg`)
     output = path.join(tmp, `out_${Date.now()}.jpg`)
-
     fs.writeFileSync(input, buffer)
 
-    /* 🚀 UPSCALE REAL x2 */
+    /* 🚀 MEJORA REAL */
     await new Promise((resolve, reject) => {
       const ff = spawn('ffmpeg', [
         '-i', input,
         '-vf',
-        'scale=iw*2:ih*2:flags=lanczos,unsharp=5:5:1.0',
+        `
+        scale=iw*2:ih*2:flags=lanczos,
+        nlmeans=s=7:p=7:r=15,
+        unsharp=7:7:1.5:7:7:0.5,
+        eq=contrast=1.15:brightness=0.01:saturation=1.05
+        `.replace(/\s+/g, ''),
         '-q:v', '1',
         output
       ])
 
-      ff.on('close', code => code === 0 ? resolve() : reject())
+      ff.on('close', c => c === 0 ? resolve() : reject())
       ff.on('error', reject)
     })
 
     const result = fs.readFileSync(output)
 
     /* 📤 ENVIAR */
-    await sock.sendMessage(from, {
-      image: result
-    }, { quoted: m })
+    await sock.sendMessage(from, { image: result }, { quoted: m })
 
   } catch (e) {
-    console.error('UPSCALE LOCAL ERROR:', e)
-    reply('❌ Error al mejorar la imagen')
+    console.error('HD ERROR:', e)
+    reply('❌ No se pudo mejorar la imagen')
   } finally {
     try { fs.unlinkSync(input) } catch {}
     try { fs.unlinkSync(output) } catch {}
   }
 }
 
-handler.command = ['hd', 'upscale', 'remini']
+handler.command = ['hd', 'remini', 'upscale']
 handler.tags = ['tools']
 handler.menu = true
 
