@@ -20,10 +20,10 @@ export const handler = async (m, {
     global.db.groups[from] = { modoadmin: false }
   }
 
-  /* ───── 👑 MODO ADMIN (SILENCIOSO) ───── */
+  /* ───── 👑 MODO ADMIN ───── */
   if (isGroup && global.db.groups[from].modoadmin) {
-    const metadata = await sock.groupMetadata(from)
-    const participants = metadata.participants || []
+    const meta = await sock.groupMetadata(from)
+    const participants = meta.participants || []
     const ownerJids = owner?.jid || []
 
     if (!ownerJids.includes(sender)) {
@@ -35,59 +35,56 @@ export const handler = async (m, {
     }
   }
 
-  /* ───── 📸 OBTENER IMAGEN ───── */
+  /* ───── 📸 IMAGEN ───── */
   const quoted =
     m.message?.extendedTextMessage?.contextInfo?.quotedMessage ||
     m.message?.imageMessage
 
-  const imgMsg =
+  const img =
     quoted?.imageMessage ||
     m.message?.imageMessage
 
-  if (!imgMsg) return reply('🪐 Responde a una imagen')
+  if (!img) return reply('🪐 Responde a una imagen')
 
-  /* ⏳ AVISO */
-  await reply('⏳ Mejorando imagen…')
+  await reply('⏳ Mejorando imagen con IA…')
 
   let input, output
 
   try {
-    /* 📥 DESCARGAR */
-    const stream = await downloadContentFromMessage(imgMsg, 'image')
+    const stream = await downloadContentFromMessage(img, 'image')
     let buffer = Buffer.alloc(0)
-    for await (const chunk of stream) {
-      buffer = Buffer.concat([buffer, chunk])
-    }
+    for await (const c of stream) buffer = Buffer.concat([buffer, c])
 
     const tmp = os.tmpdir()
     input = path.join(tmp, `in_${Date.now()}.jpg`)
-    output = path.join(tmp, `out_${Date.now()}.jpg`)
+    output = path.join(tmp, `out_${Date.now()}.png`)
     fs.writeFileSync(input, buffer)
 
-    /* ⚡ PROCESO RÁPIDO */
+    /* 🤖 REAL-ESRGAN */
     await new Promise((resolve, reject) => {
-      const ff = spawn('ffmpeg', [
-        '-i', input,
-        '-vf',
-        'scale=iw*1.5:ih*1.5:flags=fast_bilinear,unsharp=3:3:0.8',
-        '-q:v', '2',
-        output
-      ])
+      const ai = spawn(
+        '/data/data/com.termux/files/home/realesrgan-ncnn-vulkan',
+        [
+          '-i', input,
+          '-o', output,
+          '-n', 'realesrgan-x4plus',
+          '-s', '2' // x2 rápido (x4 es más lento)
+        ]
+      )
 
-      ff.on('close', c => c === 0 ? resolve() : reject())
-      ff.on('error', reject)
+      ai.on('close', c => c === 0 ? resolve() : reject())
+      ai.on('error', reject)
     })
 
     const result = fs.readFileSync(output)
 
-    /* 📤 ENVIAR */
     await sock.sendMessage(from, {
       image: result
     }, { quoted: m })
 
   } catch (e) {
-    console.error('HD FAST ERROR:', e)
-    reply('❌ No se pudo mejorar la imagen')
+    console.error('REAL HD ERROR:', e)
+    reply('❌ Error al mejorar la imagen')
   } finally {
     try { fs.unlinkSync(input) } catch {}
     try { fs.unlinkSync(output) } catch {}
