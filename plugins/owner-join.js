@@ -2,29 +2,28 @@ export const handler = async (m, {
   sock,
   args,
   reply,
-  isGroup,
-  owner,
-  sender
+  sender,
+  owner
 }) => {
 
-  // 👑 SOLO OWNER (recomendado)
+  // 👑 SOLO OWNER
   const ownerJids = owner?.jid || []
   if (!ownerJids.includes(sender)) {
     return reply('👑 Solo el owner puede usar este comando')
   }
 
   // 🔗 Validar link
-  const link = args[0]
-  if (!link) {
+  const text = args.join(' ')
+  if (!text) {
     return reply(
-      '🔗 Debes enviar un link de grupo\n\n' +
+      '🔗 Envía un link de grupo\n\n' +
       'Ejemplo:\n' +
       '.join https://chat.whatsapp.com/XXXX'
     )
   }
 
-  const regex = /chat\.whatsapp\.com\/([0-9A-Za-z]{20,24})/i
-  const match = link.match(regex)
+  // 🧠 Extraer código del link (con o sin ?mode=)
+  const match = text.match(/chat\.whatsapp\.com\/([0-9A-Za-z]{20,24})/i)
   if (!match) {
     return reply('❌ Link de grupo inválido')
   }
@@ -32,25 +31,29 @@ export const handler = async (m, {
   const inviteCode = match[1]
 
   try {
-    // ⚡ Reacción
-    await sock.sendMessage(m.chat, {
-      react: { text: '📥', key: m.key }
-    })
-
-    // 🚀 Unirse al grupo
+    // 🚀 Unirse al grupo (SIN enviar mensajes antes)
     await sock.groupAcceptInvite(inviteCode)
 
+    // ✅ Confirmar SOLO al chat actual
     await reply('✅ El bot se unió correctamente al grupo')
 
   } catch (err) {
     console.error('JOIN ERROR:', err)
-    reply('❌ No pude unirme al grupo\nPuede que el link esté vencido o el bot esté bloqueado')
+
+    reply(
+      '❌ No pude unirme al grupo\n\n' +
+      'Posibles causas:\n' +
+      '• Link vencido\n' +
+      '• Bot bloqueado\n' +
+      '• Grupo lleno\n' +
+      '• WhatsApp limitó la acción'
+    )
   }
 }
 
 handler.command = ['join']
 handler.tags = ['owner']
-handler.menu3 = true
+handler.menu = true
 handler.help = ['join <link_grupo>']
 
 export default handler
