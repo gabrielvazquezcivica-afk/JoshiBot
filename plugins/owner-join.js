@@ -58,13 +58,14 @@ export const handler = async (m, {
     // 🚀 Entrar al grupo
     const groupJid = await sock.groupAcceptInvite(inviteCode)
 
-    // 😏 Elegir mensaje chistoso random
+    // 😏 Elegir mensaje chistoso random + footer
     const texto = textosChistosos[Math.floor(Math.random() * textosChistosos.length)]
+    const mensajeFinal = `${texto}\n> JoshiBot listo`
 
     // 📩 Enviar mensaje al grupo
-    const msg = await sock.sendMessage(groupJid, { text: texto })
+    const msg = await sock.sendMessage(groupJid, { text: mensajeFinal })
 
-    // 😄 Reacción al mensaje enviado
+    // 😄 Reacción al mensaje del bot
     await sock.sendMessage(groupJid, {
       react: { text: '😏', key: msg.key }
     })
@@ -87,7 +88,7 @@ export const handler = async (m, {
 
 handler.command = ['join']
 handler.tags = ['owner']
-handler.menu3 = true
+handler.menu = true
 handler.help = ['join <link_grupo>']
 
 export default handler
