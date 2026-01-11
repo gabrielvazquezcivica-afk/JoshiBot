@@ -23,7 +23,7 @@ export const handler = async (m, {
   // 🎯 Emoji por categoría
   const tagEmoji = {  
     info: '🍄',  
-    'on-off': '🔘',  
+    frases: '📖',  
     group: '🐉',  
     admin: '👑',  
     juegos: '🎡',  
@@ -65,7 +65,7 @@ export const handler = async (m, {
   // 📌 ORDEN DEL MENÚ
   const orderedTags = [  
     'info',  
-    'on-off',  
+    'frases',  
     'group',  
     'admin',  
     'juegos',  
