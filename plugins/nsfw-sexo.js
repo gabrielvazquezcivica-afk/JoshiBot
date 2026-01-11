@@ -22,7 +22,7 @@ export const handler = async (m, {
   if (!groupData.nsfw) {
     return reply(
       '🔞 *Comandos NSFW desactivados*\n\n' +
-      'Un admin puede activarlos con:\n' +
+      'Un admin puede activarlo con:\n' +
       '.nsfw on'
     )
   }
@@ -35,13 +35,11 @@ export const handler = async (m, {
     target = ctx.mentionedJid[0]
   } else if (ctx?.participant) {
     target = ctx.participant
+  } else {
+    return reply('👀 Etiqueta o responde a alguien')
   }
 
-  if (!target) {
-    return reply('👀 Debes mencionar o responder a alguien')
-  }
-
-  // 🚫 Bloquear auto-target
+  // ❌ Bloquear uso consigo mismo
   if (target === sender) {
     return reply('🚫 No puedes usar este comando contigo mismo')
   }
@@ -49,8 +47,7 @@ export const handler = async (m, {
   const user1 = '@' + sender.split('@')[0]
   const user2 = '@' + target.split('@')[0]
 
-  const texto = `${user1} s
-  tiene sexo con ${user2} 😈🔥`
+  const texto = `${user1} tiene sexo con ${user2} 😈`
 
   /* ───── 🥵 REACCIÓN ───── */
   await sock.sendMessage(from, {
@@ -75,7 +72,7 @@ export const handler = async (m, {
     {
       video: { url: video },
       gifPlayback: true,
-      caption: `🔥 *JOSHI BOT*\n\n${texto}`,
+      caption: texto,
       mentions: [sender, target]
     },
     { quoted: m }
@@ -84,8 +81,8 @@ export const handler = async (m, {
 
 handler.command = ['sexo', 'accion']
 handler.group = true
-handler.tags = ['menu2']
-handler.menu = true
+handler.tags = ['nsfw']
+handler.menu2 = true
 handler.help = ['sexo @usuario']
 
 export default handler
