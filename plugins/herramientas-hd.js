@@ -1,6 +1,3 @@
-import fs from 'fs'
-import os from 'os'
-import path from 'path'
 import { downloadContentFromMessage } from '@whiskeysockets/baileys'
 import * as Jimp from 'jimp'
 
@@ -27,7 +24,9 @@ export const handler = async (m, {
     const ownerJids = owner?.jid || []
 
     if (!ownerJids.includes(sender)) {
-      const isAdmin = participants.some(p => p.id === sender && p.admin)
+      const isAdmin = participants.some(p =>
+        p.id === sender && p.admin
+      )
       if (!isAdmin) return
     }
   }
@@ -45,8 +44,6 @@ export const handler = async (m, {
 
   await reply('🛠️ Mejorando imagen…')
 
-  let input, output
-
   try {
     /* ───── 📥 DESCARGAR ───── */
     const stream = await downloadContentFromMessage(msg, 'image')
@@ -55,27 +52,21 @@ export const handler = async (m, {
       buffer = Buffer.concat([buffer, chunk])
     }
 
-    const tmp = os.tmpdir()
-    input = path.join(tmp, `in_${Date.now()}.jpg`)
-    output = path.join(tmp, `out_${Date.now()}.jpg`)
-    fs.writeFileSync(input, buffer)
-
-    /* ───── 🎨 MEJORA REAL ───── */
-    const image = await Jimp.Jimp.read(input)
+    /* ───── 🎨 PROCESAR ───── */
+    const image = await Jimp.Jimp.read(buffer)
 
     image
-      .brightness(0.12)
-      .contrast(0.18)
-      .color([{ apply: 'saturate', params: [18] }])
-      .convolute([
+      .brightness(0.12) // brillo
+      .contrast(0.18)   // contraste
+      .color([{ apply: 'saturate', params: [20] }]) // color
+      .convolute([      // nitidez
         [0, -1, 0],
         [-1, 5, -1],
         [0, -1, 0]
       ])
 
-    await image.writeAsync(output)
-
-    const finalBuffer = fs.readFileSync(output)
+    /* ───── 📤 BUFFER FINAL ───── */
+    const finalBuffer = await image.getBufferAsync(Jimp.MIME_JPEG)
 
     /* ───── 📤 ENVIAR ───── */
     await sock.sendMessage(from, {
@@ -86,9 +77,6 @@ export const handler = async (m, {
   } catch (e) {
     console.error('HD ERROR:', e)
     reply('❌ Error al mejorar la imagen')
-  } finally {
-    try { if (input) fs.unlinkSync(input) } catch {}
-    try { if (output) fs.unlinkSync(output) } catch {}
   }
 }
 
