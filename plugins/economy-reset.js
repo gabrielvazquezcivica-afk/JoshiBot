@@ -54,7 +54,7 @@ export const handler = async (m, {
   )
 }
 
-handler.command = ['resetcoins', 'wipegroupcoins']
+handler.command = ['resetcoins']
 handler.tags = ['owner']
 handler.menu = true
 handler.help = ['resetcoinsgroup']
