@@ -43,7 +43,6 @@ export const handler = async (m, {
 
   if (!msg) return reply('🪐 Responde a una imagen')
 
-  /* ───── 📊 AVISO ───── */
   await reply('🛠️ Mejorando imagen…')
 
   let input, output
@@ -67,13 +66,12 @@ export const handler = async (m, {
     image
       .brightness(0.12)
       .contrast(0.18)
-      .color([{ apply: 'saturate', params: [15] }])
+      .color([{ apply: 'saturate', params: [18] }])
       .convolute([
         [0, -1, 0],
         [-1, 5, -1],
         [0, -1, 0]
       ])
-      .quality(95)
 
     await image.writeAsync(output)
 
