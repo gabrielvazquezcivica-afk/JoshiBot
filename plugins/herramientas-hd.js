@@ -1,7 +1,7 @@
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-import sharp from 'sharp'
+import Jimp from 'jimp'
 import { downloadContentFromMessage } from '@whiskeysockets/baileys'
 
 export const handler = async (m, {
@@ -62,27 +62,19 @@ export const handler = async (m, {
     output = path.join(tmp, `out_${Date.now()}.jpg`)
     fs.writeFileSync(input, buffer)
 
-    /* ───── ⚡ MEJORA REAL ───── */
-    await sharp(input)
-      .resize({
-        width: 2000,
-        withoutEnlargement: false
-      })
-      .sharpen({
-        sigma: 1.4,
-        m1: 1.2,
-        m2: 2
-      })
-      .modulate({
-        brightness: 1.08,
-        saturation: 1.15
-      })
-      .linear(1.05, -5)
-      .jpeg({
-        quality: 95,
-        chromaSubsampling: '4:4:4'
-      })
-      .toFile(output)
+    /* ───── ⚡ MEJORA REAL (JIMP) ───── */
+    const image = await Jimp.read(input)
+
+    image
+      .resize(image.bitmap.width * 1.5, image.bitmap.height * 1.5) // upscale
+      .contrast(0.25)        // contraste
+      .brightness(0.08)      // brillo
+      .color([
+        { apply: 'saturate', params: [20] }
+      ])
+      .quality(95)
+
+    await image.writeAsync(output)
 
     const finalImg = fs.readFileSync(output)
 
