@@ -1,7 +1,7 @@
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-import * as Jimp from 'jimp'
+import { Jimp } from 'jimp'
 import { downloadContentFromMessage } from '@whiskeysockets/baileys'
 
 export const handler = async (m, {
@@ -27,9 +27,7 @@ export const handler = async (m, {
     const ownerJids = owner?.jid || []
 
     if (!ownerJids.includes(sender)) {
-      const isAdmin = participants.some(
-        p => p.id === sender && p.admin
-      )
+      const isAdmin = participants.some(p => p.id === sender && p.admin)
       if (!isAdmin) return
     }
   }
@@ -67,12 +65,12 @@ export const handler = async (m, {
 
     image
       .resize(
-        Math.round(image.bitmap.width * 1.5),
-        Math.round(image.bitmap.height * 1.5)
+        Math.round(image.bitmap.width * 1.4),
+        Math.round(image.bitmap.height * 1.4)
       )
-      .contrast(0.25)
-      .brightness(0.08)
-      .color([{ apply: 'saturate', params: [20] }])
+      .contrast(0.3)
+      .brightness(0.1)
+      .color([{ apply: 'saturate', params: [25] }])
       .quality(95)
 
     await image.writeAsync(output)
@@ -87,7 +85,7 @@ export const handler = async (m, {
 
   } catch (e) {
     console.error('HD ERROR:', e)
-    reply('❌ No se pudo mejorar la imagen')
+    reply('❌ Error al mejorar la imagen')
   } finally {
     try { if (input) fs.unlinkSync(input) } catch {}
     try { if (output) fs.unlinkSync(output) } catch {}
