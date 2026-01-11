@@ -1,4 +1,3 @@
-
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
@@ -30,7 +29,8 @@ export const handler = async (m, {
 
     if (!ownerJids.includes(sender)) {
       const isAdmin = participants.some(
-        p => p.id === sender && p.admin
+        p => p.id === sender &&
+        (p.admin === 'admin' || p.admin === 'superadmin')
       )
       if (!isAdmin) return
     }
@@ -41,62 +41,62 @@ export const handler = async (m, {
     m.message?.extendedTextMessage?.contextInfo?.quotedMessage ||
     m.message?.imageMessage
 
-  const msg =
+  const imgMsg =
     quoted?.imageMessage ||
     m.message?.imageMessage
 
-  if (!msg) return reply('🪐 Responde a una imagen')
+  if (!imgMsg) {
+    return reply('🪐 Responde a una imagen')
+  }
 
-  reply('⏳ Mejorando imagen…')
+  await reply('⚡ Mejorando imagen…')
 
-  let input
+  let inputFile
 
   try {
     /* ───── 📥 DESCARGAR ───── */
-    const stream = await downloadContentFromMessage(msg, 'image')
+    const stream = await downloadContentFromMessage(imgMsg, 'image')
     let buffer = Buffer.alloc(0)
     for await (const chunk of stream) {
       buffer = Buffer.concat([buffer, chunk])
     }
 
-    const tmp = os.tmpdir()
-    input = path.join(tmp, `hd_${Date.now()}.jpg`)
-    fs.writeFileSync(input, buffer)
+    inputFile = path.join(os.tmpdir(), `upscale_${Date.now()}.jpg`)
+    fs.writeFileSync(inputFile, buffer)
 
-    /* ───── 📤 SUBIR A UGUU ───── */
+    /* ───── ☁️ SUBIR ───── */
     const form = new FormData()
-    form.append('files[]', fs.createReadStream(input))
+    form.append('files[]', fs.createReadStream(inputFile))
 
-    const up = await fetch('https://uguu.se/upload.php', {
+    const upload = await fetch('https://uguu.se/upload.php', {
       method: 'POST',
       body: form,
       headers: form.getHeaders()
     })
 
-    const json = await up.json()
-    const url = json?.files?.[0]?.url
-    if (!url) throw 'No se pudo subir la imagen'
+    const upJson = await upload.json()
+    const imageUrl = upJson?.files?.[0]?.url
+    if (!imageUrl) throw 'Error subiendo imagen'
 
-    /* ───── ⚡ UPSCALE ───── */
-    const res = await fetch(
-      `https://api.siputzx.my.id/api/iloveimg/upscale?image=${encodeURIComponent(url)}`
+    /* ───── 🚀 UPSCALE x4 ───── */
+    const upscale = await fetch(
+      `https://api.siputzx.my.id/api/ai/upscale?scale=4&image=${encodeURIComponent(imageUrl)}`
     )
 
-    if (!res.ok) throw 'La API no respondió'
+    if (!upscale.ok) throw 'API no respondió'
 
-    const result = await res.buffer()
+    const result = await upscale.buffer()
 
-    /* ───── 📤 ENVIAR ───── */
+    /* ───── 📤 ENVIAR (SIN TEXTO) ───── */
     await sock.sendMessage(from, {
-      image: result,
-      caption: '✅ Imagen mejorada'
+      image: result
     }, { quoted: m })
 
   } catch (e) {
-    console.error(e)
+    console.error('UPSCALE ERROR:', e)
     reply('❌ Error al mejorar la imagen')
   } finally {
-    try { if (input) fs.unlinkSync(input) } catch {}
+    try { if (inputFile) fs.unlinkSync(inputFile) } catch {}
   }
 }
 
