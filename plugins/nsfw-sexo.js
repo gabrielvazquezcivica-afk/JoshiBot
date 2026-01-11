@@ -27,14 +27,20 @@ export const handler = async (m, {
     )
   }
 
-  // Validar mención o respuesta
-  const who = m.mentionedJid?.[0] || m.quoted?.sender
-  if (!who) return reply('👀 Etiqueta o responde a alguien')
+  /* ───── 👥 DETECTAR USUARIO (FIX REAL) ───── */
+  const who =
+    m.mentionedJid?.[0] ||
+    m.quoted?.sender ||
+    m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0]
+
+  if (!who) {
+    return reply('👀 Etiqueta o responde a alguien')
+  }
 
   const senderName = await sock.getName(m.sender)
   const targetName = await sock.getName(who)
 
-  /* 🥵 Reacción */
+  /* 🥵 REACCIÓN */
   await sock.sendMessage(from, {
     react: { text: '🥵', key: m.key }
   })
@@ -43,7 +49,7 @@ export const handler = async (m, {
 ━━━━━━━━━━━━━━
 😏 ${senderName} tiene sexo con ${targetName}`
 
-  // Videos tipo gif (sugerentes)
+  /* 🎞️ VIDEOS (GIF STYLE) */
   const videos = [
     'https://telegra.ph/file/3246f62c61a0ebebcb5c8.mp4',
     'https://telegra.ph/file/9c4b894e034c290df75e4.mp4',
@@ -66,8 +72,9 @@ export const handler = async (m, {
 }
 
 handler.command = ['sexo', 'accion']
-handler.tags = ['menu2']
-handler.menu = true
+handler.tags = ['nsfw']
+handler.menu = false
+handler.menu2 = true
 handler.group = true
 handler.help = ['sexo @usuario']
 
