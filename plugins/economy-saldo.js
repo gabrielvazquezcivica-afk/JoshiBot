@@ -1,19 +1,14 @@
-export const handler = async (m, {
-  sock,
-  from,
-  sender,
-  reply
-}) => {
+export const handler = async (m, { sock, from, sender, reply }) => {
 
   /* ───── 🧠 DB SAFE ───── */
   if (!global.db) global.db = {}
   if (!global.db.users) global.db.users = {}
 
-  // 🧾 Usuario
+  // Inicializar usuario si no existe
   if (!global.db.users[sender]) {
-    global.db.users[sender] = {
-      coins: 0
-    }
+    global.db.users[sender] = { coins: 0 }
+  } else if (typeof global.db.users[sender].coins !== 'number') {
+    global.db.users[sender].coins = 0
   }
 
   const coins = global.db.users[sender].coins
@@ -31,7 +26,7 @@ export const handler = async (m, {
         `💰 *TU SALDO*\n\n` +
         `👤 Usuario: @${sender.split('@')[0]}\n` +
         `💼 Coins: €${coins}\n\n` +
-        `> JoshiBot`,
+        `> JoshiBot listo`,
       mentions: [sender]
     },
     { quoted: m }
@@ -39,7 +34,7 @@ export const handler = async (m, {
 }
 
 handler.command = ['saldo', 'coins']
-handler.tags = ['economy']
+handler.tags = ['economia']
 handler.menu = true
 handler.help = ['saldo']
 
