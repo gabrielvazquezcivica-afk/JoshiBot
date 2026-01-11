@@ -10,16 +10,15 @@ export const handler = async (m, {
   // 🛑 Solo grupos
   if (!isGroup) return reply('❌ Este comando solo funciona en grupos')
 
-  // 👑 SOLO OWNER
+  // 👑 Solo OWNER
   const ownerJids = owner?.jid || []
-  if (!ownerJids.includes(sender)) {
-    return reply('👑 Solo el owner puede usar este comando')
-  }
+  if (!ownerJids.includes(sender)) return reply('👑 Solo el owner puede usar este comando')
 
-  /* ───── 🧠 DB SAFE ───── */
+  /* ───── DB SAFE ───── */
   if (!global.db) global.db = {}
   if (!global.db.users) global.db.users = {}
 
+  // Obtener participantes del grupo
   const metadata = await sock.groupMetadata(from)
   const participants = metadata.participants || []
 
@@ -36,19 +35,19 @@ export const handler = async (m, {
     }
   }
 
-  // ⚡ Reacción
+  // ⚡ Reacción al comando
   await sock.sendMessage(from, {
     react: { text: '🧹', key: m.key }
   })
 
-  // 📩 Mensaje
+  // 📩 Mensaje final
   await sock.sendMessage(
     from,
     {
       text:
         `🧹 *RESET DE COINS DEL GRUPO*\n\n` +
         `👥 Usuarios afectados: ${count}\n` +
-        `💸 Coins y banco eliminados\n\n` +
+        `💸 Coins eliminados\n\n` +
         `> Joshi-coins`
     },
     { quoted: m }
