@@ -46,6 +46,9 @@ export const handler = async (m, {
 
   if (!imgMsg) return reply('🪐 Responde a una imagen')
 
+  /* ⏳ AVISO */
+  await reply('⏳ Mejorando imagen…')
+
   let input, output
 
   try {
@@ -61,18 +64,13 @@ export const handler = async (m, {
     output = path.join(tmp, `out_${Date.now()}.jpg`)
     fs.writeFileSync(input, buffer)
 
-    /* 🚀 MEJORA REAL */
+    /* ⚡ PROCESO RÁPIDO */
     await new Promise((resolve, reject) => {
       const ff = spawn('ffmpeg', [
         '-i', input,
         '-vf',
-        `
-        scale=iw*2:ih*2:flags=lanczos,
-        nlmeans=s=7:p=7:r=15,
-        unsharp=7:7:1.5:7:7:0.5,
-        eq=contrast=1.15:brightness=0.01:saturation=1.05
-        `.replace(/\s+/g, ''),
-        '-q:v', '1',
+        'scale=iw*1.5:ih*1.5:flags=fast_bilinear,unsharp=3:3:0.8',
+        '-q:v', '2',
         output
       ])
 
@@ -83,10 +81,12 @@ export const handler = async (m, {
     const result = fs.readFileSync(output)
 
     /* 📤 ENVIAR */
-    await sock.sendMessage(from, { image: result }, { quoted: m })
+    await sock.sendMessage(from, {
+      image: result
+    }, { quoted: m })
 
   } catch (e) {
-    console.error('HD ERROR:', e)
+    console.error('HD FAST ERROR:', e)
     reply('❌ No se pudo mejorar la imagen')
   } finally {
     try { fs.unlinkSync(input) } catch {}
