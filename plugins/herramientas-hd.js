@@ -1,7 +1,7 @@
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-import Jimp from 'jimp'
+import * as Jimp from 'jimp'
 import { downloadContentFromMessage } from '@whiskeysockets/baileys'
 
 export const handler = async (m, {
@@ -62,16 +62,17 @@ export const handler = async (m, {
     output = path.join(tmp, `out_${Date.now()}.jpg`)
     fs.writeFileSync(input, buffer)
 
-    /* ───── ⚡ MEJORA REAL (JIMP) ───── */
+    /* ───── ⚡ MEJORA REAL ───── */
     const image = await Jimp.read(input)
 
     image
-      .resize(image.bitmap.width * 1.5, image.bitmap.height * 1.5) // upscale
-      .contrast(0.25)        // contraste
-      .brightness(0.08)      // brillo
-      .color([
-        { apply: 'saturate', params: [20] }
-      ])
+      .resize(
+        Math.round(image.bitmap.width * 1.5),
+        Math.round(image.bitmap.height * 1.5)
+      )
+      .contrast(0.25)
+      .brightness(0.08)
+      .color([{ apply: 'saturate', params: [20] }])
       .quality(95)
 
     await image.writeAsync(output)
