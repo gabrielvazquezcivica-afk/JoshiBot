@@ -11,6 +11,8 @@ export const handler = async (m, { sock, from, sender, reply, args }) => {
   const ctx = m.message?.extendedTextMessage?.contextInfo
   const mentioned = ctx?.mentionedJid?.[0]
 
+  const numberEmojis = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣']
+
   // ───── INICIAR NUEVA PARTIDA ─────
   if (!game) {
     if (!mentioned || !args[1]) return reply('❌ Debes mencionar a un jugador y poner la apuesta\nEj: .raya @usuario 500')
@@ -27,7 +29,7 @@ export const handler = async (m, { sock, from, sender, reply, args }) => {
       player1: sender,
       player2: mentioned,
       turn: sender,
-      board: ['▢','▢','▢','▢','▢','▢','▢','▢','▢'],
+      board: [...numberEmojis],
       bet: amount,
       started: false
     }
@@ -118,7 +120,7 @@ function checkWinner(b) {
   ]
   for (const combo of winCombos) {
     const [a,b1,c] = combo
-    if (b[a] === b[b1] && b[b1] === b[c] && b[a] !== '▢') return b[a]
+    if (b[a] === b[b1] && b[b1] === b[c] && (b[a] === '❌' || b[a] === '⭕')) return b[a]
   }
   return null
 }
