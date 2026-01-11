@@ -1,7 +1,7 @@
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-import { spawn } from 'child_process'
+import sharp from 'sharp'
 import { downloadContentFromMessage } from '@whiskeysockets/baileys'
 
 export const handler = async (m, {
@@ -20,78 +20,88 @@ export const handler = async (m, {
     global.db.groups[from] = { modoadmin: false }
   }
 
-  /* ───── 👑 MODO ADMIN ───── */
+  /* ───── 👑 MODO ADMIN (SILENCIOSO) ───── */
   if (isGroup && global.db.groups[from].modoadmin) {
-    const meta = await sock.groupMetadata(from)
-    const participants = meta.participants || []
+    const metadata = await sock.groupMetadata(from)
+    const participants = metadata.participants || []
     const ownerJids = owner?.jid || []
 
     if (!ownerJids.includes(sender)) {
       const isAdmin = participants.some(
-        p => p.id === sender &&
-        (p.admin === 'admin' || p.admin === 'superadmin')
+        p => p.id === sender && p.admin
       )
       if (!isAdmin) return
     }
   }
 
-  /* ───── 📸 IMAGEN ───── */
+  /* ───── 📸 OBTENER IMAGEN ───── */
   const quoted =
     m.message?.extendedTextMessage?.contextInfo?.quotedMessage ||
     m.message?.imageMessage
 
-  const img =
+  const msg =
     quoted?.imageMessage ||
     m.message?.imageMessage
 
-  if (!img) return reply('🪐 Responde a una imagen')
+  if (!msg) return reply('🖼️ Responde a una imagen')
 
-  await reply('⏳ Mejorando imagen con IA…')
+  await reply('✨ Mejorando imagen…')
 
   let input, output
 
   try {
-    const stream = await downloadContentFromMessage(img, 'image')
+    /* ───── 📥 DESCARGAR ───── */
+    const stream = await downloadContentFromMessage(msg, 'image')
     let buffer = Buffer.alloc(0)
-    for await (const c of stream) buffer = Buffer.concat([buffer, c])
+    for await (const chunk of stream) {
+      buffer = Buffer.concat([buffer, chunk])
+    }
 
     const tmp = os.tmpdir()
     input = path.join(tmp, `in_${Date.now()}.jpg`)
-    output = path.join(tmp, `out_${Date.now()}.png`)
+    output = path.join(tmp, `out_${Date.now()}.jpg`)
     fs.writeFileSync(input, buffer)
 
-    /* 🤖 REAL-ESRGAN */
-    await new Promise((resolve, reject) => {
-      const ai = spawn(
-        '/data/data/com.termux/files/home/realesrgan-ncnn-vulkan',
-        [
-          '-i', input,
-          '-o', output,
-          '-n', 'realesrgan-x4plus',
-          '-s', '2' // x2 rápido (x4 es más lento)
-        ]
-      )
+    /* ───── ⚡ MEJORA REAL ───── */
+    await sharp(input)
+      .resize({
+        width: 2000,
+        withoutEnlargement: false
+      })
+      .sharpen({
+        sigma: 1.4,
+        m1: 1.2,
+        m2: 2
+      })
+      .modulate({
+        brightness: 1.08,
+        saturation: 1.15
+      })
+      .linear(1.05, -5)
+      .jpeg({
+        quality: 95,
+        chromaSubsampling: '4:4:4'
+      })
+      .toFile(output)
 
-      ai.on('close', c => c === 0 ? resolve() : reject())
-      ai.on('error', reject)
-    })
+    const finalImg = fs.readFileSync(output)
 
-    const result = fs.readFileSync(output)
-
+    /* ───── 📤 ENVIAR ───── */
     await sock.sendMessage(from, {
-      image: result
+      image: finalImg,
+      caption: `IMAGEN MEJORADA 🖼️\n\n> JoshiBot`
     }, { quoted: m })
 
   } catch (e) {
-    console.error('REAL HD ERROR:', e)
-    reply('❌ Error al mejorar la imagen')
+    console.error('HD ERROR:', e)
+    reply('❌ No se pudo mejorar la imagen')
   } finally {
-    try { fs.unlinkSync(input) } catch {}
-    try { fs.unlinkSync(output) } catch {}
+    try { if (input) fs.unlinkSync(input) } catch {}
+    try { if (output) fs.unlinkSync(output) } catch {}
   }
 }
 
-handler.command = ['hd', 'remini', 'upscale']
+handler.command = ['hd', 'mejorar', 'enhance']
 handler.tags = ['tools']
 handler.menu = true
 
