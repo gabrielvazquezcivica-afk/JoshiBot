@@ -58,7 +58,7 @@ export const handler = async (m, {
         `👥 Usuarios afectados: ${count}\n` +
         `➕ Coins por usuario: €${amount}\n\n` +
         `🎰 Ya pueden usarlos en apuestas\n\n` +
-        `> JoshiBot listo`
+        `> Joshi-coins`
     },
     { quoted: m }
   )
