@@ -29,7 +29,7 @@ export const handler = async (m, {
     juegos: '🎡',  
     ff: '🔫',  
     descargas: '🎧',  
-    buscador: '🔍',  
+    banco: '🏦',  
     tools: '🧰',  
     stickers: '🖼️'  
   }  
@@ -71,7 +71,7 @@ export const handler = async (m, {
     'juegos',  
     'ff',  
     'descargas',  
-    'buscador',  
+    'banco',  
     'tools',  
     'stickers'  
   ]  
