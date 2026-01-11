@@ -1,8 +1,8 @@
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-import { Jimp } from 'jimp'
 import { downloadContentFromMessage } from '@whiskeysockets/baileys'
+import * as Jimp from 'jimp'
 
 export const handler = async (m, {
   sock,
@@ -20,14 +20,16 @@ export const handler = async (m, {
     global.db.groups[from] = { modoadmin: false }
   }
 
-  /* ───── 👑 MODO ADMIN (SILENCIOSO) ───── */
+  /* ───── 👑 MODO ADMIN ───── */
   if (isGroup && global.db.groups[from].modoadmin) {
     const metadata = await sock.groupMetadata(from)
     const participants = metadata.participants || []
     const ownerJids = owner?.jid || []
 
     if (!ownerJids.includes(sender)) {
-      const isAdmin = participants.some(p => p.id === sender && p.admin)
+      const isAdmin = participants.some(
+        p => p.id === sender && p.admin
+      )
       if (!isAdmin) return
     }
   }
@@ -41,13 +43,18 @@ export const handler = async (m, {
     quoted?.imageMessage ||
     m.message?.imageMessage
 
-  if (!msg) return reply('🖼️ Responde a una imagen')
+  if (!msg) return reply('🪐 Responde a una imagen')
 
-  await reply('✨ Mejorando imagen…')
+  /* ───── 📊 BARRA DE PROGRESO ───── */
+  const bar = async (txt) => {
+    await reply(`🛠️ *Mejorando imagen*\n${txt}`)
+  }
 
   let input, output
 
   try {
+    await bar('▰▱▱▱▱ 10%')
+
     /* ───── 📥 DESCARGAR ───── */
     const stream = await downloadContentFromMessage(msg, 'image')
     let buffer = Buffer.alloc(0)
@@ -60,31 +67,38 @@ export const handler = async (m, {
     output = path.join(tmp, `out_${Date.now()}.jpg`)
     fs.writeFileSync(input, buffer)
 
-    /* ───── ⚡ MEJORA REAL ───── */
+    await bar('▰▰▱▱▱ 30%')
+
+    /* ───── 🎨 MEJORA REAL ───── */
     const image = await Jimp.read(input)
 
     image
-      .resize(
-        Math.round(image.bitmap.width * 1.4),
-        Math.round(image.bitmap.height * 1.4)
-      )
-      .contrast(0.3)
-      .brightness(0.1)
-      .color([{ apply: 'saturate', params: [25] }])
+      .brightness(0.12)     // brillo
+      .contrast(0.18)       // contraste
+      .color([
+        { apply: 'saturate', params: [15] }
+      ])
+      .convolute([          // nitidez
+        [0, -1, 0],
+        [-1, 5, -1],
+        [0, -1, 0]
+      ])
       .quality(95)
+
+    await bar('▰▰▰▰▱ 80%')
 
     await image.writeAsync(output)
 
-    const finalImg = fs.readFileSync(output)
+    const finalBuffer = fs.readFileSync(output)
 
     /* ───── 📤 ENVIAR ───── */
     await sock.sendMessage(from, {
-      image: finalImg,
-      caption: `IMAGEN MEJORADA 🖼️\n\n> JoshiBot`
+      image: finalBuffer,
+      caption: `IMAGEN MEJORADA 🖼️\n> JoshiBot`
     }, { quoted: m })
 
   } catch (e) {
-    console.error('HD ERROR:', e)
+    console.error('HD ERROR:', e?.message || e)
     reply('❌ Error al mejorar la imagen')
   } finally {
     try { if (input) fs.unlinkSync(input) } catch {}
