@@ -1,8 +1,7 @@
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-import fetch from 'node-fetch'
-import FormData from 'form-data'
+import { spawn } from 'child_process'
 import { downloadContentFromMessage } from '@whiskeysockets/baileys'
 
 export const handler = async (m, {
@@ -32,7 +31,7 @@ export const handler = async (m, {
         p => p.id === sender &&
         (p.admin === 'admin' || p.admin === 'superadmin')
       )
-      if (!isAdmin) return
+      if (!isAdmin) return // 🚫 bloqueo silencioso
     }
   }
 
@@ -45,62 +44,55 @@ export const handler = async (m, {
     quoted?.imageMessage ||
     m.message?.imageMessage
 
-  if (!imgMsg) {
-    return reply('🪐 Responde a una imagen')
-  }
+  if (!imgMsg) return reply('🪐 Responde a una imagen')
 
-  await reply('⚡ Mejorando imagen…')
-
-  let inputFile
+  let input, output
 
   try {
-    /* ───── 📥 DESCARGAR ───── */
+    /* 📥 DESCARGAR */
     const stream = await downloadContentFromMessage(imgMsg, 'image')
     let buffer = Buffer.alloc(0)
     for await (const chunk of stream) {
       buffer = Buffer.concat([buffer, chunk])
     }
 
-    inputFile = path.join(os.tmpdir(), `upscale_${Date.now()}.jpg`)
-    fs.writeFileSync(inputFile, buffer)
+    const tmp = os.tmpdir()
+    input = path.join(tmp, `in_${Date.now()}.jpg`)
+    output = path.join(tmp, `out_${Date.now()}.jpg`)
 
-    /* ───── ☁️ SUBIR ───── */
-    const form = new FormData()
-    form.append('files[]', fs.createReadStream(inputFile))
+    fs.writeFileSync(input, buffer)
 
-    const upload = await fetch('https://uguu.se/upload.php', {
-      method: 'POST',
-      body: form,
-      headers: form.getHeaders()
+    /* 🚀 UPSCALE REAL x2 */
+    await new Promise((resolve, reject) => {
+      const ff = spawn('ffmpeg', [
+        '-i', input,
+        '-vf',
+        'scale=iw*2:ih*2:flags=lanczos,unsharp=5:5:1.0',
+        '-q:v', '1',
+        output
+      ])
+
+      ff.on('close', code => code === 0 ? resolve() : reject())
+      ff.on('error', reject)
     })
 
-    const upJson = await upload.json()
-    const imageUrl = upJson?.files?.[0]?.url
-    if (!imageUrl) throw 'Error subiendo imagen'
+    const result = fs.readFileSync(output)
 
-    /* ───── 🚀 UPSCALE x4 ───── */
-    const upscale = await fetch(
-      `https://api.siputzx.my.id/api/ai/upscale?scale=4&image=${encodeURIComponent(imageUrl)}`
-    )
-
-    if (!upscale.ok) throw 'API no respondió'
-
-    const result = await upscale.buffer()
-
-    /* ───── 📤 ENVIAR (SIN TEXTO) ───── */
+    /* 📤 ENVIAR */
     await sock.sendMessage(from, {
       image: result
     }, { quoted: m })
 
   } catch (e) {
-    console.error('UPSCALE ERROR:', e)
+    console.error('UPSCALE LOCAL ERROR:', e)
     reply('❌ Error al mejorar la imagen')
   } finally {
-    try { if (inputFile) fs.unlinkSync(inputFile) } catch {}
+    try { fs.unlinkSync(input) } catch {}
+    try { fs.unlinkSync(output) } catch {}
   }
 }
 
-handler.command = ['hd', 'remini', 'upscale']
+handler.command = ['hd', 'upscale', 'remini']
 handler.tags = ['tools']
 handler.menu = true
 
