@@ -5,11 +5,17 @@ export const handler = async (m, { sock, from, sender, reply }) => {
   if (!global.db.users) global.db.users = {}
   if (!global.db.users[sender]) global.db.users[sender] = { coins: 0 }
 
-  const args = m.text.split(' ').slice(1)
+  // 📝 Validar argumentos
+  const args = m.text ? m.text.trim().split(/\s+/).slice(1) : []
   const amount = parseInt(args[0])
 
-  if (!amount || amount <= 0) return reply('❌ Debes indicar una cantidad a apostar')
-  if (global.db.users[sender].coins < amount) return reply('❌ No tienes suficientes coins')
+  if (!amount || isNaN(amount) || amount <= 0) {
+    return reply('❌ Debes indicar una cantidad válida a apostar\nEjemplo: .apuesta 500')
+  }
+
+  if (global.db.users[sender].coins < amount) {
+    return reply(`❌ No tienes suficientes coins. Tu saldo: €${global.db.users[sender].coins}`)
+  }
 
   // ⚡ Retirar la apuesta
   global.db.users[sender].coins -= amount
