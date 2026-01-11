@@ -55,7 +55,7 @@ export const handler = async (m, {
         `➕ ${amount} coins añadidos\n` +
         `👤 Usuario: ${userTag}\n` +
         `💼 Total coins: €${global.db.users[target].coins}\n\n` +
-        `> JoshiBot`,
+        `> Joshi-coins`,
       mentions: [target]
     },
     { quoted: m }
