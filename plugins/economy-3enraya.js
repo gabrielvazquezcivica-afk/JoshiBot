@@ -8,17 +8,16 @@ export const handler = async (m, { sock, from, sender, reply, args }) => {
   if (!global.db.users[sender]) global.db.users[sender] = { coins: 0 }
 
   let game = gamesRaya.get(from)
+  const ctx = m.message?.extendedTextMessage?.contextInfo
+  const mentioned = ctx?.mentionedJid?.[0]
 
   // ───── INICIAR NUEVA PARTIDA ─────
   if (!game) {
-    const ctx = m.message?.extendedTextMessage?.contextInfo
-    const mentioned = ctx?.mentionedJid?.[0]
-
-    if (!mentioned) return reply('❌ Debes mencionar a un jugador para iniciar\nEj: .raya @usuario 500')
+    if (!mentioned || !args[1]) return reply('❌ Debes mencionar a un jugador y poner la apuesta\nEj: .raya @usuario 500')
     if (mentioned === sender) return reply('❌ No puedes jugar contigo mismo')
     if (!global.db.users[mentioned]) global.db.users[mentioned] = { coins: 0 }
 
-    const amount = args[1] ? Number(args[1].replace(/[^0-9]/g,'')) : 0
+    const amount = Number(args[1].replace(/[^0-9]/g,''))
     if (!amount || amount <= 0) return reply('❌ Debes indicar una cantidad válida a apostar')
     if (global.db.users[sender].coins < amount) return reply('❌ No tienes suficientes coins')
     if (global.db.users[mentioned].coins < amount) return reply('❌ El jugador mencionado no tiene suficientes coins')
@@ -30,14 +29,16 @@ export const handler = async (m, { sock, from, sender, reply, args }) => {
       turn: sender,
       board: ['1','2','3','4','5','6','7','8','9'],
       bet: amount,
-      started: false // aún no confirma segundo jugador
+      started: false
     }
 
     global.db.users[sender].coins -= amount
-
     gamesRaya.set(from, game)
 
-    return reply(`🎮 *3 EN RAYA*\n@${sender.split('@')[0]} inició una partida apostando €${amount}\nEsperando a @${mentioned.split('@')[0]} para unirse\n\nEl jugador mencionado debe escribir:\n.raya ${amount}`)
+    return await sock.sendMessage(from, {
+      text: `🎮 *3 EN RAYA*\n@${sender.split('@')[0]} inició una partida apostando €${amount}\nEsperando a @${mentioned.split('@')[0]} para unirse\n\nEl jugador mencionado debe escribir:\n.raya ${amount}`,
+      mentions: [sender, mentioned]
+    })
   }
 
   // ───── UNIRSE A PARTIDA ─────
@@ -50,18 +51,16 @@ export const handler = async (m, { sock, from, sender, reply, args }) => {
     global.db.users[sender].coins -= amount
     game.started = true
 
-    await sock.sendMessage(from, { text:
-      `🎮 *3 EN RAYA*\n@${game.player1.split('@')[0]} vs @${game.player2.split('@')[0]}\nApuesta: €${game.bet}\n\nTurno de: @${game.turn.split('@')[0]}\n` +
-      renderBoard(game.board) +
-      `\n\nEscribe .raya <número> para mover (1-9)`,
+    return await sock.sendMessage(from, {
+      text: `🎮 *3 EN RAYA*\n@${game.player1.split('@')[0]} vs @${game.player2.split('@')[0]}\nApuesta: €${game.bet}\n\nTurno de: @${game.turn.split('@')[0]}\n${renderBoard(game.board)}\n\nEscribe .raya <número> para mover (1-9)`,
       mentions: [game.player1, game.player2]
     })
-    return
   }
 
   // ───── MOVER FICHA ─────
   if (![game.player1, game.player2].includes(sender)) return // no es jugador
   if (sender !== game.turn) return reply('⏳ No es tu turno')
+
   const move = args[0] ? Number(args[0].replace(/[^0-9]/g,'')) : 0
   if (!move || move < 1 || move > 9) return reply('❌ Casilla inválida (1-9)')
   if (game.board[move-1] === 'X' || game.board[move-1] === 'O') return reply('❌ Casilla ocupada')
@@ -69,7 +68,7 @@ export const handler = async (m, { sock, from, sender, reply, args }) => {
   const mark = sender === game.player1 ? 'X' : 'O'
   game.board[move-1] = mark
 
-  // Verificar ganador
+  // ───── VERIFICAR GANADOR ─────
   const winner = checkWinner(game.board)
   if (winner) {
     const winnerId = winner === 'X' ? game.player1 : game.player2
@@ -77,32 +76,31 @@ export const handler = async (m, { sock, from, sender, reply, args }) => {
     const winnings = game.bet * 2
     global.db.users[winnerId].coins += winnings
 
-    await sock.sendMessage(from, { text:
-      `🎉 ¡Ganador: @${winnerId.split('@')[0]}!\nGanó €${winnings}\n\n${renderBoard(game.board)}\n\n> Joshi-coins`,
+    gamesRaya.delete(from)
+
+    return await sock.sendMessage(from, {
+      text: `🎉 ¡Ganador: @${winnerId.split('@')[0]}!\nGanó €${winnings}\n\n${renderBoard(game.board)}\n\n> Joshi-coins`,
       mentions: [winnerId, loserId]
     })
-    gamesRaya.delete(from)
-    return
   }
 
-  // Verificar empate
+  // ───── VERIFICAR EMPATE ─────
   if (game.board.every(c => c === 'X' || c === 'O')) {
     global.db.users[game.player1].coins += game.bet
     global.db.users[game.player2].coins += game.bet
+    gamesRaya.delete(from)
 
-    await sock.sendMessage(from, { text:
-      `🤝 Empate! Se devuelven las apuestas.\n\n${renderBoard(game.board)}\n\n> Joshi-coins`,
+    return await sock.sendMessage(from, {
+      text: `🤝 Empate! Se devuelven las apuestas.\n\n${renderBoard(game.board)}\n\n> Joshi-coins`,
       mentions: [game.player1, game.player2]
     })
-    gamesRaya.delete(from)
-    return
   }
 
-  // Cambiar turno
+  // ───── CAMBIAR TURNO ─────
   game.turn = game.turn === game.player1 ? game.player2 : game.player1
 
-  await sock.sendMessage(from, { text:
-    `🎮 Turno de: @${game.turn.split('@')[0]}\n\n${renderBoard(game.board)}\n\nEscribe .raya <número> para mover (1-9)`,
+  return await sock.sendMessage(from, {
+    text: `🎮 Turno de: @${game.turn.split('@')[0]}\n\n${renderBoard(game.board)}\n\nEscribe .raya <número> para mover (1-9)`,
     mentions: [game.player1, game.player2]
   })
 }
