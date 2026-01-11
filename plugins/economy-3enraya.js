@@ -1,8 +1,7 @@
 export const gamesRaya = new Map() // Guardar partidas activas
 
 export const handler = async (m, { sock, from, sender, reply, args }) => {
-
-  /* ───── DB SAFE ───── */
+  // DB SAFE
   if (!global.db) global.db = {}
   if (!global.db.users) global.db.users = {}
   if (!global.db.users[sender]) global.db.users[sender] = { coins: 0 }
@@ -10,22 +9,20 @@ export const handler = async (m, { sock, from, sender, reply, args }) => {
   const ctx = m.message?.extendedTextMessage?.contextInfo
   const mentioned = ctx?.mentionedJid?.[0]
 
-  // Si es un nuevo juego (mención + cantidad)
+  let game = gamesRaya.get(from)
+
+  // ======= NUEVO JUEGO =======
   if (mentioned && args[1]) {
     if (mentioned === sender) return reply('❌ No puedes jugar contigo mismo')
-
     if (!global.db.users[mentioned]) global.db.users[mentioned] = { coins: 0 }
 
     const amount = Number(args[1].replace(/[^0-9]/g,''))
-    if (!amount || amount <= 0) return reply('❌ Cantidad inválida')
+    if (!amount || amount <= 0) return reply('❌ Debes indicar una cantidad válida')
     if (global.db.users[sender].coins < amount) return reply('❌ No tienes suficientes coins')
     if (global.db.users[mentioned].coins < amount) return reply('❌ El jugador mencionado no tiene suficientes coins')
-
-    // Verificar si ya hay partida activa en el grupo
-    let game = gamesRaya.get(from)
     if (game) return reply('❌ Ya hay una partida activa en este grupo')
 
-    // Crear nueva partida
+    // Crear partida
     game = {
       player1: sender,
       player2: mentioned,
@@ -33,8 +30,6 @@ export const handler = async (m, { sock, from, sender, reply, args }) => {
       board: ['1','2','3','4','5','6','7','8','9'],
       bet: amount
     }
-
-    // Bloquear coins de ambos
     global.db.users[sender].coins -= amount
     global.db.users[mentioned].coins -= amount
 
@@ -49,9 +44,8 @@ export const handler = async (m, { sock, from, sender, reply, args }) => {
     return
   }
 
-  // Si es movimiento, debe ser respuesta al mensaje del bot
-  const game = gamesRaya.get(from)
-  if (!game) return // no hay partida
+  // ======= MOVIMIENTO =======
+  if (!game) return // no hay juego
   if (!m.quoted) return // solo responde al mensaje del bot
   if (![game.player1, game.player2].includes(sender)) return // solo jugadores
   if (sender !== game.turn) return reply('⏳ No es tu turno')
@@ -60,10 +54,11 @@ export const handler = async (m, { sock, from, sender, reply, args }) => {
   if (!move || move < 1 || move > 9) return reply('❌ Casilla inválida (1-9)')
   if (game.board[move-1] === 'X' || game.board[move-1] === 'O') return reply('❌ Casilla ocupada')
 
+  // Colocar ficha
   const mark = sender === game.player1 ? 'X' : 'O'
   game.board[move-1] = mark
 
-  // Verificar ganador
+  // Revisar ganador
   const winner = checkWinner(game.board)
   if (winner) {
     const winnerId = winner === 'X' ? game.player1 : game.player2
@@ -79,7 +74,7 @@ export const handler = async (m, { sock, from, sender, reply, args }) => {
     return
   }
 
-  // Verificar empate
+  // Revisar empate
   if (game.board.every(c => c === 'X' || c === 'O')) {
     global.db.users[game.player1].coins += game.bet
     global.db.users[game.player2].coins += game.bet
@@ -101,7 +96,7 @@ export const handler = async (m, { sock, from, sender, reply, args }) => {
   })
 }
 
-// Función para dibujar tablero
+// ======== FUNCIONES ========
 function renderBoard(board) {
   return `${board[0]} | ${board[1]} | ${board[2]}\n` +
          `---------\n` +
@@ -110,7 +105,6 @@ function renderBoard(board) {
          `${board[6]} | ${board[7]} | ${board[8]}`
 }
 
-// Verificar ganador
 function checkWinner(b) {
   const winCombos = [
     [0,1,2],[3,4,5],[6,7,8],
