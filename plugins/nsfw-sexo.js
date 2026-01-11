@@ -1,6 +1,3 @@
-import fs from 'fs'
-import path from 'path'
-
 export const handler = async (m, {
   sock,
   from,
@@ -10,29 +7,43 @@ export const handler = async (m, {
 
   if (!isGroup) return reply('❌ Este comando solo funciona en grupos')
 
+  /* ───── 🧠 DB SAFE ───── */
+  if (!global.db) global.db = {}
+  if (!global.db.groups) global.db.groups = {}
+  if (!global.db.groups[from]) {
+    global.db.groups[from] = {
+      nsfw: false
+    }
+  }
+
+  const groupData = global.db.groups[from]
+
+  /* ───── 🔞 NSFW OBLIGATORIO (CON AVISO) ───── */
+  if (!groupData.nsfw) {
+    return reply(
+      '🔞 *Comandos NSFW desactivados*\n\n' +
+      'Un admin debe activar con:\n' +
+      '.nsfw on'
+    )
+  }
+
   // Validar mención o respuesta
   const who = m.mentionedJid?.[0] || m.quoted?.sender
   if (!who) return reply('👀 Etiqueta o responde a alguien')
 
-  // NSFW control (opcional)
-  if (global.db?.groups?.[from]?.nsfw === false) {
-    return reply('🚫 Los comandos NSFW están desactivados en este grupo')
-  }
-
   const senderName = await sock.getName(m.sender)
   const targetName = await sock.getName(who)
 
-  /* 🔥 Reacción */
+  /* 🥵 Reacción */
   await sock.sendMessage(from, {
     react: { text: '🥵', key: m.key }
   })
 
   const caption = `🔥 *JOSHI BOT*
 ━━━━━━━━━━━━━━
-😏 ${senderName} se pone muy cerca de ${targetName}
-💞 La tensión se siente en el aire...`
+😏 ${senderName} tiene sexo con ${targetName}`
 
-  // Videos (sugerentes / gif style)
+  // Videos tipo gif (sugerentes)
   const videos = [
     'https://telegra.ph/file/3246f62c61a0ebebcb5c8.mp4',
     'https://telegra.ph/file/9c4b894e034c290df75e4.mp4',
@@ -55,9 +66,8 @@ export const handler = async (m, {
 }
 
 handler.command = ['sexo', 'accion']
-handler.tags = ['nsfw']
-handler.menu = false
-handler.menu2 = true
+handler.tags = ['menu2']
+handler.menu = true
 handler.group = true
 handler.help = ['sexo @usuario']
 
