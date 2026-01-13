@@ -5,16 +5,11 @@ import { spawn } from 'child_process'
 
 export const handler = async (m, { sock, from, reply }) => {
 
-  // 🔎 DETECCIÓN REAL DE STICKER
-  const quoted = m.quoted
-  const isSticker =
-    quoted &&
-    (quoted.mtype === 'stickerMessage' ||
-     quoted.type === 'sticker' ||
-     quoted.message?.stickerMessage)
+  const q = m.quoted
 
-  if (!isSticker) {
-    return reply('🖼️ *Responde a un sticker* para convertirlo en imagen')
+  // ✅ 
+  if (!q || !q.mimetype || !q.mimetype.includes('webp')) {
+    return reply('🖼️ Responde a un *sticker* para convertirlo en imagen')
   }
 
   // 🎯 Reacción
@@ -24,7 +19,7 @@ export const handler = async (m, { sock, from, reply }) => {
 
   try {
     // ⬇️ Descargar sticker
-    const buffer = await quoted.download()
+    const buffer = await q.download()
     if (!buffer) throw 'No se pudo descargar el sticker'
 
     const tmp = os.tmpdir()
@@ -33,7 +28,7 @@ export const handler = async (m, { sock, from, reply }) => {
 
     fs.writeFileSync(input, buffer)
 
-    // 🔄 WEBP → PNG
+    // 🔄 Convertir WEBP → PNG
     await new Promise((resolve, reject) => {
       const ffmpeg = spawn('ffmpeg', [
         '-y',
@@ -45,12 +40,12 @@ export const handler = async (m, { sock, from, reply }) => {
       ffmpeg.on('error', reject)
     })
 
-    const img = fs.readFileSync(output)
+    const image = fs.readFileSync(output)
 
     // 📤 Enviar imagen
     await sock.sendMessage(
       from,
-      { image: img, caption: '🖼️ Sticker convertido a imagen' },
+      { image, caption: '🖼️ Sticker convertido a imagen' },
       { quoted: m }
     )
 
@@ -65,7 +60,7 @@ export const handler = async (m, { sock, from, reply }) => {
 
 handler.command = ['toimg']
 handler.help = ['toimg (responde a un sticker)']
-handler.tags = ['stickers']
+handler.tags = ['utilidad']
 handler.menu = true
 
 export default handler
