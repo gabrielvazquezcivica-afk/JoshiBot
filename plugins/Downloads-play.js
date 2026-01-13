@@ -26,8 +26,8 @@ export const handler = async (m, {
     if (global.db.groups[from].modoadmin) {
       const metadata = await sock.groupMetadata(from)
       const participants = metadata.participants || []
-
       const ownerJids = owner?.jid || []
+
       if (!ownerJids.includes(sender)) {
         const isAdmin = participants.some(
           p => p.id === sender &&
@@ -57,37 +57,19 @@ export const handler = async (m, {
     const v = search.all.find(v => v.seconds) || search.all[0]
     const { title, url, thumbnail, author, timestamp, views, ago } = v
 
-    /* 🎶 REACCIÓN */
+    /* 🎶 REACCIÓN INICIAL */
     await sock.sendMessage(from, {
       react: { text: '🎶', key: m.key }
     })
 
-    /* 📊 INFO */
-    await sock.sendMessage(from, {
-      image: { url: thumbnail },
-      caption:
-`╔════════════════════════════╗
-║   🎧 JOSHI AUDIO SYSTEM   ║
-╠════════════════════════════╣
-║ 🎵 Título   : ${title}
-║ 👤 Canal    : ${author?.name || 'Desconocido'}
-║ ⏱ Duración : ${timestamp}
-║ 👁 Vistas   : ${views?.toLocaleString() || 'N/A'}
-║ 📅 Subido   : ${ago || 'N/A'}
-╚════════════════════════════╝`
-    }, { quoted: m })
+    /* ⬇️ INICIAR DESCARGA INMEDIATA (EN PARALELO) */
+    const tmp = path.join(os.tmpdir(), `${Date.now()}.m4a`)
 
-    /* ⬇️ DESCARGA RÁPIDA */
-    const tmp = path.join(os.tmpdir(), `${Date.now()}.mp3`)
-
-    await new Promise((resolve, reject) => {
+    const downloadPromise = new Promise((resolve, reject) => {
       const yt = spawn(
         'yt-dlp',
         [
-          '-f', 'bestaudio/best',
-          '-x',
-          '--audio-format', 'mp3',
-          '--audio-quality', '0',
+          '-f', 'bestaudio[ext=m4a]/bestaudio',
           '--no-playlist',
           '--no-warnings',
           '--quiet',
@@ -99,20 +81,40 @@ export const handler = async (m, {
 
       yt.on('close', code => {
         if (code === 0) resolve()
-        else reject(new Error(`yt-dlp exited with code ${code}`))
+        else reject(new Error('yt-dlp falló'))
       })
 
-      yt.on('error', err => reject(err))
+      yt.on('error', reject)
     })
+
+    /* 📊 ENVIAR INFO (NO BLOQUEA DESCARGA) */
+    await sock.sendMessage(from, {
+      image: { url: thumbnail },
+      caption:
+`╔════════════════════════════╗
+║   🎧 JOSHI AUDIO SYSTEM   ║
+╠════════════════════════════╣
+║ 🎵 Título   : ${title}
+║ 👤 Canal    : ${author?.name || 'Desconocido'}
+║ ⏱ Duración : ${timestamp}
+║ 👁 Vistas   : ${views?.toLocaleString() || 'N/A'}
+║ 📅 Subido   : ${ago || 'N/A'}
+╚════════════════════════════╝
+
+⏳ Enviando audio...`
+    }, { quoted: m })
+
+    /* ⏱️ ESPERAR DESCARGA  */
+    await downloadPromise
 
     const audio = fs.readFileSync(tmp)
     fs.unlinkSync(tmp)
 
-    /* 📤 ENVIAR AUDIO */
+    /* 📤 ENVIAR */
     await sock.sendMessage(from, {
       audio,
-      mimetype: 'audio/mpeg',
-      fileName: `${title}.mp3`
+      mimetype: 'audio/mp4',
+      fileName: `${title}.m4a`
     }, { quoted: m })
 
     /* ✅ REACCIÓN FINAL */
@@ -125,7 +127,7 @@ export const handler = async (m, {
     reply(
 `╭─❖ 「 ERROR 」 ❖─╮
 │ ❌ No se pudo obtener el audio
-│ 🔁 Intenta otra canción
+│ 🔁 Intenta con otra canción
 ╰──────────────────╯`
     )
   }
