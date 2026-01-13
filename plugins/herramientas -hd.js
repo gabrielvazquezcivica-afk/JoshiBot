@@ -1,4 +1,4 @@
-import Jimp from 'jimp'
+import * as Jimp from 'jimp'
 
 export const handler = async (m, { sock, from, reply }) => {
   try {
@@ -9,30 +9,30 @@ export const handler = async (m, { sock, from, reply }) => {
       return reply('❌ Responde a una imagen')
     }
 
-    // ✨ Reacción
+    // 🪄 Reacción
     await sock.sendMessage(from, {
       react: { text: '🪄', key: m.key }
     })
 
     // 📥 Descargar imagen
     const buffer = await quoted.download()
-    const img = await Jimp.read(buffer)
+    const img = await Jimp.Jimp.read(buffer)
 
-    // 📐 Reescalar a HD
+    // 📐 Aumentar tamaño (HD)
     if (img.bitmap.width < 1500) {
       img.resize(1500, Jimp.AUTO)
     }
 
-    // 🎨 Mejoras visuales
+    // 🎨 Mejoras
     img
-      .brightness(0.15)   // brillo
-      .contrast(0.15)     // contraste
-      .quality(95)        // calidad
-      .sharpen()          // nitidez
+      .brightness(0.15) // brillo
+      .contrast(0.2)    // contraste
+      .quality(95)      // calidad
+      .sharpen()        // nitidez
 
     const output = await img.getBufferAsync(Jimp.MIME_JPEG)
 
-    // 📤 Enviar imagen
+    // 📤 Enviar
     await sock.sendMessage(
       from,
       {
