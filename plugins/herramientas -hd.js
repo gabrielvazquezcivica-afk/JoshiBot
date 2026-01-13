@@ -12,25 +12,34 @@ export const handler = async (m, {
   reply,
   owner
 }) => {
+
   let input, output
 
+  /* ───── 🧠 DB SAFE ───── */
   if (!global.db) global.db = {}
   if (!global.db.groups) global.db.groups = {}
   if (isGroup && !global.db.groups[from]) {
-    global.db.groups[from] = { modoadmin: false }
+    global.db.groups[from] = {
+      modoadmin: false
+    }
   }
 
-  /* 👑 MODO ADMIN */
+  /* ───── 👑 MODO ADMIN (SILENCIOSO) ───── */
   if (isGroup && global.db.groups[from].modoadmin) {
     const meta = await sock.groupMetadata(from)
     const admins = meta.participants
-      .filter(p => p.admin)
+      .filter(p => p.admin === 'admin' || p.admin === 'superadmin')
       .map(p => p.id)
 
-    if (!admins.includes(sender) && !owner?.jid?.includes(sender)) return
+    const owners = owner?.jid || []
+
+    if (!admins.includes(sender) && !owners.includes(sender)) {
+      return // silencio total
+    }
   }
 
   try {
+    /* ───── 📷 DETECTAR IMAGEN ───── */
     const quoted =
       m.message?.extendedTextMessage?.contextInfo ||
       m.message?.imageMessage?.contextInfo
@@ -47,15 +56,19 @@ export const handler = async (m, {
       react: { text: '✨', key: m.key }
     })
 
+    /* ───── 📥 DESCARGAR IMAGEN ───── */
     const stream = await downloadContentFromMessage(imgMsg, 'image')
     let buffer = Buffer.alloc(0)
-    for await (const c of stream) buffer = Buffer.concat([buffer, c])
+    for await (const chunk of stream) {
+      buffer = Buffer.concat([buffer, chunk])
+    }
 
     const tmp = os.tmpdir()
     input = path.join(tmp, `hd_in_${Date.now()}.jpg`)
     output = path.join(tmp, `hd_out_${Date.now()}.jpg`)
     fs.writeFileSync(input, buffer)
 
+    /* ───── 🎨 MEJORAR IMAGEN ───── */
     const img = await Jimp.Jimp.read(input)
 
     if (img.bitmap.width > 1280) {
@@ -67,22 +80,23 @@ export const handler = async (m, {
       .contrast(0.12)
       .quality(85)
 
-    await new Promise((res, rej) =>
+    await new Promise((res, rej) => {
       img.write(output, err => (err ? rej(err) : res()))
-    )
+    })
 
+    /* ───── 📤 ENVIAR RESULTADO ───── */
     await sock.sendMessage(
       from,
       {
-        image: fs.readFileSync(output),
-        caption: '> Imagen mejorada 🌟'
+        image: { url: output },
+        caption: '> Imagen mejorada ✨'
       },
       { quoted: m }
     )
 
   } catch (e) {
     console.error(e?.message || String(e))
-    reply('❌ Error al mejorar imagen')
+    reply('❌ Error al mejorar la imagen')
   } finally {
     try { fs.unlinkSync(input) } catch {}
     try { fs.unlinkSync(output) } catch {}
