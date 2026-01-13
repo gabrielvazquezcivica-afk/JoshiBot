@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
-import * as Jimp from 'jimp'
+import { spawn } from 'child_process'
 import { downloadContentFromMessage } from '@whiskeysockets/baileys'
 
 export const handler = async (m, {
@@ -19,9 +19,7 @@ export const handler = async (m, {
   if (!global.db) global.db = {}
   if (!global.db.groups) global.db.groups = {}
   if (isGroup && !global.db.groups[from]) {
-    global.db.groups[from] = {
-      modoadmin: false
-    }
+    global.db.groups[from] = { modoadmin: false }
   }
 
   /* ───── 👑 MODO ADMIN (SILENCIOSO) ───── */
@@ -34,28 +32,29 @@ export const handler = async (m, {
     const owners = owner?.jid || []
 
     if (!admins.includes(sender) && !owners.includes(sender)) {
-      return // silencio total
+      return
     }
   }
 
+  /* ───── 🔎 DETECTAR IMAGEN (ROBUSTO) ───── */
+  const quoted =
+    m.message?.extendedTextMessage?.contextInfo ||
+    m.message?.imageMessage?.contextInfo
+
+  const qmsg = quoted?.quotedMessage
+
+  const imgMsg =
+    m.message?.imageMessage ||
+    qmsg?.imageMessage ||
+    qmsg?.viewOnceMessageV2?.message?.imageMessage
+
+  if (!imgMsg) return reply('❌ Responde a una imagen')
+
+  await sock.sendMessage(from, {
+    react: { text: '✨', key: m.key }
+  })
+
   try {
-    /* ───── 📷 DETECTAR IMAGEN ───── */
-    const quoted =
-      m.message?.extendedTextMessage?.contextInfo ||
-      m.message?.imageMessage?.contextInfo
-
-    const qmsg = quoted?.quotedMessage
-    const imgMsg =
-      m.message?.imageMessage ||
-      qmsg?.imageMessage ||
-      qmsg?.viewOnceMessageV2?.message?.imageMessage
-
-    if (!imgMsg) return reply('❌ Responde a una imagen')
-
-    await sock.sendMessage(from, {
-      react: { text: '✨', key: m.key }
-    })
-
     /* ───── 📥 DESCARGAR IMAGEN ───── */
     const stream = await downloadContentFromMessage(imgMsg, 'image')
     let buffer = Buffer.alloc(0)
@@ -68,34 +67,31 @@ export const handler = async (m, {
     output = path.join(tmp, `hd_out_${Date.now()}.jpg`)
     fs.writeFileSync(input, buffer)
 
-    /* ───── 🎨 MEJORAR IMAGEN ───── */
-    const img = await Jimp.Jimp.read(input)
+    /* ───── 🎨 MEJORA HD CON FFMPEG ───── */
+    await new Promise((resolve, reject) => {
+      const ff = spawn('ffmpeg', [
+        '-i', input,
+        '-vf',
+        'eq=brightness=0.05:contrast=1.15:saturation=1.1,unsharp=5:5:1.2',
+        '-q:v', '2',
+        output
+      ])
 
-    if (img.bitmap.width > 1280) {
-      img.resize(1280, Jimp.AUTO)
-    }
-
-    img
-      .brightness(0.1)
-      .contrast(0.12)
-      .quality(85)
-
-    await new Promise((res, rej) => {
-      img.write(output, err => (err ? rej(err) : res()))
+      ff.on('error', reject)
+      ff.on('close', code => code === 0 ? resolve() : reject())
     })
 
     /* ───── 📤 ENVIAR RESULTADO ───── */
     await sock.sendMessage(
       from,
       {
-        image: { url: output },
+        image: fs.readFileSync(output),
         caption: '> Imagen mejorada ✨'
       },
       { quoted: m }
     )
 
   } catch (e) {
-    console.error(e?.message || String(e))
     reply('❌ Error al mejorar la imagen')
   } finally {
     try { fs.unlinkSync(input) } catch {}
