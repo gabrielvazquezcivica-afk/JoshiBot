@@ -45,7 +45,7 @@ export const handler = async (m, { sock, from }) => {
 
 handler.command = ['hora', 'time', 'horalatam']
 handler.help = ['hora']
-handler.tags = ['herramientas']
+handler.tags = ['tools']
 handler.menu = true
 
 export default handler
