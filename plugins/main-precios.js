@@ -25,6 +25,7 @@ const handler = async (m, { reply }) => {
 
 handler.help = ['precios']
 handler.tags = ['info']
+handler.menu = true
 handler.command = /^(precios|planes)$/i
 
 export default handler
