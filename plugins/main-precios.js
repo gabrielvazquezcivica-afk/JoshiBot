@@ -22,7 +22,10 @@ export const handler = async (m, { sock, from }) => {
 ║ 👥 +3 grupos
 ╚════════════════════════════╝
 
-> JoshiBot listo
+🛒 Para contratar usa:
+👉 *.comprar*
+
+> 𝘑𝘰𝘴𝘩𝘪-𝘔𝘰𝘯𝘦𝘺 💸
 `.trim()
 
   await sock.sendMessage(
@@ -35,4 +38,6 @@ export const handler = async (m, { sock, from }) => {
 handler.command = ['precios', 'planes']
 handler.help = ['precios']
 handler.tags = ['info']
-handler.menu = true 
+handler.menu = true
+
+export default handler
