@@ -2,12 +2,16 @@ import fs from 'fs'
 import path from 'path'
 import os from 'os'
 import { spawn } from 'child_process'
+import { downloadContentFromMessage } from '@whiskeysockets/baileys'
 
 export const handler = async (m, { sock, from, reply }) => {
 
-  // 🛑 DEBE SER RESPUESTA
-  if (!m.quoted) {
-    return reply('🖼️ Responde a un sticker para convertirlo en imagen')
+  /* ───── 🔎  ───── */
+  const ctx = m.message?.extendedTextMessage?.contextInfo
+  const quoted = ctx?.quotedMessage
+
+  if (!quoted || !quoted.stickerMessage) {
+    return reply('🖼️ Responde a un *sticker* para convertirlo en imagen')
   }
 
   // 🎯 Reacción
@@ -15,18 +19,28 @@ export const handler = async (m, { sock, from, reply }) => {
     react: { text: '🖼️', key: m.key }
   })
 
-  try {
-    // ⬇️ FORZAR DESCARGA
-    const buffer = await m.quoted.download()
-    if (!buffer) throw 'No buffer'
+  let input, output
 
+  try {
+    /* ───── 📥 DESCARGAR STICKER ───── */
+    const stream = await downloadContentFromMessage(
+      quoted.stickerMessage,
+      'sticker'
+    )
+
+    let buffer = Buffer.alloc(0)
+    for await (const chunk of stream) {
+      buffer = Buffer.concat([buffer, chunk])
+    }
+
+    /* ───── 📂 ARCHIVOS TEMPORALES ───── */
     const tmp = os.tmpdir()
-    const input = path.join(tmp, `${Date.now()}.webp`)
-    const output = path.join(tmp, `${Date.now()}.png`)
+    input = path.join(tmp, `toimg_${Date.now()}.webp`)
+    output = path.join(tmp, `toimg_${Date.now()}.png`)
 
     fs.writeFileSync(input, buffer)
 
-    // 🔄 WEBP → PNG
+    /* ───── 🔄 CONVERTIR WEBP → PNG ───── */
     await new Promise((resolve, reject) => {
       const ffmpeg = spawn('ffmpeg', [
         '-y',
@@ -38,27 +52,30 @@ export const handler = async (m, { sock, from, reply }) => {
       ffmpeg.on('error', reject)
     })
 
-    const image = fs.readFileSync(output)
-
-    // 📤 Enviar imagen
+    /* ───── 📤 ENVIAR IMAGEN ───── */
     await sock.sendMessage(
       from,
-      { image, caption: '🖼️ Sticker convertido a imagen' },
+      {
+        image: fs.readFileSync(output),
+        caption: '🖼️ Sticker convertido a imagen'
+      },
       { quoted: m }
     )
 
-    fs.unlinkSync(input)
-    fs.unlinkSync(output)
-
   } catch (e) {
     console.error('TOIMG ERROR:', e)
-    reply('❌ Responde **solo a un sticker**')
+    reply('❌ Error al convertir el sticker')
+
+  } finally {
+    /* ───── 🧹 LIMPIEZA ───── */
+    try { if (input) fs.unlinkSync(input) } catch {}
+    try { if (output) fs.unlinkSync(output) } catch {}
   }
 }
 
 handler.command = ['toimg']
-handler.help = ['toimg']
-handler.tags = ['stickers']
+handler.help = ['toimg (responde a un sticker)']
+handler.tags = ['utilidad']
 handler.menu = true
 
 export default handler
