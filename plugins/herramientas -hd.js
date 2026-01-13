@@ -12,7 +12,7 @@ export const handler = async (m, {
   reply,
   owner
 }) => {
-  let input
+  let input, output
 
   /* ───── 🧠 DB SAFE ───── */
   if (!global.db) global.db = {}
@@ -65,10 +65,11 @@ export const handler = async (m, {
     }
 
     const tmp = os.tmpdir()
-    input = path.join(tmp, `hd_${Date.now()}.jpg`)
+    input = path.join(tmp, `hd_in_${Date.now()}.jpg`)
+    output = path.join(tmp, `hd_out_${Date.now()}.jpg`)
     fs.writeFileSync(input, buffer)
 
-    /* ───── 🎨 MEJORAR IMAGEN ───── */
+    /* ───── 🎨 PROCESAR IMAGEN ───── */
     const img = await Jimp.Jimp.read(input)
 
     if (img.bitmap.width < 1500) {
@@ -78,23 +79,22 @@ export const handler = async (m, {
     img
       .brightness(0.15)
       .contrast(0.2)
-      // 🔪 NITIDEZ REAL (sharpen replacement)
       .convolution([
-        [ 0, -1,  0 ],
-        [ -1, 5, -1 ],
-        [ 0, -1,  0 ]
+        [0, -1, 0],
+        [-1, 5, -1],
+        [0, -1, 0]
       ])
 
-    /* ───── 📤 EXPORTAR JPEG ───── */
-    const output = await img.getBufferAsync(
-      Jimp.MIME_JPEG,
-      { quality: 95 }
-    )
+    // 🧠 Guardar archivo (FORMA ESTABLE)
+    await img.writeAsync(output)
 
+    const finalBuffer = fs.readFileSync(output)
+
+    /* ───── 📤 ENVIAR IMAGEN HD ───── */
     await sock.sendMessage(
       from,
       {
-        image: output,
+        image: finalBuffer,
         caption: '🖼️ Imagen mejorada\n> Más brillo y nitidez'
       },
       { quoted: m }
@@ -105,6 +105,7 @@ export const handler = async (m, {
     reply('❌ Error al mejorar la imagen')
   } finally {
     try { if (input) fs.unlinkSync(input) } catch {}
+    try { if (output) fs.unlinkSync(output) } catch {}
   }
 }
 
