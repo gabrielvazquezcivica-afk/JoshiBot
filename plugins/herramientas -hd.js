@@ -1,45 +1,43 @@
-import sharp from 'sharp'
-import axios from 'axios'
+import Jimp from 'jimp'
 
 export const handler = async (m, { sock, from, reply }) => {
   try {
-    // 🛑 Debe responder a una imagen
     const quoted = m.quoted || m
     const mime = quoted.mimetype || ''
 
     if (!mime.startsWith('image/')) {
-      return reply('❌ Responde a una imagen para mejorarla')
+      return reply('❌ Responde a una imagen')
     }
 
-    // ⏳ Reacción de proceso
+    // ✨ Reacción
     await sock.sendMessage(from, {
-      react: { text: '✨', key: m.key }
+      react: { text: '🪄', key: m.key }
     })
 
     // 📥 Descargar imagen
     const buffer = await quoted.download()
+    const img = await Jimp.read(buffer)
 
-    // 🎨 Mejorar imagen
-    const improved = await sharp(buffer)
-      .resize({ width: 2000, withoutEnlargement: true }) // HD sin deformar
-      .modulate({
-        brightness: 1.15, // brillo
-        saturation: 1.1   // color
-      })
-      .sharpen({
-        sigma: 1.2,
-        m1: 1,
-        m2: 2
-      }) // nitidez
-      .jpeg({ quality: 95 }) // calidad final
-      .toBuffer()
+    // 📐 Reescalar a HD
+    if (img.bitmap.width < 1500) {
+      img.resize(1500, Jimp.AUTO)
+    }
 
-    // 📤 Enviar imagen mejorada
+    // 🎨 Mejoras visuales
+    img
+      .brightness(0.15)   // brillo
+      .contrast(0.15)     // contraste
+      .quality(95)        // calidad
+      .sharpen()          // nitidez
+
+    const output = await img.getBufferAsync(Jimp.MIME_JPEG)
+
+    // 📤 Enviar imagen
     await sock.sendMessage(
       from,
       {
-        image: improved,
-        caption: '🖼️ Imagen mejorada en HD\n> Más clara, más nítida'
+        image: output,
+        caption: '🖼️ Imagen mejorada\n> Más brillo y nitidez'
       },
       { quoted: m }
     )
@@ -50,7 +48,7 @@ export const handler = async (m, { sock, from, reply }) => {
   }
 }
 
-handler.command = ['hd', 'mejorar', 'enhance']
+handler.command = ['hd', 'mejorar']
 handler.tags = ['tools']
 handler.help = ['hd (responde a una imagen)']
 handler.menu = true
