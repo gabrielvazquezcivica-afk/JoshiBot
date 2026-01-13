@@ -38,7 +38,7 @@ export const handler = async (m, {
   }
 
   try {
-    /* ───── 🔎 DETECTAR IMAGEN (MISMA LÓGICA QUE STICKER) ───── */
+    /* ───── 🔎 DETECTAR IMAGEN (ROBUSTO) ───── */
     const quoted =
       m.message?.extendedTextMessage?.contextInfo ||
       m.message?.imageMessage?.contextInfo
@@ -71,7 +71,7 @@ export const handler = async (m, {
     input = path.join(tmp, `hd_${Date.now()}.jpg`)
     fs.writeFileSync(input, buffer)
 
-    /* ───── 🎨 MEJORAR IMAGEN ───── */
+    /* ───── 🎨 PROCESAR IMAGEN ───── */
     const img = await Jimp.Jimp.read(input)
 
     if (img.bitmap.width < 1500) {
@@ -81,12 +81,14 @@ export const handler = async (m, {
     img
       .brightness(0.15) // brillo
       .contrast(0.2)    // contraste
-      .quality(95)      // calidad
       .sharpen()        // nitidez
 
-    const output = await img.getBufferAsync(Jimp.MIME_JPEG)
+    /* ───── 📤 EXPORTAR JPEG ALTA CALIDAD ───── */
+    const output = await img.getBufferAsync(
+      Jimp.MIME_JPEG,
+      { quality: 95 }
+    )
 
-    /* ───── 📤 ENVIAR RESULTADO ───── */
     await sock.sendMessage(
       from,
       {
@@ -108,6 +110,5 @@ handler.command = ['hd', 'mejorar']
 handler.tags = ['tools']
 handler.help = ['hd (responde a una imagen)']
 handler.menu = true
-handler.group = false
 
 export default handler
