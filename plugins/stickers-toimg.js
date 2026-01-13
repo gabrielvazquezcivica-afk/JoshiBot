@@ -5,11 +5,9 @@ import { spawn } from 'child_process'
 
 export const handler = async (m, { sock, from, reply }) => {
 
-  const q = m.quoted
-
-  // ✅ 
-  if (!q || !q.mimetype || !q.mimetype.includes('webp')) {
-    return reply('🖼️ Responde a un *sticker* para convertirlo en imagen')
+  // 🛑 DEBE SER RESPUESTA
+  if (!m.quoted) {
+    return reply('🖼️ Responde a un sticker para convertirlo en imagen')
   }
 
   // 🎯 Reacción
@@ -18,9 +16,9 @@ export const handler = async (m, { sock, from, reply }) => {
   })
 
   try {
-    // ⬇️ Descargar sticker
-    const buffer = await q.download()
-    if (!buffer) throw 'No se pudo descargar el sticker'
+    // ⬇️ FORZAR DESCARGA
+    const buffer = await m.quoted.download()
+    if (!buffer) throw 'No buffer'
 
     const tmp = os.tmpdir()
     const input = path.join(tmp, `${Date.now()}.webp`)
@@ -28,7 +26,7 @@ export const handler = async (m, { sock, from, reply }) => {
 
     fs.writeFileSync(input, buffer)
 
-    // 🔄 Convertir WEBP → PNG
+    // 🔄 WEBP → PNG
     await new Promise((resolve, reject) => {
       const ffmpeg = spawn('ffmpeg', [
         '-y',
@@ -54,13 +52,13 @@ export const handler = async (m, { sock, from, reply }) => {
 
   } catch (e) {
     console.error('TOIMG ERROR:', e)
-    reply('❌ Error al convertir el sticker')
+    reply('❌ Responde **solo a un sticker**')
   }
 }
 
 handler.command = ['toimg']
-handler.help = ['toimg (responde a un sticker)']
-handler.tags = ['utilidad']
+handler.help = ['toimg']
+handler.tags = ['stickers']
 handler.menu = true
 
 export default handler
