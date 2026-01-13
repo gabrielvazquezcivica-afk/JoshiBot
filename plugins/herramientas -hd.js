@@ -21,30 +21,22 @@ export const handler = async (m, {
     global.db.groups[from] = { modoadmin: false }
   }
 
-  /* ───── 👑 MODO ADMIN (SILENCIOSO) ───── */
+  /* ───── 👑 MODO ADMIN ───── */
   if (isGroup && global.db.groups[from].modoadmin) {
-    const metadata = await sock.groupMetadata(from)
-    const participants = metadata.participants || []
-    const ownerJids = owner?.jid || []
+    const meta = await sock.groupMetadata(from)
+    const admins = meta.participants.filter(p =>
+      p.admin === 'admin' || p.admin === 'superadmin'
+    ).map(p => p.id)
 
-    if (!ownerJids.includes(sender)) {
-      const isAdmin = participants.some(
-        p =>
-          p.id === sender &&
-          (p.admin === 'admin' || p.admin === 'superadmin')
-      )
-      if (!isAdmin) return
-    }
+    if (!admins.includes(sender) && !owner?.jid?.includes(sender)) return
   }
 
   try {
-    /* ───── 🔎 DETECTAR IMAGEN ───── */
     const quoted =
       m.message?.extendedTextMessage?.contextInfo ||
       m.message?.imageMessage?.contextInfo
 
     const qmsg = quoted?.quotedMessage
-
     const imgMsg =
       m.message?.imageMessage ||
       qmsg?.imageMessage ||
@@ -53,69 +45,55 @@ export const handler = async (m, {
     if (!imgMsg) return reply('❌ Responde a una imagen')
 
     await sock.sendMessage(from, {
-      react: { text: '✨', key: m.key }
+      react: { text: '⚡', key: m.key }
     })
 
-    /* ───── 📥 DESCARGAR IMAGEN ───── */
+    /* 📥 DESCARGA */
     const stream = await downloadContentFromMessage(imgMsg, 'image')
     let buffer = Buffer.alloc(0)
-    for await (const chunk of stream) {
-      buffer = Buffer.concat([buffer, chunk])
-    }
+    for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk])
 
     const tmp = os.tmpdir()
     input = path.join(tmp, `hd_in_${Date.now()}.jpg`)
     output = path.join(tmp, `hd_out_${Date.now()}.jpg`)
     fs.writeFileSync(input, buffer)
 
-    /* ───── 🎨 PROCESAR IMAGEN ───── */
+    /* ⚡ PROCESO RÁPIDO */
     const img = await Jimp.Jimp.read(input)
 
-    if (img.bitmap.width < 1500) {
-      img.resize(1500, Jimp.AUTO)
+    if (img.bitmap.width > 1280) {
+      img.resize(1280, Jimp.AUTO)
     }
 
     img
-      .brightness(0.15)
-      .contrast(0.2)
-      .convolution([
-        [0, -1, 0],
-        [-1, 5, -1],
-        [0, -1, 0]
-      ])
+      .brightness(0.1)
+      .contrast(0.12)
+      .quality(85)
 
-    // ✅ WRITE CON CALLBACK (VERSIÓN ANTIGUA)
-    await new Promise((resolve, reject) => {
-      img.write(output, err => {
-        if (err) reject(err)
-        else resolve()
-      })
+    await new Promise((res, rej) => {
+      img.write(output, err => (err ? rej(err) : res()))
     })
 
-    const finalBuffer = fs.readFileSync(output)
-
-    /* ───── 📤 ENVIAR IMAGEN HD ───── */
     await sock.sendMessage(
       from,
       {
-        image: finalBuffer,
-        caption: '🖼️ Imagen mejorada\n> Brillo y nitidez optimizados'
+        image: fs.readFileSync(output),
+        caption: '> Imagen mejorada (rápido ⚡)'
       },
       { quoted: m }
     )
 
   } catch (e) {
-    console.error('HD ERROR:', e)
-    reply('❌ Error al mejorar la imagen')
+    console.error(e)
+    reply('❌ Error al mejorar imagen')
   } finally {
-    try { if (input) fs.unlinkSync(input) } catch {}
-    try { if (output) fs.unlinkSync(output) } catch {}
+    try { fs.unlinkSync(input) } catch {}
+    try { fs.unlinkSync(output) } catch {}
   }
 }
 
-handler.command = ['hd', 'mejorar']
+handler.command = ['hd']
 handler.tags = ['tools']
 handler.menu = true
-handler.help = ['hd (responde a una imagen)']
 
 export default handler
