@@ -38,7 +38,7 @@ export const handler = async (m, {
   }
 
   try {
-    /* ───── 🔎 DETECTAR IMAGEN (ROBUSTO) ───── */
+    /* ───── 🔎 DETECTAR IMAGEN ───── */
     const quoted =
       m.message?.extendedTextMessage?.contextInfo ||
       m.message?.imageMessage?.contextInfo
@@ -52,9 +52,8 @@ export const handler = async (m, {
 
     if (!imgMsg) return reply('❌ Responde a una imagen')
 
-    /* ───── 🪄 REACCIÓN ───── */
     await sock.sendMessage(from, {
-      react: { text: '🪄', key: m.key }
+      react: { text: '✨', key: m.key }
     })
 
     /* ───── 📥 DESCARGAR IMAGEN ───── */
@@ -85,8 +84,13 @@ export const handler = async (m, {
         [0, -1, 0]
       ])
 
-    // 🧠 Guardar archivo (FORMA ESTABLE)
-    await img.writeAsync(output)
+    // ✅ WRITE CON CALLBACK (VERSIÓN ANTIGUA)
+    await new Promise((resolve, reject) => {
+      img.write(output, err => {
+        if (err) reject(err)
+        else resolve()
+      })
+    })
 
     const finalBuffer = fs.readFileSync(output)
 
@@ -95,7 +99,7 @@ export const handler = async (m, {
       from,
       {
         image: finalBuffer,
-        caption: '🖼️ Imagen mejorada\n> Más brillo y nitidez'
+        caption: '🖼️ Imagen mejorada\n> Brillo y nitidez optimizados'
       },
       { quoted: m }
     )
@@ -111,7 +115,7 @@ export const handler = async (m, {
 
 handler.command = ['hd', 'mejorar']
 handler.tags = ['tools']
-handler.help = ['hd (responde a una imagen)']
 handler.menu = true
+handler.help = ['hd (responde a una imagen)']
 
 export default handler
