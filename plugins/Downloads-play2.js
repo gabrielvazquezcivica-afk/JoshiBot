@@ -19,17 +19,15 @@ export const handler = async (m, {
   if (isGroup) {
     if (!global.db) global.db = {}
     if (!global.db.groups) global.db.groups = {}
-    if (!global.db.groups[from]) {
-      global.db.groups[from] = { modoadmin: false }
-    }
+    if (!global.db.groups[from]) global.db.groups[from] = { modoadmin: false }
 
     if (global.db.groups[from].modoadmin) {
-      const metadata = await sock.groupMetadata(from)
-      const participants = metadata.participants || []
-
+      const meta = await sock.groupMetadata(from)
+      const parts = meta.participants || []
       const ownerJids = owner?.jid || []
+
       if (!ownerJids.includes(sender)) {
-        const isAdmin = participants.some(
+        const isAdmin = parts.some(
           p => p.id === sender &&
           (p.admin === 'admin' || p.admin === 'superadmin')
         )
@@ -39,60 +37,70 @@ export const handler = async (m, {
   }
   /* ─────────────────────────────────── */
 
-  /* ───── VALIDAR TEXTO ───── */
   const text = args.join(' ').trim()
   if (!text) {
-    return reply(`
-╭─❖ 「 🎬 JOSHI VIDEO 」 ❖─╮
+    return reply(
+`╭─❖ 「 🎬 JOSHI VIDEO 」 ❖─╮
 │ ✍️ Ejemplo:
 │ .play2 dopamina
-╰────────────────────────╯
-`.trim())
+╰─────────────────────────╯`
+    )
   }
 
   try {
-    /* 🔍 BUSCAR VIDEO */
+    /* 🔍 BUSCAR */
     const search = await yts(text)
-    if (!search.videos.length) return reply('❌ No encontré resultados')
+    if (!search.all.length) return reply('❌ No encontré resultados')
 
-    const v = search.videos[0]
+    const v = search.all.find(v => v.seconds) || search.all[0]
     const { title, url, thumbnail, author, timestamp, views, ago } = v
 
-    /* 🎬 REACCIÓN INICIAL */
-    await sock.sendMessage(from, { react: { text: '🎬', key: m.key } })
-
-    /* 📡 PANEL INFO */
+    /* 🎬 REACCIÓN */
     await sock.sendMessage(from, {
-      image: { url: thumbnail },
-      caption: `
-╔════════════════════════════╗
-║   🎬 JOSHI VIDEO SYSTEM   ║
-╠════════════════════════════╣
-║ 🎞 Título   : ${title}
-║ 👤 Canal    : ${author?.name || 'N/A'}
-║ ⏱ Duración : ${timestamp}
-║ 👁 Vistas   : ${views?.toLocaleString() || 'N/A'}
-║ 📅 Subido   : ${ago || 'N/A'}
-╚════════════════════════════╝
-`.trim()
-    }, { quoted: m })
+      react: { text: '🎬', key: m.key }
+    })
 
-    /* ⬇️ DESCARGAR VIDEO (SILENCIOSO) */
+    /* ⬇️ DESCARGA EN PARALELO (720p rápido) */
     const tmp = path.join(os.tmpdir(), `${Date.now()}.mp4`)
 
-    await new Promise((resolve, reject) => {
-      const yt = spawn('yt-dlp', [
-        '-f', 'bv*[ext=mp4]+ba[ext=m4a]/mp4',
-        '--merge-output-format', 'mp4',
-        '--no-progress',
-        '--quiet',
-        '-o', tmp,
-        url
-      ])
+    const download = new Promise((resolve, reject) => {
+      const yt = spawn(
+        'yt-dlp',
+        [
+          '-f', 'bv*[height<=720]+ba/b[height<=720]',
+          '--merge-output-format', 'mp4',
+          '--no-playlist',
+          '--no-warnings',
+          '--quiet',
+          '-o', tmp,
+          url
+        ],
+        { stdio: 'ignore' }
+      )
 
       yt.on('close', code => code === 0 ? resolve() : reject())
       yt.on('error', reject)
     })
+
+    /* 📊 INFO (NO BLOQUEA) */
+    await sock.sendMessage(from, {
+      image: { url: thumbnail },
+      caption:
+`╔════════════════════════════╗
+║   🎬 JOSHI VIDEO SYSTEM   ║
+╠════════════════════════════╣
+║ 🎥 Título   : ${title}
+║ 👤 Canal    : ${author?.name || 'Desconocido'}
+║ ⏱ Duración : ${timestamp}
+║ 👁 Vistas   : ${views?.toLocaleString() || 'N/A'}
+║ 📅 Subido   : ${ago || 'N/A'}
+╚════════════════════════════╝
+
+⏳ Enviando video...`
+    }, { quoted: m })
+
+    /* ⏱️ ESPERAR DESCARGA */
+    await download
 
     const video = fs.readFileSync(tmp)
     fs.unlinkSync(tmp)
@@ -101,26 +109,28 @@ export const handler = async (m, {
     await sock.sendMessage(from, {
       video,
       mimetype: 'video/mp4',
-      caption: `🎬 *${title}*`
+      caption: `🎬 ${title}`
     }, { quoted: m })
 
-    /* ✅ REACCIÓN FINAL */
-    await sock.sendMessage(from, { react: { text: '✅', key: m.key } })
+    /* ✅ */
+    await sock.sendMessage(from, {
+      react: { text: '✅', key: m.key }
+    })
 
   } catch (e) {
-    console.error('PLAY2 ERROR:', e)
-    reply(`
-╭─❖ 「 ERROR 」 ❖─╮
-│ ❌ No se pudo descargar el video
+    console.error('PLAY2 ERROR:', e?.message || e)
+    reply(
+`╭─❖ 「 ERROR 」 ❖─╮
+│ ❌ No se pudo enviar el video
 │ 🔁 Intenta otro nombre
-╰──────────────────╯
-`.trim())
+╰──────────────────╯`
+    )
   }
 }
 
-handler.command = ['play2']
+handler.command = ['play2', 'playvid']
 handler.tags = ['descargas']
-handler.menu = true
 handler.help = ['play2 <video>']
+handler.menu = true
 
 export default handler
