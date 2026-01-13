@@ -32,6 +32,6 @@ export const handler = async (m, { sock, from, sender, reply }) => {
 }
 
 handler.command = ['sapo']
-handler.tags = ['fun']
+handler.tags = ['juegos']
 handler.menu = true
 export default handler
