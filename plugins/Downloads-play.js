@@ -13,13 +13,15 @@ export const handler = async (m, {
   owner
 }) => {
 
-  const sender = m.key.participant || m.key.remoteJid
+  const sender = m.key.participant
 
   /* ───── 👑 MODO ADMIN (SILENCIOSO) ───── */
   if (isGroup) {
-    global.db ??= {}
-    global.db.groups ??= {}
-    global.db.groups[from] ??= { modoadmin: false }
+    if (!global.db) global.db = {}
+    if (!global.db.groups) global.db.groups = {}
+    if (!global.db.groups[from]) {
+      global.db.groups[from] = { modoadmin: false }
+    }
 
     if (global.db.groups[from].modoadmin) {
       const metadata = await sock.groupMetadata(from)
@@ -39,67 +41,99 @@ export const handler = async (m, {
 
   const text = args.join(' ').trim()
   if (!text) {
-    return reply('🎧 Usa: .play nombre de la canción')
+    return reply(
+`╭─❖ 「 🎧 JOSHI AUDIO 」 ❖─╮
+│ ✍️ Ejemplo:
+│ .play bad bunny
+╰────────────────────────╯`
+    )
   }
 
   try {
     /* 🔍 BUSCAR */
     const search = await yts(text)
-    if (!search.all.length) return reply('❌ Sin resultados')
+    if (!search.all.length) return reply('❌ No encontré resultados')
 
     const v = search.all.find(v => v.seconds) || search.all[0]
-    const { title, url } = v
+    const { title, url, thumbnail, author, timestamp, views, ago } = v
 
-    /* ⚡ REACCIÓN INSTANTÁNEA */
+    /* 🎶 REACCIÓN */
     await sock.sendMessage(from, {
-      react: { text: '🎧', key: m.key }
+      react: { text: '🎶', key: m.key }
     })
 
-    /* ⬇️ DESCARGA EXPRESS*/
-    const tmp = path.join(os.tmpdir(), `${Date.now()}.m4a`)
+    /* 📊 INFO */
+    await sock.sendMessage(from, {
+      image: { url: thumbnail },
+      caption:
+`╔════════════════════════════╗
+║   🎧 JOSHI AUDIO SYSTEM   ║
+╠════════════════════════════╣
+║ 🎵 Título   : ${title}
+║ 👤 Canal    : ${author?.name || 'Desconocido'}
+║ ⏱ Duración : ${timestamp}
+║ 👁 Vistas   : ${views?.toLocaleString() || 'N/A'}
+║ 📅 Subido   : ${ago || 'N/A'}
+╚════════════════════════════╝`
+    }, { quoted: m })
+
+    /* ⬇️ DESCARGA RÁPIDA */
+    const tmp = path.join(os.tmpdir(), `${Date.now()}.mp3`)
 
     await new Promise((resolve, reject) => {
       const yt = spawn(
         'yt-dlp',
         [
-          '-f', 'bestaudio[ext=m4a]/bestaudio',
+          '-f', 'bestaudio/best',
+          '-x',
+          '--audio-format', 'mp3',
+          '--audio-quality', '0',
           '--no-playlist',
           '--no-warnings',
           '--quiet',
-          '--merge-output-format', 'm4a',
           '-o', tmp,
           url
         ],
         { stdio: 'ignore' }
       )
 
-      yt.on('close', code => code === 0 ? resolve() : reject())
-      yt.on('error', reject)
+      yt.on('close', code => {
+        if (code === 0) resolve()
+        else reject(new Error(`yt-dlp exited with code ${code}`))
+      })
+
+      yt.on('error', err => reject(err))
     })
 
-    /* 📤 ENVÍO DIRECTO*/
+    const audio = fs.readFileSync(tmp)
+    fs.unlinkSync(tmp)
+
+    /* 📤 ENVIAR AUDIO */
     await sock.sendMessage(from, {
-      audio: fs.createReadStream(tmp),
-      mimetype: 'audio/mp4',
-      fileName: `${title}.m4a`
+      audio,
+      mimetype: 'audio/mpeg',
+      fileName: `${title}.mp3`
     }, { quoted: m })
 
-    fs.unlink(tmp, () => {})
-
-    /* ✅ FINAL */
+    /* ✅ REACCIÓN FINAL */
     await sock.sendMessage(from, {
       react: { text: '✅', key: m.key }
     })
 
   } catch (e) {
-    console.error('PLAY ERROR:', e)
-    reply('❌ Error al obtener el audio')
+    console.error('PLAY ERROR:', e?.message || e)
+    reply(
+`╭─❖ 「 ERROR 」 ❖─╮
+│ ❌ No se pudo obtener el audio
+│ 🔁 Intenta otra canción
+╰──────────────────╯`
+    )
   }
 }
 
 handler.command = ['play']
 handler.tags = ['descargas']
-handler.menu = true
 handler.help = ['play <canción>']
+handler.menu = true
 
 export default handler
