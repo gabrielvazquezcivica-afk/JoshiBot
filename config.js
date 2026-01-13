@@ -15,7 +15,7 @@ const config = {
 
   // ───── BOT ─────
   bot: {
-    name: 'JOSHI-BOT',
+    name: '𝗝𝗢𝗦𝗛𝗜-𝗕𝗢𝗧',
     prefix: '.',
     public: true,
     version: '1.0.0'
@@ -23,7 +23,7 @@ const config = {
 
   // ───── OWNER ─────
   owner: {
-    name: 'SoyGabo',
+    name: 'ѕσу gαвσ ✯',
 
     // números crudos
     numbers: [
