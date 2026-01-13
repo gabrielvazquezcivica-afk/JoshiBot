@@ -2,10 +2,15 @@ import * as Jimp from 'jimp'
 
 export const handler = async (m, { sock, from, reply }) => {
   try {
-    const quoted = m.quoted || m
-    const mime = quoted.mimetype || ''
+    // 🧠 Detectar mensaje citado o propio
+    const q = m.quoted || m
+    const msg = q.message || {}
 
-    if (!mime.startsWith('image/')) {
+    const isImage =
+      msg.imageMessage ||
+      msg.viewOnceMessage?.message?.imageMessage
+
+    if (!isImage) {
       return reply('❌ Responde a una imagen')
     }
 
@@ -15,7 +20,7 @@ export const handler = async (m, { sock, from, reply }) => {
     })
 
     // 📥 Descargar imagen
-    const buffer = await quoted.download()
+    const buffer = await q.download()
     const img = await Jimp.Jimp.read(buffer)
 
     // 📐 Aumentar tamaño (HD)
@@ -23,7 +28,7 @@ export const handler = async (m, { sock, from, reply }) => {
       img.resize(1500, Jimp.AUTO)
     }
 
-    // 🎨 Mejoras
+    // 🎨 Mejoras visuales
     img
       .brightness(0.15) // brillo
       .contrast(0.2)    // contraste
@@ -32,7 +37,7 @@ export const handler = async (m, { sock, from, reply }) => {
 
     const output = await img.getBufferAsync(Jimp.MIME_JPEG)
 
-    // 📤 Enviar
+    // 📤 Enviar imagen
     await sock.sendMessage(
       from,
       {
@@ -43,7 +48,7 @@ export const handler = async (m, { sock, from, reply }) => {
     )
 
   } catch (e) {
-    console.error(e)
+    console.error('HD ERROR:', e)
     reply('❌ Error al mejorar la imagen')
   }
 }
