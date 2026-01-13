@@ -13,7 +13,7 @@ export const handler = async (m, {
   owner
 }) => {
 
-  const sender = m.key.participant
+  const sender = m.key.participant || m.key.remoteJid
 
   /* ───── 👑 MODO ADMIN (SILENCIOSO) ───── */
   if (isGroup) {
@@ -40,7 +40,7 @@ export const handler = async (m, {
   }
   /* ─────────────────────────────────── */
 
-  // ───── VALIDAR TEXTO ─────
+  /* ───── VALIDAR TEXTO ───── */
   const text = args.join(' ').trim()
   if (!text) {
     return reply(`
@@ -52,15 +52,17 @@ export const handler = async (m, {
   }
 
   try {
-    /* 🔍 BUSCAR EN YT */
+    /* 🔍 BUSCAR EN YOUTUBE */
     const search = await yts(text)
     if (!search.all.length) return reply('❌ No encontré resultados')
 
     const v = search.all.find(v => v.seconds) || search.all[0]
     const { title, url, thumbnail, author, timestamp, views, ago } = v
 
-    /* 🎶 REACCIÓN */
-    await sock.sendMessage(from, { react: { text: '🎶', key: m.key } })
+    /* 🎶 REACCIÓN INICIAL */
+    await sock.sendMessage(from, {
+      react: { text: '🎧', key: m.key }
+    })
 
     /* 📡 PANEL DE INFORMACIÓN */
     await sock.sendMessage(from, {
@@ -71,7 +73,7 @@ export const handler = async (m, {
 ╠════════════════════════════╣
 ║ 🎵 Título   : ${title}
 ║ 👤 Canal    : ${author?.name || 'Desconocido'}
-║ ⏱ Duración : ${timestamp}
+║ ⏱ Duración : ${timestamp || 'N/A'}
 ║ 👁 Vistas   : ${views?.toLocaleString() || 'N/A'}
 ║ 📅 Subido   : ${ago || 'N/A'}
 ╚════════════════════════════╝
@@ -79,15 +81,25 @@ export const handler = async (m, {
     }, { quoted: m })
 
     /* ⬇️ DESCARGA DE AUDIO */
-    const tmp = path.join(os.tmpdir(), `${Date.now()}.mp3`)
+    const tmp = path.join(os.tmpdir(), `${Date.now()}.m4a`)
+
     await new Promise((resolve, reject) => {
-      const yt = spawn('yt-dlp', [
-        '-x',
-        '--audio-format', 'mp3',
-        '--audio-quality', '0',
-        '-o', tmp,
-        url
-      ])
+      const yt = spawn(
+        'yt-dlp',
+        [
+          '-f', 'bestaudio[ext=m4a]/bestaudio',
+          '--no-playlist',
+          '--no-warnings',
+          '--quiet',
+          '--extract-audio',
+          '--audio-format', 'm4a',
+          '--audio-quality', '5',
+          '-o', tmp,
+          url
+        ],
+        { stdio: 'ignore' } // 🚫 
+      )
+
       yt.on('close', code => code === 0 ? resolve() : reject())
       yt.on('error', reject)
     })
@@ -98,12 +110,15 @@ export const handler = async (m, {
     /* 📤 ENVIAR AUDIO */
     await sock.sendMessage(from, {
       audio,
-      mimetype: 'audio/mpeg',
-      fileName: `${title}.mp3`
+      mimetype: 'audio/mp4',
+      ptt: false,
+      fileName: `${title}.m4a`
     }, { quoted: m })
 
     /* ✅ REACCIÓN FINAL */
-    await sock.sendMessage(from, { react: { text: '✅', key: m.key } })
+    await sock.sendMessage(from, {
+      react: { text: '✅', key: m.key }
+    })
 
   } catch (e) {
     console.error('PLAY ERROR:', e)
