@@ -14,19 +14,18 @@ export const handler = async (m, {
 }) => {
   let input, output
 
-  /* ───── 🧠 DB SAFE ───── */
   if (!global.db) global.db = {}
   if (!global.db.groups) global.db.groups = {}
   if (isGroup && !global.db.groups[from]) {
     global.db.groups[from] = { modoadmin: false }
   }
 
-  /* ───── 👑 MODO ADMIN ───── */
+  /* 👑 MODO ADMIN */
   if (isGroup && global.db.groups[from].modoadmin) {
     const meta = await sock.groupMetadata(from)
-    const admins = meta.participants.filter(p =>
-      p.admin === 'admin' || p.admin === 'superadmin'
-    ).map(p => p.id)
+    const admins = meta.participants
+      .filter(p => p.admin)
+      .map(p => p.id)
 
     if (!admins.includes(sender) && !owner?.jid?.includes(sender)) return
   }
@@ -45,20 +44,18 @@ export const handler = async (m, {
     if (!imgMsg) return reply('❌ Responde a una imagen')
 
     await sock.sendMessage(from, {
-      react: { text: '⚡', key: m.key }
+      react: { text: '✨', key: m.key }
     })
 
-    /* 📥 DESCARGA */
     const stream = await downloadContentFromMessage(imgMsg, 'image')
     let buffer = Buffer.alloc(0)
-    for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk])
+    for await (const c of stream) buffer = Buffer.concat([buffer, c])
 
     const tmp = os.tmpdir()
     input = path.join(tmp, `hd_in_${Date.now()}.jpg`)
     output = path.join(tmp, `hd_out_${Date.now()}.jpg`)
     fs.writeFileSync(input, buffer)
 
-    /* ⚡ PROCESO RÁPIDO */
     const img = await Jimp.Jimp.read(input)
 
     if (img.bitmap.width > 1280) {
@@ -70,21 +67,21 @@ export const handler = async (m, {
       .contrast(0.12)
       .quality(85)
 
-    await new Promise((res, rej) => {
+    await new Promise((res, rej) =>
       img.write(output, err => (err ? rej(err) : res()))
-    })
+    )
 
     await sock.sendMessage(
       from,
       {
         image: fs.readFileSync(output),
-        caption: '> Imagen mejorada (rápido ⚡)'
+        caption: '> Imagen mejorada 🌟'
       },
       { quoted: m }
     )
 
   } catch (e) {
-    console.error(e)
+    console.error(e?.message || String(e))
     reply('❌ Error al mejorar imagen')
   } finally {
     try { fs.unlinkSync(input) } catch {}
