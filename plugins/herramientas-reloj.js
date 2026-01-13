@@ -37,7 +37,7 @@ export const handler = async (m, { sock, from }) => {
   for (const [pais, h] of Object.entries(hora)) {
     text += `${pais}: ${h}\n`
   }
-  text += '\n> JoshiBot listo'
+  text += '\n> ᴊσѕнι мυи∂ιαℓ 🌎'
 
   // Enviar
   await sock.sendMessage(from, { text }, { quoted: m })
