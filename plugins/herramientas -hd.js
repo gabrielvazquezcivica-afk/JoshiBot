@@ -50,9 +50,7 @@ export const handler = async (m, {
       qmsg?.imageMessage ||
       qmsg?.viewOnceMessageV2?.message?.imageMessage
 
-    if (!imgMsg) {
-      return reply('❌ Responde a una imagen')
-    }
+    if (!imgMsg) return reply('❌ Responde a una imagen')
 
     /* ───── 🪄 REACCIÓN ───── */
     await sock.sendMessage(from, {
@@ -62,7 +60,6 @@ export const handler = async (m, {
     /* ───── 📥 DESCARGAR IMAGEN ───── */
     const stream = await downloadContentFromMessage(imgMsg, 'image')
     let buffer = Buffer.alloc(0)
-
     for await (const chunk of stream) {
       buffer = Buffer.concat([buffer, chunk])
     }
@@ -71,7 +68,7 @@ export const handler = async (m, {
     input = path.join(tmp, `hd_${Date.now()}.jpg`)
     fs.writeFileSync(input, buffer)
 
-    /* ───── 🎨 PROCESAR IMAGEN ───── */
+    /* ───── 🎨 MEJORAR IMAGEN ───── */
     const img = await Jimp.Jimp.read(input)
 
     if (img.bitmap.width < 1500) {
@@ -79,11 +76,16 @@ export const handler = async (m, {
     }
 
     img
-      .brightness(0.15) // brillo
-      .contrast(0.2)    // contraste
-      .sharpen()        // nitidez
+      .brightness(0.15)
+      .contrast(0.2)
+      // 🔪 NITIDEZ REAL (sharpen replacement)
+      .convolution([
+        [ 0, -1,  0 ],
+        [ -1, 5, -1 ],
+        [ 0, -1,  0 ]
+      ])
 
-    /* ───── 📤 EXPORTAR JPEG ALTA CALIDAD ───── */
+    /* ───── 📤 EXPORTAR JPEG ───── */
     const output = await img.getBufferAsync(
       Jimp.MIME_JPEG,
       { quality: 95 }
