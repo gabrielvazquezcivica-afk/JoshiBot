@@ -1,30 +1,39 @@
 import fs from 'fs'
 import path from 'path'
-import { spawn } from 'child_process'
 import os from 'os'
+import { spawn } from 'child_process'
 
 export const handler = async (m, { sock, from, reply }) => {
 
-  // 🛑 Debe responder a un sticker
-  if (!m.quoted || !m.quoted.message?.stickerMessage) {
-    return reply('🖼️ Responde a un *sticker* para convertirlo en imagen')
+  // 🔎 DETECCIÓN REAL DE STICKER
+  const quoted = m.quoted
+  const isSticker =
+    quoted &&
+    (quoted.mtype === 'stickerMessage' ||
+     quoted.type === 'sticker' ||
+     quoted.message?.stickerMessage)
+
+  if (!isSticker) {
+    return reply('🖼️ *Responde a un sticker* para convertirlo en imagen')
   }
 
-  // ⏳ Reacción
+  // 🎯 Reacción
   await sock.sendMessage(from, {
     react: { text: '🖼️', key: m.key }
   })
 
   try {
-    const stickerBuffer = await m.quoted.download()
-    const tmpDir = os.tmpdir()
+    // ⬇️ Descargar sticker
+    const buffer = await quoted.download()
+    if (!buffer) throw 'No se pudo descargar el sticker'
 
-    const input = path.join(tmpDir, `${Date.now()}.webp`)
-    const output = path.join(tmpDir, `${Date.now()}.png`)
+    const tmp = os.tmpdir()
+    const input = path.join(tmp, `${Date.now()}.webp`)
+    const output = path.join(tmp, `${Date.now()}.png`)
 
-    fs.writeFileSync(input, stickerBuffer)
+    fs.writeFileSync(input, buffer)
 
-    // 🔄 Convertir WEBP → PNG
+    // 🔄 WEBP → PNG
     await new Promise((resolve, reject) => {
       const ffmpeg = spawn('ffmpeg', [
         '-y',
@@ -32,18 +41,16 @@ export const handler = async (m, { sock, from, reply }) => {
         output
       ])
 
-      ffmpeg.on('close', code => {
-        code === 0 ? resolve() : reject()
-      })
+      ffmpeg.on('close', code => code === 0 ? resolve() : reject())
       ffmpeg.on('error', reject)
     })
 
-    const image = fs.readFileSync(output)
+    const img = fs.readFileSync(output)
 
     // 📤 Enviar imagen
     await sock.sendMessage(
       from,
-      { image, caption: '🖼️ Sticker convertido a imagen' },
+      { image: img, caption: '🖼️ Sticker convertido a imagen' },
       { quoted: m }
     )
 
