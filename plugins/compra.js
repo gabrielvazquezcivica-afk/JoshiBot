@@ -7,7 +7,7 @@ export const handler = async (m, { sock, from, args, sender, reply }) => {
   if (!plan) {
     return reply(`
 ╭─❖ 🛒 COMPRAR JOSHI BOT ❖─╮
-│ Usa uno de estos planes:
+│ Elige un plan:
 │
 │ 🥉 basico
 │ 🥈 premium
@@ -19,8 +19,7 @@ export const handler = async (m, { sock, from, args, sender, reply }) => {
 `.trim())
   }
 
-  let planInfo = {}
-
+  let planInfo
   if (plan === 'basico') {
     planInfo = { nombre: 'BÁSICO', precio: '$70 MXN', grupos: '1 grupo' }
   } else if (plan === 'premium') {
@@ -31,20 +30,20 @@ export const handler = async (m, { sock, from, args, sender, reply }) => {
     return reply('❌ Plan no válido. Usa: basico | premium | vip')
   }
 
-  // 👑 Reacción
+  // 🛒 Reacción
   await sock.sendMessage(from, {
     react: { text: '🛒', key: m.key }
   })
 
-  // 📞 Datos del comprador
+  // 📞 Datos
   const numero = sender.split('@')[0]
   const ownerJid = config.owner.numbers[0] + '@s.whatsapp.net'
 
-  // 📤 Mensaje al owner
+  // 📤 Mensaje al OWNER
   const avisoOwner = `
 🛎️ *NUEVA COMPRA JOSHI BOT*
 
-👤 Número:
+👤 Cliente:
 +${numero}
 
 📦 Plan:
@@ -57,26 +56,27 @@ ${planInfo.precio}
 ${planInfo.grupos}
 `.trim()
 
-  await sock.sendMessage(ownerJid, {
-    text: avisoOwner
-  })
+  await sock.sendMessage(ownerJid, { text: avisoOwner })
 
-  // 📩 Confirmación al usuario
-  const confirmacion = `
-✅ *SOLICITUD ENVIADA*
+  // 🤖 MENSAJE AUTOMÁTICO AL USUARIO (PRIVADO)
+  const autoMsg = `
+✅ *Solicitud enviada con éxito*
 
 📦 Plan: ${planInfo.nombre}
 💵 Precio: ${planInfo.precio}
-👥 Grupos: ${planInfo.grupos}
 
-📞 El owner se pondrá en contacto contigo.
+📞 El owner se pondrá en contacto contigo en breve.
+Ten tu comprobante listo.
 
 > 𝘑𝘰𝘴𝘩𝘪 𝘛𝘦 𝘢𝘮𝘢. ღ
 `.trim()
 
+  await sock.sendMessage(sender, { text: autoMsg })
+
+  // 📩 Confirmación en el grupo/chat
   await sock.sendMessage(
     from,
-    { text: confirmacion },
+    { text: '✅ Solicitud enviada al owner.\n📩 Revisa tu chat privado.' },
     { quoted: m }
   )
 }
