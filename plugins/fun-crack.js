@@ -42,7 +42,7 @@ export const handler = async (m, { sock, from, sender, reply }) => {
 }
 
 handler.command = ['crack']
-handler.tags = ['fun']
+handler.tags = ['juegos']
 handler.menu = true
 handler.help = ['crack @usuario']
 
