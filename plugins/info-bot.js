@@ -31,7 +31,7 @@ export const handler = async (m, { sock, from }) => {
 
 handler.help = ['info']
 handler.tags = ['info']
-handler.command = /^(info|bot)$/i
+handler.command = ['info', 'infobot']
 handler.menu = true
 
 export default handler
