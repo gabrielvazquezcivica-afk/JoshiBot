@@ -5,7 +5,7 @@ function onlyNumber(jid = '') {
 }
 
 export const handler = async (m, { sock, from, reply }) => {
-  // 👑 OWNER
+  // 👑  OWNER
   const senderJid = m.key?.participant || m.sender
   const senderNum = onlyNumber(senderJid)
   const ownerNums = config.owner.numbers.map(n => onlyNumber(n))
@@ -16,8 +16,8 @@ export const handler = async (m, { sock, from, reply }) => {
 
   try {
     // ───── OBTENER TODOS LOS GRUPOS ─────
-    const allChats = await sock.chats.all() // Baileys 5+
-    const groups = allChats.filter(c => c.id.endsWith('@g.us'))
+    const chatsArray = Array.from(sock.chats.values()) // todos los chats
+    const groups = chatsArray.filter(c => c.id?.endsWith('@g.us'))
 
     if (!groups.length) return reply('🤖 No estoy en ningún grupo actualmente')
 
@@ -36,7 +36,7 @@ export const handler = async (m, { sock, from, reply }) => {
   }
 }
 
-handler.command = ['grupos', 'listgrupos']
+handler.command = ['grupos']
 handler.tags = ['owner']
 handler.owner = true
 handler.menu = true
