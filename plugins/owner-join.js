@@ -12,13 +12,13 @@ export const handler = async (m, {
     return reply('👑 Solo el owner puede usar este comando')
   }
 
-  // 🔗 Validar link
+  // 🔗 Texto completo
   const text = args.join(' ')
   if (!text) {
     return reply(
       '🔗 Envía un link de grupo\n\n' +
       'Ejemplo:\n' +
-      '.join https://chat.whatsapp.com/XXXX 1h'
+      '.join https://chat.whatsapp.com/XXXX 30m'
     )
   }
 
@@ -28,20 +28,30 @@ export const handler = async (m, {
 
   const inviteCode = match[1]
 
-  // ⏱️ Detectar duración (opcional)
+  // ⏱️ Detectar tiempo (m / h / d)
   let durationMs = null
-  const timeMatch = text.match(/(\d+)([mhd])/i)
+  let timeText = 'permanente'
 
+  const timeMatch = text.match(/(\d+)(m|h|d)/i)
   if (timeMatch) {
     const value = parseInt(timeMatch[1])
     const unit = timeMatch[2].toLowerCase()
 
-    if (unit === 'm') durationMs = value * 60 * 1000
-    if (unit === 'h') durationMs = value * 60 * 60 * 1000
-    if (unit === 'd') durationMs = value * 24 * 60 * 60 * 1000
+    if (unit === 'm') {
+      durationMs = value * 60 * 1000
+      timeText = `${value} minuto${value > 1 ? 's' : ''}`
+    }
+    if (unit === 'h') {
+      durationMs = value * 60 * 60 * 1000
+      timeText = `${value} hora${value > 1 ? 's' : ''}`
+    }
+    if (unit === 'd') {
+      durationMs = value * 24 * 60 * 60 * 1000
+      timeText = `${value} día${value > 1 ? 's' : ''}`
+    }
   }
 
-  // 😂 Mensajes random
+  // 😂 Textos random
   const textosChistosos = [
     '😎 Buenas, no vengo a molestar… pero si molesto, ya ni modo.',
     '😂 Vine por el chisme y me quedé por la risa.',
@@ -55,7 +65,12 @@ export const handler = async (m, {
     const groupJid = await sock.groupAcceptInvite(inviteCode)
 
     const texto = textosChistosos[Math.floor(Math.random() * textosChistosos.length)]
-    const mensajeFinal = `${texto}\n> JoshiBot listo`
+
+    // 📢 MENSAJE DE ENTRADA (CON TIEMPO)
+    const mensajeFinal =
+      `${texto}\n\n` +
+      `⏱️ Me quedaré en el grupo por *${timeText}*\n` +
+      `> JoshiBot listo`
 
     const msg = await sock.sendMessage(groupJid, { text: mensajeFinal })
 
@@ -65,16 +80,15 @@ export const handler = async (m, {
 
     await reply(
       durationMs
-        ? '✅ Bot unido con salida automática'
+        ? `✅ Bot unido por ${timeText}`
         : '✅ Bot unido de forma permanente'
     )
 
     // ⏳ AVISO + SALIDA
     if (durationMs) {
+      const avisoMs = 5 * 60 * 1000 // 5 minutos antes
 
-      const avisoMs = 5 * 60 * 1000 // 5 minutos
-
-      // 📢 Aviso antes de salir
+      // 📢 Aviso
       if (durationMs > avisoMs) {
         setTimeout(async () => {
           try {
