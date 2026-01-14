@@ -1,38 +1,44 @@
-import config from '../config.js' // Asegúrate de que tu config tenga owner.numbers
+import config from '../config.js'
 
-export const handler = async (m, { sock, reply, from }) => {
+function onlyNumber(jid = '') {
+  return jid?.toString().replace(/[^0-9]/g, '')
+}
 
-  // 👑 SOLO OWNER
-  const ownerJids = config.owner?.numbers || [] 
-  if (!ownerJids.includes(m.sender)) {
-    return reply('❌ Solo el owner puede usar este comando')
+export const handler = async (m, { sock, from, reply }) => {
+  // 👑 OWNER
+  const senderJid = m.key?.participant || m.sender
+  const senderNum = onlyNumber(senderJid)
+  const ownerNums = config.owner.numbers.map(n => onlyNumber(n))
+
+  if (!ownerNums.includes(senderNum)) {
+    return reply('🚫 Este comando solo puede usarlo el OWNER')
   }
 
   try {
-    // Obtener todos los chats
+    // ───── OBTENER TODOS LOS GRUPOS ─────
     const allChats = await sock.chats.all() // Baileys 5+
     const groups = allChats.filter(c => c.id.endsWith('@g.us'))
 
     if (!groups.length) return reply('🤖 No estoy en ningún grupo actualmente')
 
+    // ───── ARMAR MENSAJE ─────
     let texto = '📜 *Grupos donde estoy*\n\n'
     groups.forEach((g, i) => {
       texto += `${i + 1}. ${g.name || 'Sin nombre'} - ${g.id}\n`
     })
-
     texto += `\n> Total: ${groups.length} grupos`
 
-    await reply(texto)
-
+    // ───── ENVIAR MENSAJE ─────
+    await sock.sendMessage(from, { text: texto })
   } catch (err) {
-    console.error(err)
-    reply('❌ Error al obtener los grupos')
+    console.error('ERROR obtener grupos:', err)
+    reply('❌ Ocurrió un error al obtener los grupos donde estoy.')
   }
 }
 
-handler.command = ['grupos']
+handler.command = ['grupos', 'listgrupos']
 handler.tags = ['owner']
+handler.owner = true
 handler.menu = true
-handler.help = ['grupos']
 
 export default handler
