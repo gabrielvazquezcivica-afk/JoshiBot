@@ -18,66 +18,85 @@ export const handler = async (m, {
     return reply(
       '🔗 Envía un link de grupo\n\n' +
       'Ejemplo:\n' +
-      '.join https://chat.whatsapp.com/XXXX'
+      '.join https://chat.whatsapp.com/XXXX 1h'
     )
   }
 
-  // 🧠 Extraer código (soporta ?mode=)
+  // 🧠 Extraer código del grupo
   const match = text.match(/chat\.whatsapp\.com\/([0-9A-Za-z]{20,24})/i)
-  if (!match) {
-    return reply('❌ Link de grupo inválido')
-  }
+  if (!match) return reply('❌ Link de grupo inválido')
 
   const inviteCode = match[1]
 
-  // ✅ Lista de textos chistosos random
+  // ⏱️ Detectar duración (opcional)
+  let durationMs = null
+  const timeMatch = text.match(/(\d+)([mhd])/i)
+
+  if (timeMatch) {
+    const value = parseInt(timeMatch[1])
+    const unit = timeMatch[2].toLowerCase()
+
+    if (unit === 'm') durationMs = value * 60 * 1000
+    if (unit === 'h') durationMs = value * 60 * 60 * 1000
+    if (unit === 'd') durationMs = value * 24 * 60 * 60 * 1000
+  }
+
+  // 😂 Mensajes random
   const textosChistosos = [
     '😎 Buenas, no vengo a molestar… pero si molesto, ya ni modo.',
-    '👀 Yo solo pasaba… y me quedé.',
-    '😂 No empujo, pero si se abre espacio, me acomodo.',
-    '😏 Tranquilos, vengo en son de paz… más o menos.',
-    '🤖 Llegué yo, el que nadie pidió pero todos necesitaban.',
-    '🔥 No traigo chismes, pero me los sé todos.',
-    '😎 Aquí casual, viendo qué se ofrece.',
-    '😂 Si vine es porque me invitaron… creo.',
-    '👋 Buenas, no muerdo… mucho.',
-    '😏 Me dijeron que aquí había ambiente y confirmé.',
-    '🤖 Actualizando grupo… listo, ya llegué.',
-    '😎 No soy experto, pero opino.',
-    '😂 Llegué tarde, pero llegué.',
-    '👀 Yo solo observo… por ahora.',
-    '😏 No hago ruido, pero hago presencia.',
-    '🔥 Si algo se rompe, yo no fui.',
-    '🤖 Modo discreto: desactivado.',
     '😂 Vine por el chisme y me quedé por la risa.',
-    '😎 No traigo café, pero sí buena vibra.',
-    '👋 Buenas, ¿aquí es donde se arma?'
+    '👀 Yo solo observo… por ahora.',
+    '🤖 Llegué yo, el que nadie pidió pero todos necesitaban.',
+    '😏 Tranquilos, vengo en son de paz… más o menos.'
   ]
 
   try {
     // 🚀 Entrar al grupo
     const groupJid = await sock.groupAcceptInvite(inviteCode)
 
-    // 😏 Elegir mensaje chistoso random + footer
     const texto = textosChistosos[Math.floor(Math.random() * textosChistosos.length)]
     const mensajeFinal = `${texto}\n> JoshiBot listo`
 
-    // 📩 Enviar mensaje al grupo
     const msg = await sock.sendMessage(groupJid, { text: mensajeFinal })
 
-    // 😄 Reacción al mensaje del bot
     await sock.sendMessage(groupJid, {
       react: { text: '😏', key: msg.key }
     })
 
-    // ✅ Confirmación al owner
-    await reply('✅ El bot se unió al grupo correctamente')
+    await reply(
+      durationMs
+        ? '✅ Bot unido con salida automática'
+        : '✅ Bot unido de forma permanente'
+    )
+
+    // ⏳ AVISO + SALIDA
+    if (durationMs) {
+
+      const avisoMs = 5 * 60 * 1000 // 5 minutos
+
+      // 📢 Aviso antes de salir
+      if (durationMs > avisoMs) {
+        setTimeout(async () => {
+          try {
+            await sock.sendMessage(groupJid, {
+              text: '⏰ Aviso: me saldré del grupo en 5 minutos\n> JoshiBot'
+            })
+          } catch {}
+        }, durationMs - avisoMs)
+      }
+
+      // 🚪 Salida final
+      setTimeout(async () => {
+        try {
+          await sock.groupLeave(groupJid)
+        } catch {}
+      }, durationMs)
+    }
 
   } catch (err) {
     console.error('JOIN ERROR:', err)
     reply(
       '❌ No pude unirme al grupo\n\n' +
-      'Posibles causas:\n' +
       '• Link vencido\n' +
       '• Bot bloqueado\n' +
       '• Grupo lleno\n' +
@@ -89,6 +108,6 @@ export const handler = async (m, {
 handler.command = ['join']
 handler.tags = ['owner']
 handler.menu = true
-handler.help = ['join <link_grupo>']
+handler.help = ['join <link> [10m|1h|1d]']
 
 export default handler
