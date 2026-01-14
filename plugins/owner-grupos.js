@@ -16,19 +16,20 @@ export const handler = async (m, { sock, from, reply }) => {
 
   try {
     // ───── OBTENER TODOS LOS GRUPOS ─────
-    const allGroups = await sock.groupFetchAllParticipating() // obtiene todos los grupos
+    const allGroups = await sock.groupFetchAllParticipating()
     const groupArray = Object.values(allGroups)
 
     if (!groupArray.length) return reply('🤖 No estoy en ningún grupo actualmente')
 
     // ───── ARMAR MENSAJE ─────
     let texto = '📜 *Grupos donde estoy* 📜\n\n'
-    groupArray.forEach((g, i) => {
+    groupArray.forEach(g => {
       const miembros = g.participants?.length || 0
-      texto += `> ${g.subject || 'Sin nombre'} - ${miembros} miembros\n`
+      const emoji = miembros > 50 ? '🏆' : '👥'
+      texto += `${g.subject || 'Sin nombre'}\n> ${emoji} ${miembros} miembros\n\n`
     })
 
-    texto += `\n> Total: ${groupArray.length} grupos`
+    texto += `> Total: ${groupArray.length} grupos`
 
     // ───── ENVIAR MENSAJE ─────
     await sock.sendMessage(from, { text: texto })
