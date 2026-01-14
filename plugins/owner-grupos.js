@@ -28,7 +28,7 @@ export const handler = async (m, { sock, reply, owner, from }) => {
   }
 }
 
-handler.command = ['grupos', 'listgrupos']
+handler.command = ['grupos']
 handler.tags = ['owner']
 handler.menu = true
 handler.help = ['grupos']
