@@ -5,7 +5,7 @@ function onlyNumber(jid = '') {
 }
 
 export const handler = async (m, { sock, from, reply }) => {
-  // 👑 OWNER
+  // 👑  OWNER
   const senderJid = m.key?.participant || m.sender
   const senderNum = onlyNumber(senderJid)
   const ownerNums = config.owner.numbers.map(n => onlyNumber(n))
@@ -17,16 +17,17 @@ export const handler = async (m, { sock, from, reply }) => {
   try {
     // ───── OBTENER TODOS LOS GRUPOS ─────
     const allGroups = await sock.groupFetchAllParticipating() // obtiene todos los grupos
-
-    const groupArray = Object.values(allGroups) // convertir a array
+    const groupArray = Object.values(allGroups)
 
     if (!groupArray.length) return reply('🤖 No estoy en ningún grupo actualmente')
 
     // ───── ARMAR MENSAJE ─────
-    let texto = '📜 *Grupos donde estoy*\n\n'
+    let texto = '📜 *Grupos donde estoy* 📜\n\n'
     groupArray.forEach((g, i) => {
-      texto += `${i + 1}. ${g.subject || 'Sin nombre'} - ${g.id}\n`
+      const miembros = g.participants?.length || 0
+      texto += `> ${g.subject || 'Sin nombre'} - ${miembros} miembros\n`
     })
+
     texto += `\n> Total: ${groupArray.length} grupos`
 
     // ───── ENVIAR MENSAJE ─────
