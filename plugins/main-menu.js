@@ -34,20 +34,6 @@ export const handler = async (m, {
     stickers: '🖼️'              
   }              
             
-  // 🎯 Emoji por comando (aleatorio o fijo por categoría)            
-  const cmdEmoji = {              
-    info: '🔥',              
-    frases: '📝',              
-    group: '🍁',              
-    admin: '🌬️',              
-    juegos: '🧩',              
-    ff: '💥',              
-    descargas: '⬇️',              
-    economia: '💰',              
-    tools: '🔧',              
-    stickers: '🎨'              
-  }              
-            
   const defaultEmoji = '⬢'              
             
   // 📂 Agrupar comandos            
@@ -67,8 +53,8 @@ export const handler = async (m, {
     for (const tag of h.tags) {              
       if (tag === 'nsfw' || tag === 'owner') continue              
       if (!categories[tag]) categories[tag] = []              
-      categories[tag].push(...cmds)              
-      totalCommands += cmds.length              
+      categories[tag].push(cmds[0])              
+      totalCommands++              
     }              
   }              
             
@@ -109,14 +95,13 @@ export const handler = async (m, {
     if (!categories[tag]) continue              
             
     const emoji = tagEmoji[tag] || defaultEmoji              
-    const eCmd = cmdEmoji[tag] || defaultEmoji
-            
     menu += `            
+            
 ╔══〔 ${emoji} ${tag.toUpperCase()} 〕══╗            
 `              
             
     for (const cmd of categories[tag]) {              
-      menu += `║ ${eCmd}  .${cmd}\n`              
+      menu += `║ ${emoji}  .${cmd}\n`              
     }              
             
     menu += `╚══════════════════════╝`              
