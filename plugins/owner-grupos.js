@@ -1,7 +1,9 @@
-export const handler = async (m, { sock, reply, owner, from }) => {
+import config from '../config.js' // Asegúrate de que tu config tenga owner.numbers
+
+export const handler = async (m, { sock, reply, from }) => {
 
   // 👑 SOLO OWNER
-  const ownerJids = owner?.jid || []
+  const ownerJids = config.owner?.numbers || [] 
   if (!ownerJids.includes(m.sender)) {
     return reply('❌ Solo el owner puede usar este comando')
   }
