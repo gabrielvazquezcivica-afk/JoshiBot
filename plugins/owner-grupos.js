@@ -5,7 +5,7 @@ function onlyNumber(jid = '') {
 }
 
 export const handler = async (m, { sock, from, reply }) => {
-  // 👑  OWNER
+  // 👑 OWNER
   const senderJid = m.key?.participant || m.sender
   const senderNum = onlyNumber(senderJid)
   const ownerNums = config.owner.numbers.map(n => onlyNumber(n))
@@ -16,20 +16,22 @@ export const handler = async (m, { sock, from, reply }) => {
 
   try {
     // ───── OBTENER TODOS LOS GRUPOS ─────
-    const chatsArray = Array.from(sock.chats.values()) // todos los chats
-    const groups = chatsArray.filter(c => c.id?.endsWith('@g.us'))
+    const allGroups = await sock.groupFetchAllParticipating() // obtiene todos los grupos
 
-    if (!groups.length) return reply('🤖 No estoy en ningún grupo actualmente')
+    const groupArray = Object.values(allGroups) // convertir a array
+
+    if (!groupArray.length) return reply('🤖 No estoy en ningún grupo actualmente')
 
     // ───── ARMAR MENSAJE ─────
     let texto = '📜 *Grupos donde estoy*\n\n'
-    groups.forEach((g, i) => {
-      texto += `${i + 1}. ${g.name || 'Sin nombre'} - ${g.id}\n`
+    groupArray.forEach((g, i) => {
+      texto += `${i + 1}. ${g.subject || 'Sin nombre'} - ${g.id}\n`
     })
-    texto += `\n> Total: ${groups.length} grupos`
+    texto += `\n> Total: ${groupArray.length} grupos`
 
     // ───── ENVIAR MENSAJE ─────
     await sock.sendMessage(from, { text: texto })
+
   } catch (err) {
     console.error('ERROR obtener grupos:', err)
     reply('❌ Ocurrió un error al obtener los grupos donde estoy.')
