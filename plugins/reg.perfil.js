@@ -13,7 +13,7 @@ export const handler = async (m, {
     return reply(
 `╭─〔 ❌ NO REGISTRADO 〕
 │ Usa primero:
-│ .register nombre edad
+│ .reg nombre edad
 ╰─〔 🤖 JoshiBot RPG 〕`
     )
   }
