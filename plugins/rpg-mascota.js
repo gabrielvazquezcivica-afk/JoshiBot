@@ -46,27 +46,34 @@ Regístrate así:
   const user = global.db.users[sender]
   const group = global.db.groups[from]
 
-  /* ───── 🐶 LISTA DE MASCOTAS ───── */
+  /* ───── 🐾 MASCOTAS DISPONIBLES ───── */
   const pets = {
-    perro: { price: 3000, emoji: '🐶', bonus: 50 },
-    gato: { price: 2500, emoji: '🐱', bonus: 40 },
-    dragon: { price: 8000, emoji: '🐉', bonus: 120 },
-    lobo: { price: 5000, emoji: '🐺', bonus: 80 },
-    zorro: { price: 4500, emoji: '🦊', bonus: 70 }
+    perro:  { price: 3000, emoji: '🐶', bonus: 50 },
+    gato:   { price: 2500, emoji: '🐱', bonus: 40 },
+    lobo:   { price: 5000, emoji: '🐺', bonus: 80 },
+    zorro:  { price: 4500, emoji: '🦊', bonus: 70 },
+    dragon: { price: 8000, emoji: '🐉', bonus: 120 }
   }
 
   const option = args[0]?.toLowerCase()
 
-  /* ───── 📜 VER MASCOTA ───── */
+  /* ───── 📜 VER / MENÚ ───── */
   if (!option) {
+
     if (!group.mascota) {
+      let list = Object.entries(pets).map(([name, p]) =>
+        `${p.emoji} *${name.toUpperCase()}*
+💰 Precio: ${p.price}
+🎁 Bonus: +${p.bonus}`
+      ).join('\n\n')
+
       return sock.sendMessage(from, {
         text:
-`🐾 *MASCOTAS DEL GRUPO*
+`🐾 *MASCOTAS DISPONIBLES*
 
-No hay mascota aún.
+${list}
 
-Compra una:
+🛒 Para comprar:
 .mascota comprar <nombre>
 
 Ejemplo:
@@ -98,13 +105,17 @@ Ejemplo:
   /* ───── 🛒 COMPRAR ───── */
   if (option === 'comprar') {
     const petName = args[1]?.toLowerCase()
+
     if (!petName || !pets[petName]) {
       return sock.sendMessage(from, {
         text:
 `❌ Mascota inválida
 
-Disponibles:
-${Object.keys(pets).map(p => `• ${p}`).join('\n')}`
+Usa:
+.mascota comprar <nombre>
+
+Ejemplo:
+.mascota comprar gato`
       }, { quoted: m })
     }
 
@@ -143,18 +154,17 @@ Precio: ${pet.price}`
 
     return sock.sendMessage(from, {
       text:
-`🎉 *MASCOTA ADQUIRIDA*
+`🎉 *MASCOTA COMPRADA*
 
 ${pet.emoji} Mascota: ${petName}
-👤 Dueño: @${sender.split('@')[0]}
-💰 Costo: ${pet.price}
+💰 Precio: ${pet.price}
+🎁 Bonus: +${pet.bonus}
 
-¡Cuídala bien!`,
-      mentions: [sender]
+¡Cuídala bien!`
     }, { quoted: m })
   }
-
 }
+
 handler.command = ['mascota', 'pet']
 handler.tags = ['rpg']
 handler.menu = true
