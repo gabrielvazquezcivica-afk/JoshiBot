@@ -8,59 +8,79 @@ export const handler = async (m, {
 
   if (!isGroup) return
 
-  /* ───── 👑 MODO ADMIN (SILENCIOSO) ───── */
+  /* ───── DB BASE ───── */
   if (!global.db) global.db = {}
   if (!global.db.groups) global.db.groups = {}
   if (!global.db.groups[from]) {
-    global.db.groups[from] = { modoadmin: false, mascota: null }
-  }
-
-  if (global.db.groups[from].modoadmin) {
-    const metadata = await sock.groupMetadata(from)
-    const participants = metadata.participants || []
-    const ownerJids = owner?.jid || []
-
-    if (!ownerJids.includes(sender)) {
-      const isAdmin = participants.some(
-        p => p.id === sender &&
-        (p.admin === 'admin' || p.admin === 'superadmin')
-      )
-      if (!isAdmin) return
+    global.db.groups[from] = {
+      mascota: null,
+      modoadmin: false
     }
-  }
-  /* ─────────────────────────────────── */
-
-  /* ───── 🧠 REGISTRO ───── */
-  if (!global.db.users) global.db.users = {}
-  if (!global.db.users[sender] || !global.db.users[sender].registered) {
-    return sock.sendMessage(from, {
-      text:
-`🚫 *NO ESTÁS REGISTRADO*
-
-Regístrate así:
-.reg gabo 22`
-    }, { quoted: m })
   }
 
   const group = global.db.groups[from]
 
-  /* ───── 🐾 VALIDAR MASCOTA ───── */
+  /* ───── 👑 MODO ADMIN (SILENCIOSO) ───── */
+  if (group.modoadmin) {
+    const metadata = await sock.groupMetadata(from)
+    const participants = metadata.participants || []
+
+    // OWNER bypass
+    const ownerJids = owner?.jid || []
+    if (!ownerJids.includes(sender)) {
+      const isAdmin = participants.some(
+        p => p.id === sender &&
+          (p.admin === 'admin' || p.admin === 'superadmin')
+      )
+      if (!isAdmin) return
+    }
+  }
+  /* ───────────────────────────────────── */
+
+  /* ───── VALIDAR MASCOTA ───── */
   if (!group.mascota) {
     return sock.sendMessage(from, {
       text: '❌ Este grupo no tiene mascota'
     }, { quoted: m })
   }
 
+  /* ───── VALIDAR DUEÑO ───── */
   if (group.mascota.owner !== sender) {
     return sock.sendMessage(from, {
-      text: '🔒 Solo el dueño puede alimentar a la mascota'
+      text: '🚫 Solo el dueño puede alimentar a la mascota'
     }, { quoted: m })
   }
 
+  const pet = group.mascota
   const now = Date.now()
+  const limit = 20 * 60 * 1000 // 20 minutos
 
-  /* ───── 🍖 DAR DE COMER ───── */
-  group.mascota.lastFeed = now
+  /* ───── MUERTE AUTOMÁTICA ───── */
+  if (pet.lastFed && (now - pet.lastFed) > limit) {
+    const deadPet = pet.name
+    group.mascota = null
+
+    if (typeof global.saveDB === 'function') global.saveDB()
+
+    return sock.sendMessage(from, {
+      text:
+`💀 *MASCOTA MUERTA*
+
+🐾 ${deadPet} murió por hambre
+⏰ Pasaron más de 20 minutos
+❌ El grupo se quedó sin mascota`
+    }, { quoted: m })
+  }
+
+  /* ───── ALIMENTAR ───── */
+  pet.lastFed = now
+  pet.xp = (pet.xp || 0) + 10
+
+  // Subir nivel cada 100 XP
+  if (!pet.level) pet.level = 1
+  if (pet.xp >= pet.level * 100) {
+    pet.level++
+  }
 
   if (typeof global.saveDB === 'function') global.saveDB()
 
@@ -68,39 +88,21 @@ Regístrate así:
     react: { text: '🍖', key: m.key }
   })
 
-  await sock.sendMessage(from, {
+  return sock.sendMessage(from, {
     text:
-`${group.mascota.emoji} *MASCOTA ALIMENTADA*
+`🍖 *MASCOTA ALIMENTADA*
 
-🕒 Próxima comida en:
-20 minutos
+${pet.emoji} Mascota: ${pet.name}
+❤️ Nivel: ${pet.level}
+✨ XP: ${pet.xp}
 
-⚠️ Si no come, morirá`
+⏰ Recuerda alimentarla cada 20 minutos`
   }, { quoted: m })
-
-  /* ───── ☠️ TEMPORIZADOR DE MUERTE ───── */
-  setTimeout(async () => {
-    const g = global.db.groups[from]
-    if (!g || !g.mascota) return
-
-    if (g.mascota.lastFeed !== now) return // ya comió otra vez
-
-    const deadPet = g.mascota
-    g.mascota = null
-    if (typeof global.saveDB === 'function') global.saveDB()
-
-    await sock.sendMessage(from, {
-      text:
-`☠️ *MASCOTA MUERTA*
-
-${deadPet.emoji} Tu mascota murió por hambre.
-El grupo se quedó sin mascota.`
-    })
-  }, 20 * 60 * 1000) // 20 minutos
 }
 
 handler.command = ['alimentar', 'comer', 'feed']
 handler.tags = ['rpg']
+handler.group = true
 handler.menu = true
 
 export default handler
