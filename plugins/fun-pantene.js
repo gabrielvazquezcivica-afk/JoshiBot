@@ -1,44 +1,38 @@
-// juegos-pantene-hard.js 🧴
 export const handler = async (m, { sock, from, isGroup, reply, owner }) => {
-  if (!isGroup) return reply('❌ Solo en grupos')
+  if (!isGroup) return reply('❌ Solo funciona en grupos')
 
-  /* ───── 🧠 MODO ADMIN ───── */
   if (!global.db) global.db = {}
   if (!global.db.groups) global.db.groups = {}
   if (!global.db.groups[from]) global.db.groups[from] = { modoadmin: false }
 
+  const sender = m.key.participant || m.key.remoteJid
+
   if (global.db.groups[from].modoadmin) {
     const meta = await sock.groupMetadata(from)
-    const sender = m.sender
+    const ownerJids = owner?.jid || []
     const isAdmin = meta.participants.some(
       p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
     )
-    const ownerJids = owner?.jid || []
     if (!isAdmin && !ownerJids.includes(sender)) return
   }
 
   const ctx = m.message?.extendedTextMessage?.contextInfo
-  const target = ctx?.mentionedJid?.[0] || m.sender
-  const porcentaje = Math.floor(Math.random() * 101)
+  const target =
+    ctx?.mentionedJid?.[0] ||
+    ctx?.participant ||
+    sender
 
-  const frases = [
-    'la panza llegó primero y se quedó 🫃',
-    'hay más barriga que dignidad 😭',
-    'el espejo ya se rindió 🪞',
-    'la camiseta vive en sufrimiento constante 👕',
-    'panza en modo dominante 📈'
-  ]
+  const porcentaje = Math.floor(Math.random() * 101)
 
   await sock.sendMessage(from, {
     text: `
-🧴 *TEST PANTENE EXTREMO* 🧴
+🍌 *TEST PANTENE* 🍌
 
 👤 @${target.split('@')[0]}
-📏 Panza > Orgullo: *${porcentaje}%*
-📢 Veredicto:
-${frases[Math.floor(Math.random() * frases.length)]}
+📏 Resultado:
+Tiene *${porcentaje}%* más panza que pene
 
-> Ciencia 100% irresponsable
+> Medido con cinta imaginaria
 `.trim(),
     mentions: [target]
   })
