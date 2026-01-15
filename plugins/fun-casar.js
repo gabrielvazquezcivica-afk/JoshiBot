@@ -30,12 +30,12 @@ export const handler = async (m, {
       const isAdmin = participants.some(
         p => p.id === sender && (p.admin === 'admin' || p.admin === 'superadmin')
       )
-      if (!isAdmin) return // 🚫 bloqueo silencioso
+      if (!isAdmin) return
     }
   }
   /* ─────────────────────────────────── */
 
-  // 📋 Obtener participantes
+  // 📋 METADATA
   let metadata
   try {
     metadata = await sock.groupMetadata(from)
@@ -44,6 +44,8 @@ export const handler = async (m, {
   }
 
   const botJid = sock.user.id
+  const sender = m.key.participant || m.sender
+
   const users = metadata.participants
     .map(p => p.id)
     .filter(id => id !== botJid)
@@ -57,16 +59,35 @@ export const handler = async (m, {
     react: { text: '💍', key: m.key }
   })
 
-  // 🎲 Elegir pareja
-  const p1 = users[Math.floor(Math.random() * users.length)]
-  let p2
-  do {
-    p2 = users[Math.floor(Math.random() * users.length)]
-  } while (p2 === p1)
+  // ───── 💑 LÓGICA DE EMPAREJAMIENTO ─────
+  const mentions = m.mentionedJid || []
+
+  let p1, p2
+
+  if (mentions.length >= 2) {
+    // 👥 Dos mencionados
+    p1 = mentions[0]
+    p2 = mentions[1]
+  } else if (mentions.length === 1) {
+    // 👤 Un mencionado + autor
+    p1 = mentions[0]
+    p2 = sender
+  } else {
+    // 🎲 Dos al azar
+    p1 = users[Math.floor(Math.random() * users.length)]
+    do {
+      p2 = users[Math.floor(Math.random() * users.length)]
+    } while (p2 === p1)
+  }
+
+  // 🚫 Evitar auto-casamiento
+  if (p1 === p2) {
+    return reply('😳 No puedes casarte contigo mismo')
+  }
 
   const compat = Math.floor(Math.random() * 101)
 
-  // 💖 Frases de boda
+  // 💖 Frases
   const votos = [
     'Prometen amarse incluso cuando falle el WiFi 📶',
     'Aceptan compartir memes, risas y desveladas 🌙',
@@ -95,7 +116,7 @@ export const handler = async (m, {
 ${votos[Math.floor(Math.random() * votos.length)]}
 
 ${finales[Math.floor(Math.random() * finales.length)]}
-🤖 Oficia: JoshiBot
+> Joshi-Cupido
 `.trim()
 
   await sock.sendMessage(
