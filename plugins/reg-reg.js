@@ -21,7 +21,7 @@ export const handler = async (m, {
     return reply(
 `╭─〔 🧾 REGISTRO RPG 〕
 │ Uso correcto:
-│ .register nombre edad
+│ .reg nombre edad
 │
 │ Ejemplo:
 │ .register Gabo 22
@@ -62,7 +62,7 @@ export const handler = async (m, {
   )
 }
 
-handler.command = ['register', 'registrar']
+handler.command = ['reg', 'registrar']
 handler.tags = ['registro']
 handler.menu = true
 
