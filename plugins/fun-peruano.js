@@ -20,27 +20,30 @@ export const handler = async (m, { sock, from, isGroup, reply, owner }) => {
     if (!isAdmin && !ownerJids.includes(sender)) return
   }
 
-  /* ───── 👤 TARGET ───── */
+  /* ───── 👤 TARGET CORRECTO ───── */
   const ctx = m.message?.extendedTextMessage?.contextInfo
-  const target = ctx?.mentionedJid?.[0] || sender
+  const target =
+    ctx?.mentionedJid?.[0] ||
+    ctx?.participant ||
+    sender
 
   const insultos = [
-    'habla huevadas con confianza de doctor 🤡',
-    'más perdido que cerebro en huelga 🧠',
-    'orgullo nacional… del ridículo 🇵🇪',
-    'piensa lento y mal 🐌',
-    'sobrevive de milagro estadístico 📉'
+    'habla huevadas con seguridad de ingeniero 🤡',
+    'más perdido que WiFi gratis 📶',
+    'orgullo nacional del ridículo 🇵🇪',
+    'razona en modo ahorro 🧠',
+    'sobrevive por error del sistema 📉'
   ]
 
   await sock.sendMessage(from, {
     text: `
-🇵🇪 *PERUANO NIVEL DIOS* 🇵🇪
+🇵🇪 *PERUANO SUPREMO* 🇵🇪
 
 👤 @${target.split('@')[0]}
 📢 Diagnóstico:
 ${insultos[Math.floor(Math.random() * insultos.length)]}
 
-> Análisis sin piedad
+> Evaluado con desprecio
 `.trim(),
     mentions: [target]
   })
