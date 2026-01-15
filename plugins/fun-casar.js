@@ -107,8 +107,8 @@ export const handler = async (m, {
   const texto = `
 💒 *CASAMIENTO BOT* 💒
 
-👰 @${p1.split('@')[0]}
-🤵 @${p2.split('@')[0]}
+💞 @${p1.split('@')[0]}
+💞 @${p2.split('@')[0]}
 
 ❤️ Compatibilidad: *${compat}%*
 
