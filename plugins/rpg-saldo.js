@@ -3,7 +3,6 @@ export const handler = async (m, {
   from,
   sender,
   isGroup,
-  reply,
   owner
 }) => {
 
@@ -25,7 +24,7 @@ export const handler = async (m, {
           p => p.id === sender &&
           (p.admin === 'admin' || p.admin === 'superadmin')
         )
-        if (!isAdmin) return // 🔇 bloqueo silencioso
+        if (!isAdmin) return
       }
     }
   }
@@ -34,14 +33,15 @@ export const handler = async (m, {
   /* ───── 🧠 REGISTRO ───── */
   if (!global.db.users) global.db.users = {}
   if (!global.db.users[sender] || !global.db.users[sender].registered) {
-    return reply(
+    return sock.sendMessage(from, {
+      text:
 `🚫 *NO ESTÁS REGISTRADO*
 
 Regístrate para usar RPG:
 
 📌 Ejemplo:
 .reg gabo 22`
-    )
+    }, { quoted: m })
   }
 
   const user = global.db.users[sender]
@@ -50,11 +50,14 @@ Regístrate para usar RPG:
   const exp = user.exp || 0
   const level = user.level || 1
 
+  /* 💰 REACCIÓN */
   await sock.sendMessage(from, {
     react: { text: '💰', key: m.key }
   })
 
-  return reply(
+  /* 📤 MENSAJE CON MENCIÓN REAL */
+  await sock.sendMessage(from, {
+    text:
 `╭─〔 💰 TU SALDO 〕
 │
 │ 👤 Usuario: @${sender.split('@')[0]}
@@ -63,8 +66,8 @@ Regístrate para usar RPG:
 │ ✨ Exp: ${exp}
 │
 ╰─〔 🤖 JoshiBot RPG 〕`,
-    { mentions: [sender] }
-  )
+    mentions: [sender]
+  }, { quoted: m })
 }
 
 handler.command = ['saldo', 'balance', 'money']
