@@ -25,11 +25,11 @@ export const handler = async (m, {
     info: '🍄',              
     frases: '📖',              
     group: '🐉',              
-    admin: '👑',              
+    descargas: '🎧',              
     juegos: '🎡',              
     ff: '🔫',              
-    descargas: '🎧',              
-    economia: '🏦',              
+    registro: '📚',              
+    rpg: '💰',              
     tools: '🧰',              
     stickers: '🖼️'              
   }              
@@ -63,11 +63,11 @@ export const handler = async (m, {
     'info',              
     'frases',              
     'group',              
-    'admin',              
+    'descargas',              
     'juegos',              
     'ff',              
-    'descargas',              
-    'economia',              
+    'registro',              
+    'rpg',              
     'tools',              
     'stickers'              
   ]              
