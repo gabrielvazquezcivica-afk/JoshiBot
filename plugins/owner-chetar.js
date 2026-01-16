@@ -7,50 +7,50 @@ export const handler = async (m, {
   owner
 }) => {
 
-  /* ───── SOLO GRUPOS ───── */
   if (!isGroup) return
 
-  /* ───── DB BASE ───── */
   if (!global.db) global.db = {}
   if (!global.db.users) global.db.users = {}
-  
-  // 🔑 OWNER
+
   const ownerJids = owner?.jid || []
   if (!ownerJids.includes(sender)) {
-    return reply('❌ Solo el OWNER puede usar este comando')
+    return sock.sendMessage(from, { text: '❌ Solo el OWNER puede usar este comando' }, { quoted: m })
   }
 
-  // 🎯 Usuario objetivo (mención o reply)
-  let target = 
+  // Usuario objetivo (mención o reply)
+  let target =
     m.message?.extendedTextMessage?.contextInfo?.participant ||
     m.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0] ||
     sender
 
   if (!global.db.users[target]) {
-    return reply('❌ Este usuario no está registrado')
+    return sock.sendMessage(from, { text: '❌ Este usuario no está registrado' }, { quoted: m })
   }
 
   const user = global.db.users[target]
 
-  // ───── BONIFICACIÓN CHEAT ─────
+  // Bonificación cheat
   user.money = (user.money || 0) + 2000
   user.xp = (user.xp || 0) + 200
   user.level = (user.level || 0) + 5
 
   if (typeof global.saveDB === 'function') global.saveDB()
 
-  return reply(
-`⚡ CHEAT EJECUTADO ✅
+  // Enviar mensaje **mencionando correctamente**
+  const text = `
+⚡ CHEAT EJECUTADO ✅
 
 👤 Usuario: @${target.split('@')[0]}
 💰 Dinero: +2000
 ✨ XP: +200
-🏆 Nivel: +5`
-  , { mentions: [target] })
+🏆 Nivel: +5
+`.trim()
+
+  await sock.sendMessage(from, { text, mentions: [target] }, { quoted: m })
 }
 
-handler.command = ['chetar', 'cheat']
-handler.tags = ['owner']
+handler.command = ['chetar']
+handler.tags = ['rpg']
 handler.group = true
 handler.menu = true
 
