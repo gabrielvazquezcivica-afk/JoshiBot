@@ -2,15 +2,40 @@ export const handler = async (m, {
   sock,
   from,
   sender,
-  reply
+  reply,
+  isGroup,
+  owner
 }) => {
 
-  if (!global.db) global.db = {}
-  if (!global.db.users) global.db.users = {}
+  /* ───── 👑 MODO ADMIN (SILENCIOSO) ───── */
+  if (isGroup) {
+    if (!global.db) global.db = {}
+    if (!global.db.groups) global.db.groups = {}
+    if (!global.db.groups[from]) {
+      global.db.groups[from] = { modoadmin: false }
+    }
 
+    if (global.db.groups[from].modoadmin) {
+      const metadata = await sock.groupMetadata(from)
+      const participants = metadata.participants || []
+
+      // 👑 OWNER bypass
+      const ownerJids = owner?.jid || []
+      if (!ownerJids.includes(sender)) {
+        const isAdmin = participants.some(
+          p => p.id === sender &&
+            (p.admin === 'admin' || p.admin === 'superadmin')
+        )
+        if (!isAdmin) return // 🚫 bloqueo silencioso
+      }
+    }
+  }
+  /* ─────────────────────────────────── */
+
+  /* ───── REGISTRO ───── */
+  if (!global.db.users) global.db.users = {}
   const user = global.db.users[sender]
 
-  // ❌ REGISTRO
   if (!user) {
     return reply(`
 ❌ No estás registrado
@@ -22,7 +47,7 @@ Ejemplo:
 `.trim())
   }
 
-  // ⏱️ COOLDOWN (5 minutos)
+  /* ───── ⏱️ COOLDOWN (5 min) ───── */
   const cooldown = 5 * 60 * 1000
   const now = Date.now()
 
@@ -31,12 +56,10 @@ Ejemplo:
     const min = Math.floor(restante / 60000)
     const sec = Math.floor((restante % 60000) / 1000)
 
-    return reply(
-      `⏳ Debes esperar *${min}m ${sec}s* para volver a pescar`
-    )
+    return reply(`⏳ Debes esperar *${min}m ${sec}s* para volver a pescar`)
   }
 
-  // 🎣 OPCIONES
+  /* ───── 🎣 PESCA ───── */
   const pesca = [
     { item: 'Pez Dorado', money: 500 },
     { item: 'Pez Plata', money: 300 },
@@ -47,13 +70,12 @@ Ejemplo:
 
   const result = pesca[Math.floor(Math.random() * pesca.length)]
 
-  // 💰 RECOMPENSA
   user.money = (user.money || 0) + result.money
   user.lastFish = now
 
   if (typeof global.saveDB === 'function') global.saveDB()
 
-  // 📢 MENSAJE
+  /* ───── 📢 RESPUESTA ───── */
   const msg = result.money > 0
     ? `🎣 Pescaste *${result.item}*\n💰 Ganaste *${result.money}*`
     : '🎣 No pescaste nada esta vez…'
