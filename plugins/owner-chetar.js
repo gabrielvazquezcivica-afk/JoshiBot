@@ -31,7 +31,7 @@ export const handler = async (m, {
 
   // Bonificación cheat
   user.money = (user.money || 0) + 2000
-  user.xp = (user.xp || 0) + 200
+  user.exp = (user.exp || 0) + 200   // 🔹 Cambiado de xp a exp
   user.level = (user.level || 0) + 5
 
   if (typeof global.saveDB === 'function') global.saveDB()
@@ -42,7 +42,7 @@ export const handler = async (m, {
 
 👤 Usuario: @${target.split('@')[0]}
 💰 Dinero: +2000
-✨ XP: +200
+✨ Exp: +200
 🏆 Nivel: +5
 `.trim()
 
