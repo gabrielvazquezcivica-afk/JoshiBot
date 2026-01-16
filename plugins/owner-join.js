@@ -4,27 +4,25 @@ function onlyNumber(jid = '') {
   return jid.replace(/[^0-9]/g, '')
 }
 
-export const handler = async (m, {
-  sock,
-  args,
-  reply
-}) => {
+function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms))
+}
 
-  /* ───── 👑 OWNER CHECK ───── */
+export const handler = async (m, { sock, args, reply }) => {
+
+  /* ───── 👑 OWNER ───── */
   const senderJid = m.key.participant || m.sender
   const senderNum = onlyNumber(senderJid)
   const ownerNums = config.owner.numbers.map(n => onlyNumber(n))
 
   if (!ownerNums.includes(senderNum)) {
-    return reply('👑 Este comando solo puede usarlo el OWNER')
+    return reply('👑 Solo el OWNER puede usar este comando')
   }
 
-  /* ───── 🔗 VALIDAR LINK ───── */
+  /* ───── LINK ───── */
   if (!args[0]) {
     return reply(
-`❌ Uso incorrecto
-
-📌 Ejemplos:
+`📌 Uso:
 .join <link> permanente
 .join <link> 5h
 .join <link> 30m
@@ -37,7 +35,7 @@ export const handler = async (m, {
 
   const inviteCode = match[1]
 
-  /* ───── ⏱️ TIEMPO ───── */
+  /* ───── TIEMPO ───── */
   let duration = null
   let timeText = 'permanente'
 
@@ -45,9 +43,7 @@ export const handler = async (m, {
     const t = args[1].toLowerCase()
     const num = parseInt(t)
 
-    if (isNaN(num)) {
-      return reply('❌ Tiempo inválido')
-    }
+    if (isNaN(num)) return reply('❌ Tiempo inválido')
 
     if (t.endsWith('h')) {
       duration = num * 60 * 60 * 1000
@@ -63,11 +59,17 @@ export const handler = async (m, {
     }
   }
 
-  try {
-    /* ───── 🚀 UNIRSE ───── */
-    const groupJid = await sock.groupAcceptInvite(inviteCode)
+  let groupJid
 
-    /* ───── 🧠 GUARDAR TIMER ───── */
+  try {
+    /* ───── JOIN ───── */
+    groupJid = await sock.groupAcceptInvite(inviteCode)
+
+    if (!groupJid) {
+      return reply('❌ WhatsApp no devolvió el grupo (reintenta)')
+    }
+
+    /* ───── GUARDAR TIMER ───── */
     if (duration) {
       if (!global.db) global.db = {}
       if (!global.db.joinTimers) global.db.joinTimers = {}
@@ -78,19 +80,18 @@ export const handler = async (m, {
       }
     }
 
-    /* ───── 📢 AVISO ───── */
-    const msg = `
-🤖 *JOSHI BOT*
+    /* ───── ESPERA OBLIGATORIA ───── */
+    await sleep(3000)
 
-👋 Hola grupo
-⏰ Me quedaré: *${timeText}*
+    /* ───── AVISO SEGURO ───── */
+    try {
+      await sock.sendMessage(groupJid, {
+        text: `🤖 *JOSHI BOT*\n\n👋 Hola grupo\n⏰ Me quedaré: *${timeText}*\n\n> SoyGabo`
+      })
+    } catch (e) {
+      console.log('⚠️ Aviso no enviado, pero join exitoso')
+    }
 
-> SoyGabo
-`.trim()
-
-    await sock.sendMessage(groupJid, { text: msg })
-
-    /* ───── ✅ CONFIRMACIÓN ───── */
     reply(`✅ Bot unido correctamente\n⏰ Tiempo: ${timeText}`)
 
   } catch (e) {
@@ -108,7 +109,6 @@ export const handler = async (m, {
 
 handler.command = ['join']
 handler.tags = ['owner']
-handler.group = false
 handler.menu = true
 
 export default handler
