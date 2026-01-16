@@ -1,75 +1,114 @@
-import ms from 'ms'
+import config from '../config.js'
 
-export const handler = async (m, { sock, args, reply, owner }) => {
+function onlyNumber(jid = '') {
+  return jid.replace(/[^0-9]/g, '')
+}
+
+export const handler = async (m, {
+  sock,
+  args,
+  reply
+}) => {
+
+  /* ───── 👑 OWNER CHECK ───── */
+  const senderJid = m.key.participant || m.sender
+  const senderNum = onlyNumber(senderJid)
+  const ownerNums = config.owner.numbers.map(n => onlyNumber(n))
+
+  if (!ownerNums.includes(senderNum)) {
+    return reply('👑 Este comando solo puede usarlo el OWNER')
+  }
+
+  /* ───── 🔗 VALIDAR LINK ───── */
+  if (!args[0]) {
+    return reply(
+`❌ Uso incorrecto
+
+📌 Ejemplos:
+.join <link> permanente
+.join <link> 5h
+.join <link> 30m
+.join <link> 2d`
+    )
+  }
+
+  const match = args[0].match(/chat\.whatsapp\.com\/([0-9A-Za-z]{20,24})/)
+  if (!match) return reply('❌ Link inválido')
+
+  const inviteCode = match[1]
+
+  /* ───── ⏱️ TIEMPO ───── */
+  let duration = null
+  let timeText = 'permanente'
+
+  if (args[1] && args[1] !== 'permanente') {
+    const t = args[1].toLowerCase()
+    const num = parseInt(t)
+
+    if (isNaN(num)) {
+      return reply('❌ Tiempo inválido')
+    }
+
+    if (t.endsWith('h')) {
+      duration = num * 60 * 60 * 1000
+      timeText = `${num} hora(s)`
+    } else if (t.endsWith('m')) {
+      duration = num * 60 * 1000
+      timeText = `${num} minuto(s)`
+    } else if (t.endsWith('d')) {
+      duration = num * 24 * 60 * 60 * 1000
+      timeText = `${num} día(s)`
+    } else {
+      return reply('❌ Usa h, m o d')
+    }
+  }
+
   try {
-    const sender = m.key.participant || m.key.remoteJid
-    const ownerJids = owner?.jid || []
+    /* ───── 🚀 UNIRSE ───── */
+    const groupJid = await sock.groupAcceptInvite(inviteCode)
 
-    if (!ownerJids.includes(sender)) {
-      return reply('🚫 Solo el OWNER puede usar este comando')
+    /* ───── 🧠 GUARDAR TIMER ───── */
+    if (duration) {
+      if (!global.db) global.db = {}
+      if (!global.db.joinTimers) global.db.joinTimers = {}
+
+      global.db.joinTimers[groupJid] = {
+        leaveAt: Date.now() + duration,
+        timeText
+      }
     }
 
-    if (!args[0]) {
-      return reply('❌ Usa:\n.join link 5m | 2h | 1d')
-    }
+    /* ───── 📢 AVISO ───── */
+    const msg = `
+🤖 *JOSHI BOT*
 
-    const link = args[0]
-    const timeArg = args[1] || '30m'
-    const duration = ms(timeArg)
+👋 Hola grupo
+⏰ Me quedaré: *${timeText}*
 
-    if (!duration) {
-      return reply('❌ Tiempo inválido (ej: 10m, 2h, 1d)')
-    }
-
-    const code = link.split('/').pop()
-
-    // 🟢 ACEPTAR INVITACIÓN
-    const res = await sock.groupAcceptInvite(code)
-
-    // 🕐 ESPERAR A QUE WHATSAPP REGISTRE EL GRUPO
-    await new Promise(r => setTimeout(r, 4000))
-
-    const groupJid = res?.gid || res
-
-    if (!groupJid) {
-      return reply('❌ No se pudo obtener el grupo')
-    }
-
-    // 📢 AVISO YA DENTRO
-    await sock.sendMessage(groupJid, {
-      text: `
-🤖 *JOSHI BOT HA ENTRADO* 🤖
-
-⏳ Tiempo dentro:
-🕒 *${timeArg}*
-
-⚠️ Al terminar el tiempo
-el bot saldrá automáticamente.
-
-> Powered by SoyGabo
+> SoyGabo
 `.trim()
-    })
 
-    reply(`✅ Entré al grupo por *${timeArg}*`)
+    await sock.sendMessage(groupJid, { text: msg })
 
-    // ⏱ SALIDA AUTOMÁTICA
-    setTimeout(async () => {
-      try {
-        await sock.sendMessage(groupJid, {
-          text: '⏰ Tiempo terminado, me retiro 👋'
-        })
-        await sock.groupLeave(groupJid)
-      } catch {}
-    }, duration)
+    /* ───── ✅ CONFIRMACIÓN ───── */
+    reply(`✅ Bot unido correctamente\n⏰ Tiempo: ${timeText}`)
 
   } catch (e) {
     console.error('JOIN ERROR:', e)
-    reply('❌ Error al entrar al grupo')
+    reply(
+`❌ No pude unirme al grupo
+
+• Link vencido
+• Bot bloqueado
+• Grupo lleno
+• Límite de WhatsApp`
+    )
   }
 }
 
 handler.command = ['join']
 handler.tags = ['owner']
-handler.owner = true
+handler.group = false
+handler.menu = true
 
 export default handler
