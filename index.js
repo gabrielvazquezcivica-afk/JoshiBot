@@ -256,6 +256,40 @@ if (['hola', 'hola joshi', 'buenas', 'buenos dias', 'buenas tardes', 'buenas noc
   return
 }
 
+    // 😈 ALBUR PESADO SIN DOBLE SENTIDO (SOLO CARRILLA)
+global.lastPene ||= {}
+
+const peneText = text.toLowerCase().trim()
+const peneNow = Date.now()
+const peneLast = global.lastPene[sender] || 0
+
+if (peneText === 'pene') {
+  // ⏱️ Cooldown 45 segundos
+  if (peneNow - peneLast < 45000) return
+  global.lastPene[sender] = peneNow
+
+  const respuestas = [
+    '💀 Wey, con ese vocabulario no pasas ni primaria',
+    '🤡 Eso fue lo mejor que se te ocurrió escribir?',
+    '🧠 Pensé que ibas a decir algo inteligente… pensé mal',
+    '😐 Tu teclado merece un mejor dueño',
+    '📉 Cada mensaje tuyo baja el nivel del grupo',
+    '🥱 Avísame cuando tengas algo que valga la pena',
+    '🤦‍♂️ Ni el autocorrector quiso ayudarte',
+    '👎 Escribes y el grupo pierde neuronas',
+    '🗿 Pareces NPC mal programado',
+    '📵 Mejor quédate en silencio, te sale mejor'
+  ]
+
+  const r = respuestas[Math.floor(Math.random() * respuestas.length)]
+
+  await sock.sendMessage(from, {
+    text: r
+  }, { quoted: m })
+
+  return
+}
+
     if (!text.startsWith(PREFIX)) return
 
     const args = text.slice(PREFIX.length).trim().split(/\s+/)
