@@ -3,16 +3,13 @@ export const handler = async (m, { sock, from }) => {
   // 🚫 Ignorar mensajes del bot
   if (m.key?.fromMe) return
 
-  // 📩 Obtener texto REAL (compatible JoshiBot)
-  const text = m.text || 
-    m.message?.conversation ||
-    m.message?.extendedTextMessage?.text
-
+  // 📩 TEXTO (tu core ya lo normaliza aquí)
+  const text = m.text
   if (!text) return
 
   const msg = text.toLowerCase().trim()
 
-  // 👋 SIN PREFIJO
+  // 👋 RESPUESTA SIN PREFIJO
   if (msg === 'hola') {
     await sock.sendMessage(
       from,
@@ -24,8 +21,10 @@ export const handler = async (m, { sock, from }) => {
   }
 }
 
-// 🔥
-handler.all = true
+// 🔥 
+handler.before = true
+
+// ❌ 
 handler.command = []
 handler.tags = []
 handler.menu = false
