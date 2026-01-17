@@ -1,28 +1,31 @@
-export const handler = async (m, { sock, from, isGroup }) => {
+export const handler = async (m, { sock, from }) => {
 
   // 🚫 Ignorar mensajes del bot
-  if (m.key.fromMe) return
+  if (m.key?.fromMe) return
 
-  // 📩 Texto del mensaje
-  const text =
+  // 📩 Obtener texto REAL (compatible JoshiBot)
+  const text = m.text || 
     m.message?.conversation ||
-    m.message?.extendedTextMessage?.text ||
-    ''
+    m.message?.extendedTextMessage?.text
 
   if (!text) return
 
-  // 🧹 Normalizar
   const msg = text.toLowerCase().trim()
 
-  // 👋 Respuesta sin prefijo
+  // 👋 SIN PREFIJO
   if (msg === 'hola') {
-    await sock.sendMessage(from, {
-      text: '👋 Hola 😄 ¿cómo estás?\n> JoshiBot'
-    }, { quoted: m })
+    await sock.sendMessage(
+      from,
+      {
+        text: '👋 Hola 😄 ¿qué tal?\n> JoshiBot'
+      },
+      { quoted: m }
+    )
   }
 }
 
-// ❗ SIN command → no usa prefijo
+// 🔥
+handler.all = true
 handler.command = []
 handler.tags = []
 handler.menu = false
