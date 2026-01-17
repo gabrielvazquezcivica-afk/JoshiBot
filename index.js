@@ -290,6 +290,70 @@ if (peneText === 'pene') {
   return
 }
 
+    // 😈
+global.lastPito ||= {}
+
+const pitoText = text.toLowerCase().trim()
+const pitoNow = Date.now()
+const pitoLast = global.lastPito[sender] || 0
+
+if (pitoText === 'pito') {
+  // ⏱️ cooldown 45s
+  if (pitoNow - pitoLast < 45000) return
+  global.lastPito[sender] = pitoNow
+
+  const respuestas = [
+    '💀 Eso fue lo único que tu cerebro pudo procesar?',
+    '🤡 Con razón escribes eso, no te da para más',
+    '🧠 Usa la cabeza, no el teclado a lo bruto',
+    '📉 Cada mensaje tuyo baja el nivel del chat',
+    '😐 Neta, qué necesidad de escribir eso',
+    '🗿 NPC detectado, inteligencia en mantenimiento',
+    '🤦‍♂️ Y luego se preguntan por qué nadie responde',
+    '🥱 Avísame cuando tengas algo útil que decir',
+    '📵 Tu teclado merece descanso… y tú también',
+    '👎 Mejor quédate leyendo, escribir no es lo tuyo'
+  ]
+
+  const r = respuestas[Math.floor(Math.random() * respuestas.length)]
+
+  await sock.sendMessage(from, {
+    text: r
+  }, { quoted: m })
+
+  return
+}
+
+    // 🤖 
+global.lastBot ||= {}
+
+const botText = text.toLowerCase().trim()
+const botNow = Date.now()
+const botLast = global.lastBot[sender] || 0
+
+if (botText === 'bot') {
+  // ⏱️ cooldown 30 segundos
+  if (botNow - botLast < 30000) return
+  global.lastBot[sender] = botNow
+
+  await sock.sendMessage(from, {
+    text: `👋 Hola, ${pushName}
+
+Soy *JoshiBot* 🤖  
+Puedo ayudarte con:
+
+📥 Descargas (audio y video)
+🎮 Comandos RPG y economía
+👮 Moderación de grupos
+⚙️ Configuración del grupo
+🎲 Juegos y comandos divertidos
+
+✍️ Escribe un comando o dime qué necesitas.`
+  }, { quoted: m })
+
+  return
+}
+
     if (!text.startsWith(PREFIX)) return
 
     const args = text.slice(PREFIX.length).trim().split(/\s+/)
